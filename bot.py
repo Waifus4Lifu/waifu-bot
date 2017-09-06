@@ -248,6 +248,14 @@ async def on_message(message):
         # Check to see if the user has this role
         for author_role in member.roles:
             if author_role.name == "super_waifus":
+                message_parts = message.content.split(' ', 1)
+
+                if len(message_parts) == 1:
+                    msg = "{user}, you must specify a person or reason for the invite."
+                    await client.send_message(message.channel, msg.format(user=member.mention))
+                    log.info("[{0}] Requested an invite but didn't give a reason".format(member))
+                    return
+
                 # Create the invite
                 invite = await client.create_invite(
                     get_channel("welcome"),
@@ -256,8 +264,8 @@ async def on_message(message):
                     temporary = False,
                     unique = True
                 )
-                msg = "{user}, invite created: {url}"
-                await client.send_message(message.channel, msg.format(user=member.mention, url=invite.url))
+                msg = "{user} created an invite: {reason}\nlink: {url}"
+                await client.send_message(get_channel("super_waifu_chat"), msg.format(user=member.mention, reason=message_parts[1], url=invite.url))
                 log.info("[{0}] Requested an invite, code: {1}".format(member, invite.code))
                 break
         else:
