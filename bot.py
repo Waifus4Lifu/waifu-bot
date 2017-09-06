@@ -228,7 +228,7 @@ async def on_message(message):
             reply = "Hello {user}, you are now able to access {shitposting}. You fucking pervert."
             await client.send_message(message.channel, reply.format(user=member.mention, shitposting=get_channel("nsfw_shitposting").mention))
 
-    elif message.content.startswith("!iamaloser"):
+    elif message.content.lower().startswith("!iamaloser"):
         # Check to see if the user has this role
         for author_role in member.roles:
             if author_role.name == "shitty_people":
@@ -243,6 +243,28 @@ async def on_message(message):
             msg = "{user}, are you stupid? You didn't have access to {shitposting}."
             await client.send_message(message.channel, msg.format(user=member.mention, shitposting=get_channel("nsfw_shitposting").mention))
             log.info("[{0}] Role was already not assigned".format(member))
+
+    elif message.content.lower().startswith("!invite"):
+        # Check to see if the user has this role
+        for author_role in member.roles:
+            if author_role.name == "super_waifus":
+                # Create the invite
+                invite = await client.create_invite(
+                    get_channel("welcome"),
+                    max_age = 86400,
+                    max_uses = 1,
+                    temporary = False,
+                    unique = True
+                )
+                msg = "{user}, invite created: {url}"
+                await client.send_message(message.channel, msg.format(user=member.mention, url=invite.url))
+                log.info("[{0}] Requested an invite, code: {1}".format(member, invite.code))
+                break
+        else:
+            # They didn't have the role, do nothing
+            msg = "{user}, you don't have access to create invites you cuck."
+            await client.send_message(message.channel, msg.format(user=member.mention, shitposting=get_channel("nsfw_shitposting").mention))
+            log.info("[{0}] Requested an invite but was denied".format(member))
 
     # Show a help/about dialog
     elif message.content.lower().startswith("!wtf"):
