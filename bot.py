@@ -259,7 +259,7 @@ async def on_message(message):
 
                 # Create the invite
                 invite = await client.create_invite(
-                    get_channel("welcome"),
+                    get_channel("welcome_and_rules"),
                     max_age = 86400,
                     max_uses = 1,
                     temporary = False,
