@@ -19,7 +19,8 @@ valid_games = [
     "MINECRAFT",
     "GTA",
     "GUARDIANS",
-    "CIV"
+    "CIV",
+    "JACKBOX"
 ]
 
 parser = argparse.ArgumentParser(description="Handle the #on_hand_volunteers channel.")
