@@ -304,7 +304,7 @@ async def on_message(message):
         await client.send_message(message.channel, "{user}, 4".format(user=member.mention))
 
     # Automatically fix tables
-    elif "(╯°□°）╯︵ ┻━┻" in message.content:
+    elif "┻━┻" in message.content:
         await client.send_message(message.channel, "┬──┬ ﾉ(° -°ﾉ)\n{user} that wasn't nice.".format(user=member.mention))
 
     # #yeah
