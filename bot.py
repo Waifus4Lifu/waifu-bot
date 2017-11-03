@@ -349,6 +349,11 @@ async def on_message(message):
                 return
 
             # check if they are already on the shitlist
+            for existing_shit in shitlist:
+                if shithead.name == existing_shit['name']:
+                    msg = "{user}, that shithead is already on the shitlist. They must have really fucked up if you are trying to add them again."
+                    await client.send_message(message.channel, msg.format(user=member.mention))
+                    return
 
             if message_parts[1].lower() == "add":
                 # Add them to the shitlist and write to file
