@@ -7,6 +7,8 @@ import asyncio
 import urllib
 import json
 import random
+import os
+import pickle
 
 valid_games = [
     "PUBG",
@@ -134,7 +136,7 @@ async def on_message(message):
             log.info("[{user}] requested to join invalid game: {game}".format(user=member.name, game=game))
 
     # Add user to a game
-    if message.content.lower().startswith("!join"):
+    elif message.content.lower().startswith("!join"):
         message_parts = message.content.split(' ', 1)
 
         if len(message_parts) == 1:
@@ -253,7 +255,7 @@ async def on_message(message):
             if author_role.name == "super_waifus":
                 message_parts = message.content.split(' ', 1)
 
-                if len(message_parts) == 1:
+                if len(message_parts) == 1 or message_parts[1] == "":
                     msg = "{user}, you must specify a person or reason for the invite."
                     await client.send_message(message.channel, msg.format(user=member.mention))
                     log.info("[{0}] Requested an invite but didn't give a reason".format(member))
@@ -297,6 +299,89 @@ async def on_message(message):
               "`!iamaloser` - Give up access to nsfw channels.\n" \
               "\nIf I'm not working correctly, go fuck yourself, you aren't my boss."
         await client.send_message(message.channel, msg)
+
+    elif message.content.lower().startswith("!shitlist"):
+        # Example: !shitlist
+        # Example: !shitlist add @PeasAndClams#7812 cuck
+        # Example: !shitlist remove @PeasAndClams#7812
+        authorized_users = [
+            "115183069555589125", # aceat64
+            "229502929608900608"  # sanicxx
+        ]
+
+        try:
+            with open(os.path.join(sys.path[0], 'shitlist.dat'), 'rb') as fp:
+                shitlist = pickle.load(fp)
+        except FileNotFoundError:
+            # No previous file, so create an empty list
+            shitlist = []
+
+        message_parts = message.content.split(' ', 3)
+
+        if len(message_parts) == 1 or message_parts[1] == "":
+            # display shitlist
+            reply_msg = "There are {count} people on sanicxx's shitlist.\n\n".format(count=len(shitlist))
+            for shithead in shitlist:
+                if not shithead['reason']:
+                    reply_msg += ("@{0}\n".format(shithead['name']))
+                else:
+                    reply_msg += ("@{0}: {1}\n".format(shithead['name'], shithead['reason']))
+            await client.send_message(message.channel, reply_msg)
+        else:
+            if member.id not in authorized_users:
+                msg = "{user}, you aren't authorized to do this, keep trying and you might end up on sanicxx's shitlist"
+                await client.send_message(message.channel, msg.format(user=member.mention))
+                return
+
+            # check if user is real
+            try:
+                shithead = server.get_member(message_parts[2][2:-1])
+            except IndexError:
+                msg = "{user}, add/remove who? I'm not a fucking mind reader."
+                await client.send_message(message.channel, msg.format(user=member.mention))
+                return
+
+            if not shithead:
+                msg = "{user}, you have to specify a user (with a mention), this isn't rocket science..."
+                await client.send_message(message.channel, msg.format(user=member.mention))
+                return
+
+            # check if they are already on the shitlist
+
+            if message_parts[1].lower() == "add":
+                # Add them to the shitlist and write to file
+                try:
+                    shitlist.append({
+                        'name': shithead.name,
+                        'reason': message_parts[3]
+                    })
+                except IndexError:
+                    shitlist.append({
+                        'name': shithead.name,
+                        'reason': None
+                    })
+
+                with open(os.path.join(sys.path[0], 'shitlist.dat'), 'wb') as fp:
+                    pickle.dump(shitlist, fp)
+
+                msg = "{user}, I've added {shithead} to the shitlist."
+                await client.send_message(message.channel, msg.format(user=member.mention, shithead=shithead.name))
+                return
+            elif message_parts[1].lower() == "remove":
+                # Remove them to the shitlist and write to file
+                shitlist[:] = [d for d in shitlist if d.get('name') != shithead.name]
+
+                with open(os.path.join(sys.path[0], 'shitlist.dat'), 'wb') as fp:
+                    pickle.dump(shitlist, fp)
+
+                msg = "{user}, I've removed {shithead} from the shitlist."
+                await client.send_message(message.channel, msg.format(user=member.mention, shithead=shithead.name))
+                return
+            else:
+                # abuse the moron for doing things wrong
+                msg = "{user}, that's not a valid command you moron."
+                await client.send_message(message.channel, msg.format(user=member.mention))
+                return
 
     # RFC 1149.5 specifies 4 as the standard IEEE-vetted random number.
     # https://xkcd.com/221/
