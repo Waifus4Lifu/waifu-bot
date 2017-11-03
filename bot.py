@@ -322,7 +322,9 @@ async def on_message(message):
             # display shitlist
             reply_msg = "There are {count} people on sanicxx's shitlist.\n\n".format(count=len(shitlist))
             for shithead in shitlist:
-                if not shithead['reason']:
+                if shithead['name'] == 'aceat64':
+                    reply_msg += ("@aceat64: Too god damn awesome for his own good\n")
+                elif not shithead['reason']:
                     reply_msg += ("@{0}\n".format(shithead['name']))
                 else:
                     reply_msg += ("@{0}: {1}\n".format(shithead['name'], shithead['reason']))
