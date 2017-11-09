@@ -170,7 +170,7 @@ async def on_message(message):
                 await client.send_message(message.channel, reply.format(user=member.mention, game=game))
 
                 notification_msg = "{user} has signed up to play {game}! There are currently {players} players available."
-                await client.send_message(get_channel("general_chat"), notification_msg.format(user=member.mention, game=game, players=len(get_members_by_role(game))))
+                await client.send_message(get_channel("looking_for_group"), notification_msg.format(user=member.mention, game=game, players=len(get_members_by_role(game))))
         else:
             msg = "{user}, that's not a valid game, stop being stupid."
             await client.send_message(message.channel, msg.format(user=member.mention))
@@ -201,7 +201,7 @@ async def on_message(message):
                     await client.send_message(message.channel, msg.format(user=member.mention, game=game))
 
                     notification_msg = "{user} no longer wants to play {game} like a bitch. There are currently {players} players available."
-                    await client.send_message(get_channel("general_chat"), notification_msg.format(user=member.mention, game=game, players=len(get_members_by_role(game))))
+                    await client.send_message(get_channel("looking_for_group"), notification_msg.format(user=member.mention, game=game, players=len(get_members_by_role(game))))
                     break
             else:
                 # They didn't have the role, do nothing
