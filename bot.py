@@ -99,7 +99,7 @@ async def on_message(message):
     if message.author == client.user:
         return
     member = server.get_member_named(str(message.author))
-    
+
     #Post a message as WaifuBot
     if "Love,\nWaifuBot" in message.content:
         if message.channel.is_private:
@@ -159,6 +159,42 @@ async def on_message(message):
             msg = "{user}, that's not a valid game, stop being stupid."
             await client.send_message(message.channel, msg.format(user=member.mention))
             log.info("[{user}] requested to join invalid game: {game}".format(user=member.name, game=game))
+
+    # grant access to nfsw-shitposting
+    elif message.content.lower().startswith("!join shitposting"):
+        # Check to see if the user already has this role
+        for author_role in member.roles:
+            if author_role.name == "shitty_people":
+                # They did, let them know they already had it
+                msg = "{user} you are already listed as a pervert."
+                await client.send_message(message.channel, msg.format(user=member.mention))
+                log.info("[{0}] Role already assigned".format(member))
+                break
+        else:
+            role = get_role("shitty_people")
+            if not role:
+                return False
+            # They didn't have the role, so add it
+            await client.add_roles(member, role)
+            log.info("[{0}] Role added".format(member))
+            reply = "Hello {user}, you are now able to access {shitposting}. You fucking pervert."
+            await client.send_message(message.channel, reply.format(user=member.mention, shitposting=get_channel("nsfw_shitposting").mention))
+
+    elif message.content.lower().startswith("!leave shitposting"):
+        # Check to see if the user has this role
+        for author_role in member.roles:
+            if author_role.name == "shitty_people":
+                # They did, so remove the role
+                await client.remove_roles(member, author_role)
+                msg = "{user}, you have been removed {shitposting}. Go cry in your safe space, loser."
+                await client.send_message(message.channel, msg.format(user=member.mention, shitposting=get_channel("nsfw_shitposting").mention))
+                log.info("[{0}] Role removed".format(member))
+                break
+        else:
+            # They didn't have the role, do nothing
+            msg = "{user}, are you stupid? You didn't have access to {shitposting}."
+            await client.send_message(message.channel, msg.format(user=member.mention, shitposting=get_channel("nsfw_shitposting").mention))
+            log.info("[{0}] Role was already not assigned".format(member))
 
     # Add user to a game
     elif message.content.lower().startswith("!join"):
@@ -238,42 +274,6 @@ async def on_message(message):
             await client.send_message(message.channel, msg.format(user=member.mention))
             log.info("[{user}] requested to join invalid game: {game}".format(user=member.name, game=game))
 
-    # grant access to nfsw-shitposting
-    elif message.content.lower().startswith("!iamapervert"):
-        # Check to see if the user already has this role
-        for author_role in member.roles:
-            if author_role.name == "shitty_people":
-                # They did, let them know they already had it
-                msg = "{user} you are already listed as a pervert."
-                await client.send_message(message.channel, msg.format(user=member.mention))
-                log.info("[{0}] Role already assigned".format(member))
-                break
-        else:
-            role = get_role("shitty_people")
-            if not role:
-                return False
-            # They didn't have the role, so add it
-            await client.add_roles(member, role)
-            log.info("[{0}] Role added".format(member))
-            reply = "Hello {user}, you are now able to access {shitposting}. You fucking pervert."
-            await client.send_message(message.channel, reply.format(user=member.mention, shitposting=get_channel("nsfw_shitposting").mention))
-
-    elif message.content.lower().startswith("!iamaloser"):
-        # Check to see if the user has this role
-        for author_role in member.roles:
-            if author_role.name == "shitty_people":
-                # They did, so remove the role
-                await client.remove_roles(member, author_role)
-                msg = "{user}, you have been removed {shitposting}. Go cry in your safe space, loser."
-                await client.send_message(message.channel, msg.format(user=member.mention, shitposting=get_channel("nsfw_shitposting").mention))
-                log.info("[{0}] Role removed".format(member))
-                break
-        else:
-            # They didn't have the role, do nothing
-            msg = "{user}, are you stupid? You didn't have access to {shitposting}."
-            await client.send_message(message.channel, msg.format(user=member.mention, shitposting=get_channel("nsfw_shitposting").mention))
-            log.info("[{0}] Role was already not assigned".format(member))
-
     elif message.content.lower().startswith("!invite"):
         # Check to see if the user has this role
         for author_role in member.roles:
@@ -305,11 +305,11 @@ async def on_message(message):
             log.info("[{0}] Requested an invite but was denied".format(member))
 
     # Show a help/about dialog
-    elif message.content.lower().startswith("!wtf"):
+    elif message.content.lower().startswith("!wtf") or message.content.lower().startswith("!help"):
         log.info("[{0}] Requested information about us".format(member.name))
         msg = "Fuck you, I'm a bot for managing various automatic rules and features of the Waifus_4_Lifu Discord chat server.\n\n" \
               "I understand the following commands:\n\n" \
-              "`!wtf` - This about message.\n" \
+              "`!help` or `!wtf` - This help message.\n" \
               "`!games` - Show a list of supported games.\n" \
               "`!players` - Who is available to play a game. Example: `!players PUBG`\n" \
               "`!join` - Add yourself to the list of people who want to play a game. Example: `!join PUBG`\n" \
@@ -320,8 +320,8 @@ async def on_message(message):
               "`!shrug`\n" \
               "`!catfact`\n" \
               "`!google`\n" \
-              "`!iamapervert` - Gain access to nsfw channels.\n" \
-              "`!iamaloser` - Give up access to nsfw channels.\n\n" \
+              "`!join shitposting` - Gain access to nsfw/shitposting channel.\n" \
+              "`!leave shitposting` - Give up access to nsfw/shitposting channel.\n\n" \
               "These seasonal commands may also be used:\n\n" \
               "`!naughty` - Join the W4L secret santa gift exchange.\n" \
               "`!nice` - Leave the W4L secret santa gift exchange.\n" \
@@ -667,5 +667,5 @@ async def on_message(message):
             await client.send_file(message.channel, 'dennis.gif')
             await client.send_message(message.channel, msg)
 
-            
+
 client.run(args.token)
