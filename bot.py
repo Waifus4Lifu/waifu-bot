@@ -26,13 +26,6 @@ valid_games = [
     "JACKBOX",
     "RAINBOW_SIX"
 ]
-#Rate limiter config
-message_limit = 3
-cooldown_seconds = 30
-#Rate limiter global variables
-message_count = 0
-previous_author = None
-previous_timestamp = None
 
 parser = argparse.ArgumentParser(description="Handle the #on_hand_volunteers channel.")
 parser.add_argument("-v", "--verbose", dest="verbose", action="store_const",
@@ -106,6 +99,26 @@ async def on_message(message):
     if message.author == client.user:
         return
     member = server.get_member_named(str(message.author))
+    
+    #Post a message as WaifuBot
+    if "Love,\nWaifuBot" in message.content:
+        if message.channel.is_private:
+            return
+        authorized_users = [
+            "115183069555589125", # aceat64
+            "221162619497611274", # HungryNinja
+            "194641296529424386", # canibalcrab
+            "130586766754316288"  # PeasAndClams
+        ]
+        #Delay for member-side GUI update
+        time.sleep(.5)
+        if message.author.id not in authorized_users:
+            await client.delete_message(message)
+            return
+        msg = message.content.replace('Love,\nWaifuBot', '')
+        await client.send_message(message.channel, msg)
+        await client.delete_message(message)
+        return
 
     if not member:
         await client.send_message(message.author, "You are not a Waifu. GTFO")
@@ -654,34 +667,5 @@ async def on_message(message):
             await client.send_file(message.channel, 'dennis.gif')
             await client.send_message(message.channel, msg)
 
-    #Rate limiter
-    if message.channel.name == "nsfw_shitposting":
-        global previous_author
-        global message_count
-        global previous_timestamp
-        #Get seconds since first message after start of cooldown
-        try:
-            delta = message.timestamp - previous_timestamp
-            delta = delta.seconds
-        except TypeError:
-            delta = 0
-        #Reset count if cooldown has been reached or new author has posted
-        if delta > cooldown_seconds or message.author != previous_author:
-            message_count = 0;
-            previous_timestamp = message.timestamp
-            delta = 0
-        previous_author = message.author
-        #Increment count by number of attachments, if any. Otherwise, increment by 1.
-        if len(message.attachments) > 1:
-            message_count = message_count + len(message.attachments)
-        else:
-            message_count = message_count + 1
-        #If count is 5 or more, berate them
-        if message_count > message_limit:
-            msg = "**Error 429: DUMP DETECTED :poo:**\n{0}, you may not be breaking any rules, but you are being a scumbag.".format(message.author.mention)
-            await client.send_message(message.channel, msg)
-            log.info("[{0}] hit rate limit with {1} posts in [{2}] within {3} seconds".format(message.author, message_count, message.channel, delta))
-            message_count = 0
-            previous_timestamp = message.timestamp
             
 client.run(args.token)
