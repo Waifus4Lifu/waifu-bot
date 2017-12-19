@@ -378,11 +378,11 @@ async def on_message(message):
             reply_msg = "There are {count} people on sanicxx's shitlist.\n\n".format(count=len(shitlist))
             for shithead in shitlist:
                 if shithead['name'] == 'aceat64' and random.randint(1, 3) == 1:
-                    reply_msg += ("@aceat64: Too god damn awesome for his own good\n")
+                    reply_msg += ("aceat64: Too god damn awesome for his own good\n")
                 elif not shithead['reason']:
-                    reply_msg += ("@{0}\n".format(shithead['name']))
+                    reply_msg += ("{0}\n".format(shithead['name']))
                 else:
-                    reply_msg += ("@{0}: {1}\n".format(shithead['name'], shithead['reason']))
+                    reply_msg += ("{0}: {1}\n".format(shithead['name'], shithead['reason']))
             await client.send_message(message.channel, reply_msg)
         else:
             if member.id not in authorized_users:
@@ -392,34 +392,29 @@ async def on_message(message):
 
             # check if user is real
             try:
-                shithead = server.get_member(message_parts[2][2:-1])
+                shithead = message_parts[2]
             except IndexError:
                 msg = "{user}, add/remove who? I'm not a fucking mind reader."
-                await client.send_message(message.channel, msg.format(user=member.mention))
-                return
-
-            if not shithead:
-                msg = "{user}, you have to specify a user (with a mention), this isn't rocket science..."
                 await client.send_message(message.channel, msg.format(user=member.mention))
                 return
 
             if message_parts[1].lower() == "add":
                 # check if they are already on the shitlist
                 for existing_shit in shitlist:
-                    if shithead.name == existing_shit['name']:
+                    if shithead == existing_shit['name']:
                         msg = "{user}, that shithead {shithead} is already on the shitlist. They must have really fucked up if you are trying to add them again."
-                        await client.send_message(message.channel, msg.format(user=member.mention, shithead=shithead.name))
+                        await client.send_message(message.channel, msg.format(user=member.mention, shithead=shithead))
                         return
 
                 # Add them to the shitlist and write to file
                 try:
                     shitlist.append({
-                        'name': shithead.name,
+                        'name': shithead,
                         'reason': message_parts[3]
                     })
                 except IndexError:
                     shitlist.append({
-                        'name': shithead.name,
+                        'name': shithead,
                         'reason': None
                     })
 
@@ -427,26 +422,26 @@ async def on_message(message):
                     pickle.dump(shitlist, fp)
 
                 msg = "{user}, I've added {shithead} to the shitlist."
-                await client.send_message(message.channel, msg.format(user=member.mention, shithead=shithead.name))
+                await client.send_message(message.channel, msg.format(user=member.mention, shithead=shithead))
                 return
             elif message_parts[1].lower() == "remove":
                 # check if they are actually on the shitlist
                 for existing_shit in shitlist:
-                    if shithead.name == existing_shit['name']:
+                    if shithead == existing_shit['name']:
                         break
                 else:
                     msg = "{user}, that fucker {shithead} isn't on the shitlist... yet."
-                    await client.send_message(message.channel, msg.format(user=member.mention, shithead=shithead.name))
+                    await client.send_message(message.channel, msg.format(user=member.mention, shithead=shithead))
                     return
 
                 # Remove them to the shitlist and write to file
-                shitlist[:] = [d for d in shitlist if d.get('name') != shithead.name]
+                shitlist[:] = [d for d in shitlist if d.get('name') != shithead]
 
                 with open(os.path.join(sys.path[0], 'shitlist.dat'), 'wb') as fp:
                     pickle.dump(shitlist, fp)
 
                 msg = "{user}, I've removed {shithead} from the shitlist."
-                await client.send_message(message.channel, msg.format(user=member.mention, shithead=shithead.name))
+                await client.send_message(message.channel, msg.format(user=member.mention, shithead=shithead))
                 return
             else:
                 # abuse the moron for doing things wrong
