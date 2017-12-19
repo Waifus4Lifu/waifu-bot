@@ -371,7 +371,7 @@ async def on_message(message):
             # No previous file, so create an empty list
             shitlist = []
 
-        message_parts = message.content.split(' ', 3)
+        message_parts = message.clean_content.split(' ', 3)
 
         if len(message_parts) == 1 or message_parts[1] == "":
             # display shitlist
@@ -397,6 +397,9 @@ async def on_message(message):
                 msg = "{user}, add/remove who? I'm not a fucking mind reader."
                 await client.send_message(message.channel, msg.format(user=member.mention))
                 return
+
+            if shithead[0] == '@':
+                shithead = shithead[1:]
 
             if message_parts[1].lower() == "add":
                 # check if they are already on the shitlist
