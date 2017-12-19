@@ -120,7 +120,7 @@ async def on_message(message):
     if message.author == client.user:
         return
     member = server.get_member_named(str(message.author))
-    
+
     #Post a message as WaifuBot
     if "Love,\nWaifuBot" in message.content:
         if message.channel.is_private:
@@ -139,6 +139,8 @@ async def on_message(message):
         msg = message.content.replace('Love,\nWaifuBot', '')
         await client.send_message(message.channel, msg)
         await client.delete_message(message)
+        notification_msg = "{user} made me say something in {channel}."
+        await client.send_message(get_channel("super_waifu_chat"), notification_msg.format(user=member.mention, channel=message.channel.mention))
         return
 
     if not member:
