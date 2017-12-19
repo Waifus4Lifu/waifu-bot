@@ -400,6 +400,8 @@ async def on_message(message):
 
             if shithead[0] == '@':
                 shithead = shithead[1:]
+            elif shithead[0] == '"':
+                shithead = message.clean_content.split('"')[1]
 
             if message_parts[1].lower() == "add":
                 # check if they are already on the shitlist
