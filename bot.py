@@ -678,7 +678,35 @@ async def on_message(message):
             msg = "Hey " + santa.name + ", just a reminder, if you are mailing your gift, it should be sent with enough time to arrive by December 20th.\nAlso, I'm sure you are well aware, but your secret child is " + child.name + "."
             await client.send_message(santa, msg)
         return
-
+    
+    #USE SPARINGLY: Send custom reminder DMs to all participants
+    elif message.content.lower().startswith("!letterfromsanta"):
+        log.info("[{0}] requested custom mass reminder".format(member))
+        authorized_users = [
+            "115183069555589125", # aceat64
+            "221162619497611274", # HungryNinja
+            "130586766754316288"  # PeasAndClams
+        ]
+        if member.id not in authorized_users:
+            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'))
+            msg = "Just what do you think you're doing, cucko?\nYou're not the boss of me."
+            await client.send_message(message.channel, msg)
+            return
+        try:
+            with open(os.path.join(sys.path[0], 'naughtylist.dat'), 'rb') as fp:
+                naughtylist = pickle.load(fp)
+        except FileNotFoundError:
+            #No assigned pairs yet
+            msg = "You must have forgotten that there is nothing to remember."
+            await client.send_message(message.channel, msg)
+            return
+        while len(naughtylist)>1:
+            santa = naughtylist.pop(0)
+            child = naughtylist.pop(0)
+            msg = message.content.replace("!letterfromsanta ", "")
+            await client.send_message(santa, msg)
+        return
+    
     #Did someone say hungry?
     lower = message.content.lower()
     if "m hungry" in lower or "s hungry" in lower or "e hungry" in lower or "y hungry" in lower:
