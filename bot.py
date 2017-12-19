@@ -100,7 +100,7 @@ async def on_ready():
     roles = dict()
 
     log.info("Connected to server: {0}".format(server.name))
-    
+
     #Update the 'playing' status message every 5-10 minutes from playing.txt
     while True:
         playing = open(os.path.join(sys.path[0], 'playing.txt')).read().splitlines()
@@ -121,11 +121,6 @@ async def on_message(message):
         return
     member = server.get_member_named(str(message.author))
     
-    #Remind Bryan he's a cuck
-    if message.author.id == "285262293053472768":
-        if random.randint(1, 10) == 1:
-            await client.send_message(message.channel, "Shut up, cuck.")
-
     #Post a message as WaifuBot
     if "Love,\nWaifuBot" in message.content:
         if message.channel.is_private:
@@ -721,6 +716,6 @@ async def on_message(message):
             await client.send_message(message.channel, msg)
             log.info("[{0}] hit rate limit with {1} posts in [{2}] within {3} seconds".format(message.author, message_count, message.channel, delta))
             message_count = 0
-            previous_timestamp = message.timestamp        
+            previous_timestamp = message.timestamp
 
 client.run(args.token)
