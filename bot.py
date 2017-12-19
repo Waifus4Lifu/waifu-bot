@@ -339,6 +339,7 @@ async def on_message(message):
               "`!leave` - Remove yourself from the list of people who want to play a game.\n" \
               "`!8ball` - Ask the magic 8 ball a question.\n" \
               "`!random` - Request a random number, chosen by fair dice roll.\n" \
+              "`!sponge` - Mock previous post even if you’re not smart enough to be clever.\n" \  
               "`!yeah`\n" \
               "`!shrug`\n" \
               "`!catfact`\n" \
@@ -514,7 +515,24 @@ async def on_message(message):
             query=urllib.parse.quote(message_parts[1])
         )
         await client.send_message(message.channel, help_msg)
-
+    
+    #Mock previous post when you're not smart enough to come up with anything clever
+    elif message.content.lower().startswith("!sponge"):
+        messages = client.messages
+        if len(messages) > 1:
+            messages.pop()
+            messages.reverse()
+            for previous_message in messages:
+                if previous_message.channel == message.channel:
+                    break
+            reply_message = "{0}: ".format(message.author.mention)
+            for i in range(0, len(previous_message.content)):
+                if random.randint(0,1) == 1:
+                    reply_message += previous_message.content[i].lower()
+                else:
+                    reply_message += previous_message.content[i].upper()
+            await client.send_file(message.channel, os.path.join(sys.path[0], 'sponge.jpg'), filename=None, content=reply_message, tts=False)
+    
     #Add self to naughty_list
     elif message.content.lower().startswith("!naughty"):
         #Check for existing role
