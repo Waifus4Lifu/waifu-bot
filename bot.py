@@ -107,6 +107,11 @@ async def on_message(message):
     if message.author == client.user:
         return
     member = server.get_member_named(str(message.author))
+    
+    #Remind Bryan he's a cuck
+    if message.author.id == "285262293053472768":
+        if random.randint(1, 10) == 1:
+            await client.send_message(message.channel, "Shut up, cuck.")
 
     #Post a message as WaifuBot
     if "Love,\nWaifuBot" in message.content:
