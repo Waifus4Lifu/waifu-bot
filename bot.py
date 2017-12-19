@@ -103,7 +103,7 @@ async def on_ready():
     
     #Update the 'playing' status message every 5-10 minutes from playing.txt
     while True:
-        playing = open(sys.path[0] + '/playing.txt').read().splitlines()
+        playing = open(os.path.join(sys.path[0], 'playing.txt')).read().splitlines()
         playing = random.choice(playing)
         if playing[:1] == "0":
             status = discord.Status.online
@@ -502,7 +502,7 @@ async def on_message(message):
         await client.send_message(message.channel, "{user}: {phrase}".format(user=member.mention, phrase=random.choice(phrases)))
 
     elif message.content.lower().startswith("!catfact"):
-        cat_facts = open(sys.path[0] + '/cat_facts.txt').read().splitlines()
+        cat_facts = open(os.path.join(sys.path[0], 'cat_facts.txt')).read().splitlines()
         await client.send_message(message.channel, random.choice(cat_facts))
 
     # Let me google that for you
@@ -575,7 +575,7 @@ async def on_message(message):
             "130586766754316288"  # PeasAndClams
         ]
         if member.id not in authorized_users:
-            await client.send_file(message.channel, 'dennis.gif')
+            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'))
             msg = "Just what do you think you're doing, cucko?\nYou're not the boss of me."
             await client.send_message(message.channel, msg)
             return
@@ -638,7 +638,7 @@ async def on_message(message):
                 naughtylist = pickle.load(fp)
         except FileNotFoundError:
             # No assigned pairs yet
-            await client.send_file(message.channel, 'dennis.gif')
+            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'))
             msg = "Whoa Rudolph, you're getting ahead of the game here.\nThe list hasn't even been processed yet."
             await client.send_message(message.channel, msg)
             return
@@ -665,7 +665,7 @@ async def on_message(message):
             "130586766754316288"  # PeasAndClams
         ]
         if member.id not in authorized_users:
-            await client.send_file(message.channel, 'dennis.gif')
+            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'))
             msg = "Just what do you think you're doing, cucko?\nYou're not the boss of me."
             await client.send_message(message.channel, msg)
             return
@@ -690,7 +690,7 @@ async def on_message(message):
         log.info("[{0}] said someone is/was hungry".format(member))
         if random.randint(1, 3) != 1:
             msg = "No, <@221162619497611274> is hungry."
-            await client.send_file(message.channel, 'dennis.gif')
+            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'))
             await client.send_message(message.channel, msg)
 
     #Rate limiter
