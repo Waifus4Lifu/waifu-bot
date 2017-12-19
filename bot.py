@@ -100,6 +100,19 @@ async def on_ready():
     roles = dict()
 
     log.info("Connected to server: {0}".format(server.name))
+    
+    #Update the 'playing' status message every 5-10 minutes from playing.txt
+    while True:
+        playing = open(sys.path[0] + '/playing.txt').read().splitlines()
+        playing = random.choice(playing)
+        if playing[:1] == "0":
+            status = discord.Status.online
+        elif playing[:1] == "1":
+            status = discord.Status.idle
+        else:
+            status = discord.Status.dnd
+        await client.change_presence(game=discord.Game(name=playing[1:]), status=status)
+        await asyncio.sleep(random.randint(300, 600))
 
 @client.event
 async def on_message(message):
