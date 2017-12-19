@@ -339,7 +339,7 @@ async def on_message(message):
               "`!leave` - Remove yourself from the list of people who want to play a game.\n" \
               "`!8ball` - Ask the magic 8 ball a question.\n" \
               "`!random` - Request a random number, chosen by fair dice roll.\n" \
-              "`!sponge` - Mock previous post even if you’re not smart enough to be clever.\n" \  
+              "`!sponge` - Mock previous post even if you’re not smart enough to be clever.\n" \
               "`!yeah`\n" \
               "`!shrug`\n" \
               "`!catfact`\n" \
@@ -515,7 +515,7 @@ async def on_message(message):
             query=urllib.parse.quote(message_parts[1])
         )
         await client.send_message(message.channel, help_msg)
-    
+
     #Mock previous post when you're not smart enough to come up with anything clever
     elif message.content.lower().startswith("!sponge"):
         messages = client.messages
@@ -532,7 +532,7 @@ async def on_message(message):
                 else:
                     reply_message += previous_message.content[i].upper()
             await client.send_file(message.channel, os.path.join(sys.path[0], 'sponge.jpg'), filename=None, content=reply_message, tts=False)
-    
+
     #Add self to naughty_list
     elif message.content.lower().startswith("!naughty"):
         #Check for existing role
@@ -698,7 +698,7 @@ async def on_message(message):
             msg = "Hey " + santa.name + ", just a reminder, if you are mailing your gift, it should be sent with enough time to arrive by December 20th.\nAlso, I'm sure you are well aware, but your secret child is " + child.name + "."
             await client.send_message(santa, msg)
         return
-    
+
     #USE SPARINGLY: Send custom reminder DMs to all participants
     elif message.content.lower().startswith("!letterfromsanta"):
         log.info("[{0}] requested custom mass reminder".format(member))
@@ -726,7 +726,7 @@ async def on_message(message):
             msg = message.content.replace("!letterfromsanta ", "")
             await client.send_message(santa, msg)
         return
-    
+
     #Did someone say hungry?
     lower = message.content.lower()
     if "m hungry" in lower or "s hungry" in lower or "e hungry" in lower or "y hungry" in lower:
