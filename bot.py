@@ -524,14 +524,14 @@ async def on_message(message):
             messages.reverse()
             for previous_message in messages:
                 if previous_message.channel == message.channel:
-                    break
-            reply_message = "{0}: ".format(message.author.mention)
-            for i in range(0, len(previous_message.content)):
-                if random.randint(0,1) == 1:
-                    reply_message += previous_message.content[i].lower()
-                else:
-                    reply_message += previous_message.content[i].upper()
-            await client.send_file(message.channel, os.path.join(sys.path[0], 'sponge.jpg'), filename=None, content=reply_message, tts=False)
+                    reply_message = "{0}: ".format(message.author.mention)
+                    for i in range(0, len(previous_message.content)):
+                        if random.randint(0,1) == 1:
+                            reply_message += previous_message.content[i].lower()
+                        else:
+                            reply_message += previous_message.content[i].upper()
+                    await client.send_file(message.channel, os.path.join(sys.path[0], 'sponge.jpg'), filename=None, content=reply_message, tts=False)
+                    return
 
     #Add self to naughty_list
     elif message.content.lower().startswith("!naughty"):
@@ -590,9 +590,8 @@ async def on_message(message):
             "130586766754316288"  # PeasAndClams
         ]
         if member.id not in authorized_users:
-            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'))
             msg = "Just what do you think you're doing, cucko?\nYou're not the boss of me."
-            await client.send_message(message.channel, msg)
+            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'), filename=None, content=msg, tts=False)
             return
         log.info("[{0}] Requested processing the list".format(member.name))
 
@@ -653,9 +652,8 @@ async def on_message(message):
                 naughtylist = pickle.load(fp)
         except FileNotFoundError:
             # No assigned pairs yet
-            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'))
-            msg = "Whoa Rudolph, you're getting ahead of the game here.\nThe list hasn't even been processed yet."
-            await client.send_message(message.channel, msg)
+            msg = "Just what do you think you're doing, cucko?\nYou're not the boss of me."
+            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'), filename=None, content=msg, tts=False)
             return
         msg = "{user}, check your DMs. I've heard that's where it's going down."
         await client.send_message(message.channel, msg.format(user=member.mention))
@@ -680,9 +678,8 @@ async def on_message(message):
             "130586766754316288"  # PeasAndClams
         ]
         if member.id not in authorized_users:
-            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'))
             msg = "Just what do you think you're doing, cucko?\nYou're not the boss of me."
-            await client.send_message(message.channel, msg)
+            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'), filename=None, content=msg, tts=False)
             return
         try:
             with open(os.path.join(sys.path[0], 'naughtylist.dat'), 'rb') as fp:
@@ -708,9 +705,8 @@ async def on_message(message):
             "130586766754316288"  # PeasAndClams
         ]
         if member.id not in authorized_users:
-            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'))
             msg = "Just what do you think you're doing, cucko?\nYou're not the boss of me."
-            await client.send_message(message.channel, msg)
+            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'), filename=None, content=msg, tts=False)
             return
         try:
             with open(os.path.join(sys.path[0], 'naughtylist.dat'), 'rb') as fp:
@@ -733,8 +729,7 @@ async def on_message(message):
         log.info("[{0}] said someone is/was hungry".format(member))
         if random.randint(1, 3) != 1:
             msg = "No, <@221162619497611274> is hungry."
-            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'))
-            await client.send_message(message.channel, msg)
+            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'), filename=None, content=msg, tts=False)
 
     #Rate limiter
     if message.channel.name == "nsfw_shitposting":
