@@ -356,6 +356,50 @@ async def on_message(message):
               "\nIf I'm not working correctly, go fuck yourself, you aren't my boss."
         await client.send_message(message.channel, msg)
 
+    #Allow sanicxx to go pout in AFK
+    elif message.content.lower().startswith("!pout"):
+        #Check if user is sanicxx
+        if message.author.id != "229502929608900608":
+            msg = "Just what do you think you're doing, cucko?\nNobody pouts like sanicxx."
+            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'), filename=None, content=msg, tts=False)
+            return
+        #Check if user is in a voice channel
+        if message.author.voice.voice_channel != None:
+            exempt_users = [
+                "229502929608900608", # sanicxx
+                "131527313933336577", # MrsCyberpunk
+                "239566289943789579"  # Elvistux
+            ]
+            #Load shitlist
+            try:
+                with open(os.path.join(sys.path[0], 'shitlist.dat'), 'rb') as fp:
+                    shitlist = pickle.load(fp)
+            except FileNotFoundError:
+            #No previous file, so create an empty list
+                shitlist = []
+            #Get list of users in voice channel with user
+            for shithead in message.author.voice.voice_channel.voice_members:
+                #Check if potential shithead is exempt
+                if shithead.id not in exempt_users:
+                    #Check if they are not on the shitlist
+                    on_list = False
+                    for existing_shit in shitlist:
+                        if shithead.name == existing_shit['name']:
+                            on_list = True
+                    if not on_list:
+                        #Put the shithead on the shitlist
+                        shitlist.append({
+                            'name': shithead.name,
+                            'reason': "Contributed to making sanicxx pout in the corner."
+                        })
+                        with open(os.path.join(sys.path[0], 'shitlist.dat'), 'wb') as fp:
+                            pickle.dump(shitlist, fp)
+                        msg = "{user}, I've added {shithead} to the shitlist for making you pout in the corner."
+                        await client.send_message(message.channel, msg.format(user=message.author.mention, shithead=shithead.name))
+            await client.move_member(message.author, get_channel("AFK"))
+        else:
+            log.error("User not in a voice channel")
+
     elif message.content.lower().startswith("!shitlist"):
         # Example: !shitlist
         # Example: !shitlist add @PeasAndClams#7812 cuck
