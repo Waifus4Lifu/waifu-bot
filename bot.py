@@ -97,7 +97,7 @@ async def on_ready():
     log.debug("ID: {0}".format(client.user.id))
 
     # Hardcoded server ID for Waifus4Lifu
-    server = client.get_server("378672710454214677")
+    server = client.get_server("160165796562075649")
     channels = dict()
     roles = dict()
 
