@@ -9,10 +9,12 @@
 0for keeps
 0favorites
 0fast and loose
+0god
+0AI simulator
 1it cool
 1around
 1mind games
-1quiddich
+1quidditch
 1outside
 1the lottery
 1house
