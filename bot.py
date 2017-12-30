@@ -212,6 +212,12 @@ async def on_message(message):
         await client.send_message(message.author, "You are not a Waifu. GTFO")
         return False
 
+    #Gift easter egg
+    if message.content.lower().startswith("!letsplayagame"):
+        if message.author.id == "194641296529424386":
+            msg = "https://youtu.be/PzooiJsQuoc"
+            await client.send_message(member, msg)
+        
     if message.content.lower().startswith("!games"):
         reply_msg = "The following games are currently supported:\n```"
         for game in valid_games:
