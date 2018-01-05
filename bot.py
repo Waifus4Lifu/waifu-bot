@@ -211,12 +211,6 @@ async def on_message(message):
     if not member:
         await client.send_message(message.author, "You are not a Waifu. GTFO")
         return False
-
-    #Gift easter egg
-    if message.content.lower().startswith("!letsplayagame"):
-        if message.author.id == "194641296529424386":
-            msg = "https://youtu.be/PzooiJsQuoc"
-            await client.send_message(member, msg)
         
     if message.content.lower().startswith("!games"):
         reply_msg = "The following games are currently supported:\n```"
@@ -649,7 +643,7 @@ async def on_message(message):
             msg = "No, <@221162619497611274> is hungry."
             await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'), filename=None, content=msg, tts=False)
 
-    #Rate limiter
+    #Shitposting rate limiter
     if message.channel.name == "nsfw_shitposting":
         global previous_author
         global message_count
@@ -678,5 +672,19 @@ async def on_message(message):
             log.info("[{0}] hit rate limit with {1} posts in [{2}] within {3} seconds".format(message.author, message_count, message.channel, delta))
             message_count = 0
             previous_timestamp = message.timestamp
+            
+    #LFG rate limiter
+    elif message.channel.name == "looking_for_group" and len(client.messages) > 0 and "@" not in message.content:
+        messages = reversed(client.messages)
+        count = 0
+        for previous_message in messages:
+            if previous_message.channel.name == "looking_for_group":
+                if "@" in previous_message.content:
+                    break
+                elif count > 8:
+                    msg = "Hey {0} and friends, let's move this conversation to {1}.\nThanks!".format(message.author.mention, get_channel("general_chat").mention)
+                    await client.send_message(message.channel, msg)
+                    break
+                count+=1
 
 client.run(args.token)
