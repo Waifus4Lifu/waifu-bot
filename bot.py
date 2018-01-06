@@ -118,6 +118,8 @@ async def on_ready():
 
 @client.event
 async def on_member_join(member):
+    if member.bot:
+        return
     await client.add_roles(member, get_role("noobs"))
     await asyncio.sleep(30)
     msg = "Hey {0}, I'm WaifuBot. I manage various things on the Waifus_4_Lifu discord server.\n".format(member.name)
