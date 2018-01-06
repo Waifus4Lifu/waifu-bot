@@ -143,7 +143,7 @@ async def on_member_join(member):
                 msg = "Yup. Thanks! granting access in {0}...".format(countdown)
                 await client.edit_message(countdown_message, new_content=msg)
                 await asyncio.sleep(1)
-            msg = "Acess Granted!"
+            msg = "Access Granted!"
             await client.edit_message(countdown_message, new_content=msg)
             await client.remove_roles(member, get_role("noobs"))
             msg = "Hey everyone, {0} just joined.\n\n{1}, please introduce yourself and let us know who invited you.\n\nThanks!".format(member.name, member.mention)
@@ -634,7 +634,57 @@ async def on_message(message):
                             reply_message += previous_message.content[i].upper()
                     await client.send_file(message.channel, os.path.join(sys.path[0], 'sponge.jpg'), filename=None, content=reply_message, tts=False)
                     return
-
+    
+    #Game code lottery
+    if message.content.lower().startswith("!lottery"):
+        await client.send_typing(message.channel)
+        await asyncio.sleep(1)
+        drawing_delay = 30
+        if not get_role("bot_testers") in member.roles:
+            msg = "Just what do you think you're doing? You're not authorized."
+            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'), filename=None, content=msg, tts=False)
+            return
+        msg = "Hey @everyone, {0} has initiated an indie game code lottery.\n"
+        msg+= "The game code drawing will be held in {1} minutes.\n"
+        msg+= "A winner will be drawn at random from those who **add a reaction to this post**.\n"
+        msg+= "You can react as many times as you want, only one entry will be counted.\n"
+        msg+= "Disclaimer: I believe these codes still work but make no guarantees. Good luck!"
+        lottery_post = await client.send_message(message.channel, msg.format(message.author.mention, drawing_delay))
+        end_time = time.time() + (drawing_delay * 60)
+        entrants = []
+        while time.time() < end_time:
+            seconds_left = end_time - time.time()
+            reaction = await client.wait_for_reaction(timeout=seconds_left)
+            if reaction != None:
+                if reaction.user not in entrants:
+                    entrants.append(reaction.user)
+        if len(entrants) == 0:
+            msg = "Nobody entered the drawing. Nobody wins."
+            await client.send_message(message.channel, msg)
+        else:
+            winner = random.choice(entrants)
+            msg = "Congratulations, {0}! You have won the lottery drawing. Check your DMs for your steam code.".format(winner.mention)
+            await client.send_message(message.channel, msg)
+            try:
+                codes = open(os.path.join(sys.path[0], 'codes.txt')).read().splitlines()
+                if len(codes) > 0:
+                    code = codes[0]
+                    codes.pop(0)
+                else:
+                    code = "\nError: Code not found. Please contact PeasAndClams for details."
+            except FileNotFoundError:
+                code = "\nError: Code not found. Please contact PeasAndClams for details."
+            msg = "Hey {0}, here is your steam code: {1}".format(winner.mention, code)
+            try:
+                await client.send_message(winner, msg)
+            except discord.errors.Forbidden:
+                msg = "{0}, {1} won the drawing but does not accept DMs. The prize code is: {3}".format(get_role("super_waifus").mention, winner.name, code)
+                await client.send_message(get_channel("super_waifu_chat"), msg)
+            codes_file = open(os.path.join(sys.path[0], 'codes.txt'), "w")
+            for code in codes:
+                codes_file.write(code + "\n")
+            codes_file.close()                
+                    
     #Did someone say hungry?
     lower = message.content.lower()
     if "m hungry" in lower or "s hungry" in lower or "e hungry" in lower or "y hungry" in lower:
