@@ -636,7 +636,7 @@ async def on_message(message):
                     return
     
     #Game code lottery
-    if message.content.lower().startswith("!lottery"):
+    elif message.content.lower().startswith("!lottery"):
         await client.send_typing(message.channel)
         await asyncio.sleep(1)
         drawing_delay = 30
