@@ -26,7 +26,8 @@ valid_games = [
     "GUARDIANS",
     "CIV",
     "JACKBOX",
-    "RAINBOW_SIX"
+    "RAINBOW_SIX",
+    "SQUIBS"
 ]
 
 #Rate limiter config
