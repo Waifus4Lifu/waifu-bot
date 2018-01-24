@@ -580,7 +580,8 @@ async def on_message(message):
 
     # Waifu Pink!
     elif message.content.lower().startswith("!color"):
-        await client.send_message(message.channel, "{user}, Waifu Pink uses hex code: `#f241af`, also known as Red: 242, Green: 65, Blue: 175")
+        msg = "{user}, Waifu Pink uses hex code: `#f241af`, also known as Red: 242, Green: 65, Blue: 175"
+        await client.send_message(message.channel, msg.format(user=member.mention))
 
     # Magic 8 Ball
     elif message.content.lower().startswith("!8ball"):
