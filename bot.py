@@ -580,7 +580,7 @@ async def on_message(message):
 
     # Waifu Pink!
     elif message.content.lower().startswith("!color"):
-        if message.author.id == 221162619497611274:
+        if message.author.id == "221162619497611274":
             msg = "{user}, you are not authorized to see in color."
         else:
             msg = "{user}, Waifu Pink uses hex code: `#f241af`, also known as Red: 242, Green: 65, Blue: 175"
