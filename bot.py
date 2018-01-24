@@ -214,7 +214,7 @@ async def on_message(message):
     if not member:
         await client.send_message(message.author, "You are not a Waifu. GTFO")
         return False
-        
+
     if message.content.lower().startswith("!games"):
         reply_msg = "The following games are currently supported:\n```"
         for game in valid_games:
@@ -408,6 +408,7 @@ async def on_message(message):
               "`!8ball` - Ask the magic 8 ball a question.\n" \
               "`!random` - Request a random number, chosen by fair dice roll.\n" \
               "`!sponge` - Mock previous post even if you’re not smart enough to be clever.\n" \
+              "`!color` - Get the hex and RGB values for Waifu Pink.\n" \
               "`!yeah`\n" \
               "`!shrug`\n" \
               "`!catfact`\n" \
@@ -577,6 +578,10 @@ async def on_message(message):
     elif message.content.lower().startswith("!shrug"):
         await client.send_message(message.channel, "¯\\_(ツ)_/¯")
 
+    # Waifu Pink!
+    elif message.content.lower().startswith("!color"):
+        await client.send_message(message.channel, "{user}, Waifu Pink uses hex code: `#f241af`, also known as Red: 242, Green: 65, Blue: 175")
+
     # Magic 8 Ball
     elif message.content.lower().startswith("!8ball"):
         phrases = [
@@ -637,7 +642,7 @@ async def on_message(message):
                             reply_message += previous_message.content[i].upper()
                     await client.send_file(message.channel, os.path.join(sys.path[0], 'sponge.jpg'), filename=None, content=reply_message, tts=False)
                     return
-    
+
     #Game code lottery
     elif message.content.lower().startswith("!lottery"):
         await client.send_typing(message.channel)
@@ -686,8 +691,8 @@ async def on_message(message):
             codes_file = open(os.path.join(sys.path[0], 'codes.txt'), "w")
             for code in codes:
                 codes_file.write(code + "\n")
-            codes_file.close()                
-                    
+            codes_file.close()
+
     #Did someone say hungry?
     lower = message.content.lower()
     if "m hungry" in lower or "s hungry" in lower or "e hungry" in lower or "y hungry" in lower:
@@ -725,7 +730,7 @@ async def on_message(message):
             log.info("[{0}] hit rate limit with {1} posts in [{2}] within {3} seconds".format(message.author, message_count, message.channel, delta))
             message_count = 0
             previous_timestamp = message.timestamp
-            
+
     #LFG rate limiter
     elif message.channel.name == "looking_for_group" and len(client.messages) > 0 and "@" not in message.content:
         messages = reversed(client.messages)
