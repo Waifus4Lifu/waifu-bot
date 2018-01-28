@@ -1,0 +1,10 @@
+discord:
+    token: DISCORD_TOKEN
+    server_id: 'DISCORD_SERVER_ID'
+twitch:
+    api_key: TWITCH_API_KEY
+    streamers:
+    - STREAMER_NAME
+    - STREAMER_NAME
+    - STREAMER_NAME
+    
