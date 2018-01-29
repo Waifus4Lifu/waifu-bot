@@ -336,6 +336,8 @@ async def on_message(message):
                     reply = "Hello {user}, you are now able to access {channel}. You fucking pervert.".format(user=member.mention, channel=get_channel("nsfw_shitposting").mention)
                 elif role.name == "creeps":
                     reply = "Ok {user}, you will now be notified in {channel} when a stream goes live. You're a piece of work.".format(user=member.mention, channel=get_channel("promote_a_stream").mention)
+                else:
+                    reply = "Ok {user}, you have been added to {role}.".format(user=member.mention, role=role)
                 await client.send_message(message.channel, reply)
 
         else:
@@ -377,6 +379,8 @@ async def on_message(message):
                         reply = "Alright {user}, I see how it is. {channel} is now off-limits to you.".format(user=member.mention, channel=get_channel("nsfw_shitposting").mention)
                     elif role == "creeps":
                         reply = "Ok {user}, you will no longer be notified of live streams.".format(user=member.mention)
+                    else:
+                        reply = "Ok {user}, you have been stripped of the {role} role. We all knew you wouldn't last.".format(user=member.name, role=role)
                     await client.send_message(message.channel, reply)
                     break
             else:
@@ -387,7 +391,7 @@ async def on_message(message):
         else:
             msg = "{user}, that's not a valid game, stop being stupid."
             await client.send_message(message.channel, msg.format(user=member.mention))
-            log.info("[{user}] requested to join invalid game: {role}".format(user=member.name, role=role))
+            log.info("[{user}] requested to join invalid game/role: {role}".format(user=member.name, role=role))
 
     elif message.content.lower().startswith("!invite"):
         # Check to see if the user has this role
