@@ -15,40 +15,12 @@ import aiohttp
 import datetime
 import yaml
 
-with open(os.path.join(sys.path[0], 'config.yaml'), "r") as f:
-    config = yaml.load(f)
-
-valid_games = [
-    "PUBG",
-    "OVERWATCH",
-    "QUAKE",
-    "ELITE",
-    "TITANFALL",
-    "DBD",
-    "ROCKET LEAGUE",
-    "MINECRAFT",
-    "GTA",
-    "GUARDIANS",
-    "CIV",
-    "JACKBOX",
-    "RAINBOW_SIX",
-    "SQUIBS"
-]
-
-valid_roles = [
-    "shitty_people",
-    "creeps"
-]
-
-#Rate limiter config
-message_limit = 3
-cooldown_seconds = 30
 #Rate limiter global variables
 message_count = 0
 previous_author = None
 previous_timestamp = None
 
-parser = argparse.ArgumentParser(description="Handle the #on_hand_volunteers channel.")
+parser = argparse.ArgumentParser(description="Handle the various automation functions for a discord server.")
 parser.add_argument("-v", "--verbose", dest="verbose", action="store_const",
                     const=True, default=False,
                     help="verbose output")
@@ -66,6 +38,24 @@ else:
     log.basicConfig(format="[%(asctime)s] [%(levelname)s] %(message)s", level=log.INFO, stream=sys.stdout)
 
 log.info("Started")
+
+with open(os.path.join(sys.path[0], 'config.yaml'), "r") as f:
+    config = yaml.load(f)
+
+# TODO: Validate that required entries exist
+
+#Rate limiter config
+try:
+    message_limit = config['rate_limit']['message_limit']
+except KeyError:
+    # Defaul to 3
+    message_limit = 3
+
+try:
+    cooldown_seconds = config['rate_limit']['cooldown_seconds']
+except KeyError:
+    # Defaul to 30
+    cooldown_seconds = 30
 
 client = discord.Client()
 
@@ -258,7 +248,7 @@ async def on_message(message):
 
     if message.content.lower().startswith("!games"):
         reply_msg = "The following games are currently supported:\n```"
-        for game in valid_games:
+        for game in config['valid_games']:
             players = get_members_by_role(game)
 
             reply_msg += ("{0} ({1} Players)\n".format(game.ljust(14), len(players)))
@@ -278,7 +268,7 @@ async def on_message(message):
 
         game = message_parts[1].upper()
 
-        if game in valid_games:
+        if game in config['valid_games']:
             log.info("[{user}] Requested the list of players: {game}".format(user=member.name, game=game))
 
             players = get_members_by_role(game)
@@ -309,7 +299,7 @@ async def on_message(message):
         if role == "promote_a_stream":
             role = "creeps"
 
-        if role.upper() in valid_games or role.lower() in valid_roles:
+        if role.upper() in config['valid_games'] or role.lower() in config['valid_roles']:
             log.info("[{user}] requested to join game/role: {role}".format(user=member.name, role=role))
 
             # Check to see if the user already has this role
@@ -327,7 +317,7 @@ async def on_message(message):
                 # They didn't have the role, so add it
                 await client.add_roles(member, role)
                 log.info("[{0}] Role added".format(member))
-                if role.name in valid_games:
+                if role.name in config['valid_games']:
                     reply = "Hello {user}, you are now signed up for {role}. People can tag you instead of EVERYONE by using `@{game}`.\n" \
                         "You can use `!leave {game}` to be removed from the list at any time.".format(user=member.mention, role=role)
                     notification_msg = "{user} has signed up to play {role}! There are currently {players} players available."
@@ -362,7 +352,7 @@ async def on_message(message):
         if role == "promote_a_stream":
             role = "creeps"
 
-        if role.upper() in valid_games or role.lower() in valid_roles:
+        if role.upper() in config['valid_games'] or role.lower() in config['valid_roles']:
             log.info("[{user}] requested to leave game/role: {role}".format(user=member.name, role=role))
 
             # Check to see if the user has this role
@@ -371,7 +361,7 @@ async def on_message(message):
                     # They did, so remove the role
                     await client.remove_roles(member, author_role)
                     log.info("[{0}] Role removed".format(member))
-                    if role in valid_games:
+                    if role in config['valid_games']:
                         reply = "Hello {user}, you have been removed from list for {role}, to re-join send `!join {role}` in any channel.".format(user=member.mention, role=role)
                         notification_msg = "{user} no longer wants to play {role} like a bitch. There are currently {players} players available."
                         await client.send_message(get_channel("looking_for_group"), notification_msg.format(user=member.mention, role=role, players=len(get_members_by_role(role))))

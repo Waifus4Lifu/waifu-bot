@@ -1,10 +1,30 @@
 discord:
     token: DISCORD_TOKEN
     server_id: 'DISCORD_SERVER_ID'
+rate_limit:
+    message_limit: 3
+    cooldown_seconds: 30
+valid_games:
+    - PUBG
+    - OVERWATCH
+    - QUAKE
+    - ELITE
+    - TITANFALL
+    - DBD
+    - ROCKET LEAGUE
+    - MINECRAFT
+    - GTA
+    - GUARDIANS
+    - CIV
+    - JACKBOX
+    - RAINBOW_SIX
+    - SQUIBS
+valid_roles:
+    - shitty_people
+    - creeps
 twitch:
     api_key: TWITCH_API_KEY
     streamers:
     - STREAMER_NAME
     - STREAMER_NAME
     - STREAMER_NAME
-    
