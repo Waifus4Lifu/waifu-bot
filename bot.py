@@ -56,6 +56,12 @@ try:
 except KeyError:
     # Defaul to 30
     cooldown_seconds = 30
+    
+#List of live streams
+live = {}
+streamers = config['twitch']['streamers']
+for streamer in streamers:
+    live[streamer] = False
 
 client = discord.Client()
 
@@ -130,23 +136,23 @@ async def monitor_streams():
                     async with session.get(url) as resp:
                         data = await resp.json()
                 if resp.status == 200:
-                    if data['stream'] != None:
-                        if data['stream']['stream_type'] == "live":
-                            created_at = data['stream']['created_at']
-                            date_time = datetime.datetime.strptime(created_at, '%Y-%m-%dT%H:%M:%SZ')
-                            delta = datetime.datetime.utcnow() - date_time
-                            if delta.total_seconds() < 600:
-                                game = data['stream']['game']
-                                title="Live stream detected!"
-                                url="https://www.twitch.tv/{}".format(streamer)
-                                description="Hey {}, [{}]({}) is streaming {}.".format(get_role("creeps").mention, streamer, url, game)
-                                thumbnail_url = data['stream']['channel']['logo']
-                                image_url = data['stream']['preview']['large']
-                                embed = discord.Embed(title=title, description=description, url=url, color=0xce43a6)
-                                embed.set_thumbnail(url=thumbnail_url)
-                                embed.set_image(url=image_url)
-                                await client.send_message(get_channel("promote_a_stream"), embed=embed)
-        await asyncio.sleep(600)
+                    if data['stream'] == None:
+                        live[streamer] = False
+                    elif data['stream']['stream_type'] == "live":
+                        if not live[streamer]:
+                            live[streamer] = True
+                            game = data['stream']['game']
+                            title="Live stream detected:"
+                            url="https://www.twitch.tv/{}".format(streamer)
+                            msg = "Hey {}!".format(get_role("creeps").mention)
+                            description="[{}]({}) is streaming {}.".format(streamer, url, game)
+                            thumbnail_url = data['stream']['channel']['logo']
+                            image_url = data['stream']['preview']['large']
+                            embed = discord.Embed(title=title, description=description, url=url, color=0xce43a6)
+                            embed.set_thumbnail(url=thumbnail_url)
+                            #embed.set_image(url=image_url)
+                            await client.send_message(get_channel("promote_a_stream"), msg, embed=embed)
+        await asyncio.sleep(30)
 
 @client.event
 async def on_member_join(member):
