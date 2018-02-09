@@ -66,6 +66,14 @@ for streamer in streamers:
 
 client = discord.Client()
 
+def get_authorized_users():
+    return [
+        "115183069555589125", # aceat64
+        "221162619497611274", # HungryNinja
+        "194641296529424386", # canibalcrab
+        "130586766754316288"  # PeasAndClams
+    ]
+
 def get_games():
     try:
         with open(os.path.join(sys.path[0], 'games.dat'), 'rb') as fp:
@@ -228,15 +236,10 @@ async def on_message(message):
     if "-WaifuBot" in message.content:
         if message.channel.is_private:
             return
-        authorized_users = [
-            "115183069555589125", # aceat64
-            "221162619497611274", # HungryNinja
-            "194641296529424386", # canibalcrab
-            "130586766754316288"  # PeasAndClams
-        ]
+
         #Delay for member-side GUI update
         asyncio.sleep(1)
-        if message.author.id not in authorized_users:
+        if message.author.id not in get_authorized_users():
             await client.delete_message(message)
             return
         if len(message.attachments) == 0:
@@ -266,13 +269,7 @@ async def on_message(message):
         return False
 
     if message.content.lower().startswith("!addgame"):
-        authorized_users = [
-            "115183069555589125", # aceat64
-            "221162619497611274", # HungryNinja
-            "194641296529424386", # canibalcrab
-            "130586766754316288"  # PeasAndClams
-        ]
-        if message.author.id not in authorized_users:
+        if message.author.id not in get_authorized_users():
             msg = "{user}, you are not authorized to do that!"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
@@ -306,13 +303,7 @@ async def on_message(message):
         await client.send_message(message.channel, msg.format(user=member.mention, game=game))
 
     if message.content.lower().startswith("!addrole"):
-        authorized_users = [
-            "115183069555589125", # aceat64
-            "221162619497611274", # HungryNinja
-            "194641296529424386", # canibalcrab
-            "130586766754316288"  # PeasAndClams
-        ]
-        if message.author.id not in authorized_users:
+        if message.author.id not in get_authorized_users():
             msg = "{user}, you are not authorized to do that!"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
@@ -346,13 +337,7 @@ async def on_message(message):
         await client.send_message(message.channel, msg.format(user=member.mention, role=role))
 
     if message.content.lower().startswith("!removegame"):
-        authorized_users = [
-            "115183069555589125", # aceat64
-            "221162619497611274", # HungryNinja
-            "194641296529424386", # canibalcrab
-            "130586766754316288"  # PeasAndClams
-        ]
-        if message.author.id not in authorized_users:
+        if message.author.id not in get_authorized_users():
             msg = "{user}, you are not authorized to do that!"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
@@ -386,13 +371,7 @@ async def on_message(message):
             return
 
     if message.content.lower().startswith("!removerole"):
-        authorized_users = [
-            "115183069555589125", # aceat64
-            "221162619497611274", # HungryNinja
-            "194641296529424386", # canibalcrab
-            "130586766754316288"  # PeasAndClams
-        ]
-        if message.author.id not in authorized_users:
+        if message.author.id not in get_authorized_users():
             msg = "{user}, you are not authorized to do that!"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
