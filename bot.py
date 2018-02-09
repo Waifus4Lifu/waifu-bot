@@ -600,7 +600,8 @@ async def on_message(message):
         msg = "Fuck you, I'm a bot for managing various automatic rules and features of the Waifus_4_Lifu Discord chat server.\n\n" \
               "I understand the following commands:\n\n" \
               "`!help` or `!wtf` - This help message.\n" \
-              "`!games` - Show a list of supported games.\n" \
+              "`!games` - Show a list of games you can join for LFG notifications.\n" \
+              "`!roles` - Show a list of roles/groups you can join.\n" \
               "`!players` - Who is available to play a game. Example: `!players PUBG`\n" \
               "`!join` - Add yourself to a role or the list of people who want to play a game. Example: `!join PUBG`\n" \
               "`!leave` - Remove yourself from a role or the list of people who want to play a game.\n" \
