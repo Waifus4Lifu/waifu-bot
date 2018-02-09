@@ -56,14 +56,29 @@ try:
 except KeyError:
     # Defaul to 30
     cooldown_seconds = 30
-    
+
 #List of live streams
 live = {}
+twitch_api_key = config['twitch']['api_key']
 streamers = config['twitch']['streamers']
 for streamer in streamers:
     live[streamer] = False
 
 client = discord.Client()
+
+def get_games():
+    try:
+        with open(os.path.join(sys.path[0], 'games.dat'), 'rb') as fp:
+            return pickle.load(fp)
+    except FileNotFoundError:
+        return False
+
+def get_roles():
+    try:
+        with open(os.path.join(sys.path[0], 'roles.dat'), 'rb') as fp:
+            return pickle.load(fp)
+    except FileNotFoundError:
+        return False
 
 def get_channel(requested_channel):
     for channel in server.channels:
@@ -127,8 +142,6 @@ async def change_status():
 #Every 10 min, check if a streamer in the config file began streaming within the last 10 min
 @asyncio.coroutine
 async def monitor_streams():
-    twitch_api_key = config['twitch']['api_key']
-    streamers = config['twitch']['streamers']
     while True:
         for streamer in streamers:
                 url = "https://api.twitch.tv/kraken/streams/{}?client_id={}".format(streamer, twitch_api_key)
@@ -252,13 +265,188 @@ async def on_message(message):
         await client.send_message(message.author, "You are not a Waifu. GTFO")
         return False
 
-    if message.content.lower().startswith("!games"):
-        reply_msg = "The following games are currently supported:\n```"
-        for game in config['valid_games']:
-            players = get_members_by_role(game)
+    if message.content.lower().startswith("!addgame"):
+        authorized_users = [
+            "115183069555589125", # aceat64
+            "221162619497611274", # HungryNinja
+            "194641296529424386", # canibalcrab
+            "130586766754316288"  # PeasAndClams
+        ]
+        if message.author.id not in authorized_users:
+            msg = "{user}, you are not authorized to do that!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
 
-            reply_msg += ("{0} ({1} Players)\n".format(game.ljust(14), len(players)))
-        reply_msg += "```"
+        message_parts = message.content.split(' ', 1)
+
+        if len(message_parts) == 1:
+            msg = "{user}, you didn't specify a game, are you retarded?"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        game = message_parts[1].upper()
+
+        # Verify that the role exists and is all caps
+        if not get_role(game):
+            msg = "{user}, there's no role for this game. Make sure the role exists and is all caps with no spaces, you moron."
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        games = get_games()
+        if not games:
+            games = []
+
+        # Add the role to the savefile
+        games.append(game)
+
+        with open(os.path.join(sys.path[0], 'games.dat'), 'wb') as fp:
+            pickle.dump(games, fp)
+
+        msg = "{user}, I have added {game} to the list of games."
+        await client.send_message(message.channel, msg.format(user=member.mention, game=game))
+
+    if message.content.lower().startswith("!addrole"):
+        authorized_users = [
+            "115183069555589125", # aceat64
+            "221162619497611274", # HungryNinja
+            "194641296529424386", # canibalcrab
+            "130586766754316288"  # PeasAndClams
+        ]
+        if message.author.id not in authorized_users:
+            msg = "{user}, you are not authorized to do that!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        message_parts = message.content.split(' ', 1)
+
+        if len(message_parts) == 1:
+            msg = "{user}, you didn't specify a role, are you retarded?"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        role = message_parts[1].lower()
+
+        # Verify that the role exists and is all caps
+        if not get_role(role):
+            msg = "{user}, there's no role for this. Make sure the role exists and is all lower case with no spaces, you moron."
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        roles = get_roles()
+        if not roles:
+            roles = []
+
+        # Add the role to the savefile
+        roles.append(role)
+
+        with open(os.path.join(sys.path[0], 'roles.dat'), 'wb') as fp:
+            pickle.dump(roles, fp)
+
+        msg = "{user}, I have added {role} to the list of roles."
+        await client.send_message(message.channel, msg.format(user=member.mention, role=role))
+
+    if message.content.lower().startswith("!removegame"):
+        authorized_users = [
+            "115183069555589125", # aceat64
+            "221162619497611274", # HungryNinja
+            "194641296529424386", # canibalcrab
+            "130586766754316288"  # PeasAndClams
+        ]
+        if message.author.id not in authorized_users:
+            msg = "{user}, you are not authorized to do that!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        message_parts = message.content.split(' ', 1)
+
+        if len(message_parts) == 1:
+            msg = "{user}, you didn't specify a game, are you retarded?"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        game = message_parts[1].upper()
+
+        # Check if the role is in the savefile, if it is delete it
+        games = get_games()
+        if not games:
+            msg = "{user}, there are no games in the savefile."
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        if game in games:
+            # remove game from list and update savefile
+            games.remove(game)
+            with open(os.path.join(sys.path[0], 'games.dat'), 'wb') as fp:
+                pickle.dump(games, fp)
+            msg = "{user}, I have removed {game} from the list of games."
+            await client.send_message(message.channel, msg.format(user=member.mention, game=game))
+        else:
+            msg = "{user}, that game isn't listed. How'd you fuck that up?"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+    if message.content.lower().startswith("!removerole"):
+        authorized_users = [
+            "115183069555589125", # aceat64
+            "221162619497611274", # HungryNinja
+            "194641296529424386", # canibalcrab
+            "130586766754316288"  # PeasAndClams
+        ]
+        if message.author.id not in authorized_users:
+            msg = "{user}, you are not authorized to do that!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        message_parts = message.content.split(' ', 1)
+
+        if len(message_parts) == 1:
+            msg = "{user}, you didn't specify a role, are you retarded?"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        role = message_parts[1].lower()
+
+        # Check if the role is in the savefile, if it is delete it
+        roles = get_roles()
+        if not roles:
+            msg = "{user}, there are no roles in the savefile."
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        if role in roles:
+            # remove role from list and update savefile
+            roles.remove(role)
+            with open(os.path.join(sys.path[0], 'roles.dat'), 'wb') as fp:
+                pickle.dump(roles, fp)
+            msg = "{user}, I have removed {role} from the list of roles."
+            await client.send_message(message.channel, msg.format(user=member.mention, role=role))
+        else:
+            msg = "{user}, that role isn't listed. How'd you fuck that up?"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+    if message.content.lower().startswith("!games"):
+        if get_games():
+            reply_msg = "The following games are currently supported:\n```"
+            for game in get_games():
+                players = get_members_by_role(game)
+
+                reply_msg += ("{0} ({1} Players)\n".format(game.ljust(14), len(players)))
+            reply_msg += "```"
+        else:
+            reply_msg = "There are no games in the savefile!"
+        await client.send_message(message.channel, reply_msg)
+
+    if message.content.lower().startswith("!roles"):
+        if get_roles():
+            reply_msg = "The following roles are currently supported:\n```"
+            for role in get_roles():
+                players = get_members_by_role(role)
+
+                reply_msg += ("{0} ({1} members)\n".format(role.ljust(14), len(players)))
+            reply_msg += "```"
+        else:
+            reply_msg = "There are no roles in the savefile!"
         await client.send_message(message.channel, reply_msg)
 
     elif message.content.lower().startswith("!players"):
@@ -274,7 +462,7 @@ async def on_message(message):
 
         game = message_parts[1].upper()
 
-        if game in config['valid_games']:
+        if game in get_games():
             log.info("[{user}] Requested the list of players: {game}".format(user=member.name, game=game))
 
             players = get_members_by_role(game)
@@ -286,7 +474,7 @@ async def on_message(message):
         else:
             msg = "{user}, that's not a valid game, stop being stupid."
             await client.send_message(message.channel, msg.format(user=member.mention))
-            log.info("[{user}] requested to join invalid game: {game}".format(user=member.name, game=game))
+            log.info("[{user}] requested to list invalid game: {game}".format(user=member.name, game=game))
 
     # Add user to a game/role
     elif message.content.lower().startswith("!join"):
@@ -300,46 +488,51 @@ async def on_message(message):
 
         role = message_parts[1]
         #Legacy support for old geezers
-        if role == "shitposting":
+        if role.lower() == "shitposting":
             role = "shitty_people"
-        if role == "promote_a_stream":
+        if role.lower() == "promote_a_stream":
             role = "creeps"
 
-        if role.upper() in config['valid_games'] or role.lower() in config['valid_roles']:
-            log.info("[{user}] requested to join game/role: {role}".format(user=member.name, role=role))
-
-            # Check to see if the user already has this role
-            for author_role in member.roles:
-                if author_role.name == role:
-                    # They did, let them know they already had it
-                    msg = "{user} you are already a member of {role}."
-                    await client.send_message(message.channel, msg.format(user=member.mention, role=role))
-                    log.info("[{0}] Role already assigned".format(member))
-                    break
-            else:
-                role = get_role(role)
-                if not role:
-                    return False
-                # They didn't have the role, so add it
-                await client.add_roles(member, role)
-                log.info("[{0}] Role added".format(member))
-                if role.name in config['valid_games']:
-                    reply = "Hello {user}, you are now signed up for {role}. People can tag you instead of EVERYONE by using `@{game}`.\n" \
-                        "You can use `!leave {game}` to be removed from the list at any time.".format(user=member.mention, role=role)
-                    notification_msg = "{user} has signed up to play {role}! There are currently {players} players available."
-                    await client.send_message(get_channel("looking_for_group"), notification_msg.format(user=member.mention, role=role, players=len(get_members_by_role(role))))
-                elif role.name == "shitty_people":
-                    reply = "Hello {user}, you are now able to access {channel}. You fucking pervert.".format(user=member.mention, channel=get_channel("nsfw_shitposting").mention)
-                elif role.name == "creeps":
-                    reply = "Ok {user}, you will now be notified in {channel} when a stream goes live. You're a piece of work.".format(user=member.mention, channel=get_channel("promote_a_stream").mention)
-                else:
-                    reply = "Ok {user}, you have been added to {role}.".format(user=member.mention, role=role)
-                await client.send_message(message.channel, reply)
-
+        if role.upper() in get_games():
+            role = role.upper()
+        elif role.lower() in get_roles():
+            role = role.lower()
         else:
             msg = "{user}, that's not a valid game/role, stop being stupid."
             await client.send_message(message.channel, msg.format(user=member.mention))
             log.info("[{user}] requested to join invalid game/role: {role}".format(user=member.name, role=role))
+
+        log.info("[{user}] requested to join game/role: {role}".format(user=member.name, role=role))
+
+        # Check to see if the user already has this role
+        for author_role in member.roles:
+            if author_role.name == role:
+                # They did, let them know they already had it
+                msg = "{user} you are already a member of {role}."
+                await client.send_message(message.channel, msg.format(user=member.mention, role=role))
+                log.info("[{0}] Role already assigned".format(member))
+                break
+        else:
+            role = get_role(role)
+            if not role:
+                return False
+
+            # They didn't have the role, so add it
+            await client.add_roles(member, role)
+            log.info("[{0}] Role added".format(member))
+
+            if role.name in get_games():
+                reply = "Hello {user}, you are now signed up for {role}. People can tag you instead of EVERYONE by using `@{role}`.\n" \
+                    "You can use `!leave {role}` to be removed from the list at any time.".format(user=member.mention, role=role.name)
+                notification_msg = "{user} has signed up to play {role}! There are currently {players} players available."
+                await client.send_message(get_channel("looking_for_group"), notification_msg.format(user=member.mention, role=role, players=len(get_members_by_role(role.name))))
+            elif role.name == "shitty_people":
+                reply = "Hello {user}, you are now able to access {channel}. You fucking pervert.".format(user=member.mention, channel=get_channel("nsfw_shitposting").mention)
+            elif role.name == "creeps":
+                reply = "Ok {user}, you will now be notified in {channel} when a stream goes live. You're a piece of work.".format(user=member.mention, channel=get_channel("promote_a_stream").mention)
+            else:
+                reply = "Ok {user}, you have been added to {role}.".format(user=member.mention, role=role)
+            await client.send_message(message.channel, reply)
 
     # Remove user from a game/role
     elif message.content.lower().startswith("!leave"):
@@ -353,41 +546,44 @@ async def on_message(message):
 
         role = message_parts[1]
         #Legacy support for old geezers
-        if role == "shitposting":
+        if role.lower() == "shitposting":
             role = "shitty_people"
-        if role == "promote_a_stream":
+        if role.lower() == "promote_a_stream":
             role = "creeps"
 
-        if role.upper() in config['valid_games'] or role.lower() in config['valid_roles']:
-            log.info("[{user}] requested to leave game/role: {role}".format(user=member.name, role=role))
-
-            # Check to see if the user has this role
-            for author_role in member.roles:
-                if author_role.name == role:
-                    # They did, so remove the role
-                    await client.remove_roles(member, author_role)
-                    log.info("[{0}] Role removed".format(member))
-                    if role in config['valid_games']:
-                        reply = "Hello {user}, you have been removed from list for {role}, to re-join send `!join {role}` in any channel.".format(user=member.mention, role=role)
-                        notification_msg = "{user} no longer wants to play {role} like a bitch. There are currently {players} players available."
-                        await client.send_message(get_channel("looking_for_group"), notification_msg.format(user=member.mention, role=role, players=len(get_members_by_role(role))))
-                    elif role == "shitty_people":
-                        reply = "Alright {user}, I see how it is. {channel} is now off-limits to you.".format(user=member.mention, channel=get_channel("nsfw_shitposting").mention)
-                    elif role == "creeps":
-                        reply = "Ok {user}, you will no longer be notified of live streams.".format(user=member.mention)
-                    else:
-                        reply = "Ok {user}, you have been stripped of the {role} role. We all knew you wouldn't last.".format(user=member.name, role=role)
-                    await client.send_message(message.channel, reply)
-                    break
-            else:
-                # They didn't have the role, do nothing
-                msg = "{user}, you have already unsubscribed from the list for {role}"
-                await client.send_message(message.channel, msg.format(user=member.mention, role=role))
-                log.info("[{0}] Role was already not assigned".format(member))
+        if role.upper() in get_games():
+            role = role.upper()
+        elif role.lower() in get_roles():
+            role = role.lower()
         else:
-            msg = "{user}, that's not a valid game, stop being stupid."
+            msg = "{user}, that's not a valid game/role, stop being stupid."
             await client.send_message(message.channel, msg.format(user=member.mention))
             log.info("[{user}] requested to join invalid game/role: {role}".format(user=member.name, role=role))
+
+        log.info("[{user}] requested to leave game/role: {role}".format(user=member.name, role=role))
+
+        # Check to see if the user has this role
+        for author_role in member.roles:
+            if author_role.name == role:
+                # They did, so remove the role
+                await client.remove_roles(member, author_role)
+                log.info("[{0}] Role removed".format(member))
+                if role in get_games():
+                    reply = "Hello {user}, you have been removed from list for {role}, to re-join send `!join {role}` in any channel.".format(user=member.mention, role=role)
+                    notification_msg = "{user} no longer wants to play {role} like a bitch. There are currently {players} players available."
+                    await client.send_message(get_channel("looking_for_group"), notification_msg.format(user=member.mention, role=role, players=len(get_members_by_role(role))))
+                elif role == "shitty_people":
+                    reply = "Alright {user}, I see how it is. {channel} is now off-limits to you.".format(user=member.mention, channel=get_channel("nsfw_shitposting").mention)
+                elif role == "creeps":
+                    reply = "Ok {user}, you will no longer be notified of live streams.".format(user=member.mention)
+                else:
+                    reply = "Ok {user}, you have been stripped of the {role} role. We all knew you wouldn't last.".format(user=member.name, role=role)
+                await client.send_message(message.channel, reply)
+        else:
+            # They didn't have the role, do nothing
+            msg = "{user}, you have already unsubscribed from the list for {role}"
+            await client.send_message(message.channel, msg.format(user=member.mention, role=role))
+            log.info("[{0}] Role was already not assigned".format(member))
 
     elif message.content.lower().startswith("!invite"):
         # Check to see if the user has this role
