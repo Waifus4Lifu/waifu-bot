@@ -711,6 +711,8 @@ async def on_message(message):
             for shithead in shitlist:
                 if shithead['name'] == 'aceat64' and random.randint(1, 3) == 1:
                     reply_msg += ("aceat64: Too god damn awesome for his own good\n")
+                elif shithead['name'] == 'canibalcrab':
+                    reply_msg += ("canibalcrab: drawin' dicks all over the shitlist 8=====D 8==D 8============D")    
                 elif not shithead['reason']:
                     reply_msg += ("{0}\n".format(shithead['name']))
                 else:
