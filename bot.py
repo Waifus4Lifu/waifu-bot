@@ -119,7 +119,6 @@ async def on_ready():
 
     loop = asyncio.get_event_loop()
     status_task = loop.create_task(change_status())
-    stream_task = loop.create_task(monitor_streams())
 
 #Update the 'playing' status message every 5-10 minutes from playing.txt
 @asyncio.coroutine
