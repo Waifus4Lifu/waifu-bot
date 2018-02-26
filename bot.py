@@ -809,7 +809,7 @@ async def on_message(message):
         cat_fact = random.choice(cat_facts)
         if random.randint(1, 4) == 1:
             cat_fact = cat_fact.replace('cat', 'catgirl')
-        await client.send_message(message.channel, random.choice(cat_facts))
+        await client.send_message(message.channel, cat_fact)
 
     # Let me google that for you
     elif message.content.lower().startswith("!google"):
