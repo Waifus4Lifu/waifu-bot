@@ -675,6 +675,8 @@ async def on_message(message):
             for shithead in shitlist:
                 if shithead['name'] == 'aceat64' and random.randint(1, 3) == 1:
                     reply_msg += ("aceat64: Too god damn awesome for his own good\n")
+                elif shithead['name'] == 'canibalcrab' and random.randint(1, 2) == 1:
+                    reply_msg += ("canibalcrab: drawin' dicks all over the shitlist 8=====D 8==D 8============D")
                 elif not shithead['reason']:
                     reply_msg += ("{0}\n".format(shithead['name']))
                 else:
@@ -804,6 +806,8 @@ async def on_message(message):
 
     elif message.content.lower().startswith("!catfact"):
         cat_facts = open(os.path.join(sys.path[0], 'cat_facts.txt')).read().splitlines()
+        if random.randint(1, 4) == 1:
+            cat_facts = cat_facts.replace('cat', 'catgirl')
         await client.send_message(message.channel, random.choice(cat_facts))
 
     # Let me google that for you
