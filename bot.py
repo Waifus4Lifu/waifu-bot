@@ -806,8 +806,9 @@ async def on_message(message):
 
     elif message.content.lower().startswith("!catfact"):
         cat_facts = open(os.path.join(sys.path[0], 'cat_facts.txt')).read().splitlines()
+        cat_fact = random.choice(cat_facts)
         if random.randint(1, 4) == 1:
-            cat_facts = cat_facts.replace('cat', 'catgirl')
+            cat_fact = cat_fact.replace('cat', 'catgirl')
         await client.send_message(message.channel, random.choice(cat_facts))
 
     # Let me google that for you
