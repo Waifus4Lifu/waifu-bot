@@ -4,9 +4,3 @@ discord:
 rate_limit:
     message_limit: 3
     cooldown_seconds: 30
-twitch:
-    api_key: TWITCH_API_KEY
-    streamers:
-    - STREAMER_NAME
-    - STREAMER_NAME
-    - STREAMER_NAME
