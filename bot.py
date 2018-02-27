@@ -57,13 +57,6 @@ except KeyError:
     # Defaul to 30
     cooldown_seconds = 30
 
-#List of live streams
-live = {}
-twitch_api_key = config['twitch']['api_key']
-streamers = config['twitch']['streamers']
-for streamer in streamers:
-    live[streamer] = False
-
 client = discord.Client()
 
 def is_super_waifu(member):
@@ -126,7 +119,6 @@ async def on_ready():
 
     loop = asyncio.get_event_loop()
     status_task = loop.create_task(change_status())
-    stream_task = loop.create_task(monitor_streams())
 
 #Update the 'playing' status message every 5-10 minutes from playing.txt
 @asyncio.coroutine
@@ -142,34 +134,6 @@ async def change_status():
             status = discord.Status.dnd
         await client.change_presence(game=discord.Game(name=playing[1:]), status=status)
         await asyncio.sleep(random.randint(300, 600))
-
-#Every 10 min, check if a streamer in the config file began streaming within the last 10 min
-@asyncio.coroutine
-async def monitor_streams():
-    while True:
-        for streamer in streamers:
-                url = "https://api.twitch.tv/kraken/streams/{}?client_id={}".format(streamer, twitch_api_key)
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(url) as resp:
-                        data = await resp.json()
-                if resp.status == 200:
-                    if data['stream'] == None:
-                        live[streamer] = False
-                    elif data['stream']['stream_type'] == "live":
-                        if not live[streamer]:
-                            live[streamer] = True
-                            game = data['stream']['game']
-                            title="Live stream detected:"
-                            url="https://www.twitch.tv/{}".format(streamer)
-                            msg = "Hey {}!".format(get_role("creeps").mention)
-                            description="[{}]({}) is streaming {}.".format(streamer, url, game)
-                            thumbnail_url = data['stream']['channel']['logo']
-                            image_url = data['stream']['preview']['large']
-                            embed = discord.Embed(title=title, description=description, url=url, color=0xce43a6)
-                            embed.set_thumbnail(url=thumbnail_url)
-                            #embed.set_image(url=image_url)
-                            await client.send_message(get_channel("promote_a_stream"), msg, embed=embed)
-        await asyncio.sleep(30)
 
 @client.event
 async def on_member_join(member):
@@ -711,6 +675,8 @@ async def on_message(message):
             for shithead in shitlist:
                 if shithead['name'] == 'aceat64' and random.randint(1, 3) == 1:
                     reply_msg += ("aceat64: Too god damn awesome for his own good\n")
+                elif shithead['name'] == 'canibalcrab' and random.randint(1, 2) == 1:
+                    reply_msg += ("canibalcrab: drawin' dicks all over the shitlist 8=====D 8==D 8============D")
                 elif not shithead['reason']:
                     reply_msg += ("{0}\n".format(shithead['name']))
                 else:
@@ -840,7 +806,10 @@ async def on_message(message):
 
     elif message.content.lower().startswith("!catfact"):
         cat_facts = open(os.path.join(sys.path[0], 'cat_facts.txt')).read().splitlines()
-        await client.send_message(message.channel, random.choice(cat_facts))
+        cat_fact = random.choice(cat_facts)
+        if random.randint(1, 4) == 1:
+            cat_fact = cat_fact.replace('cat', 'catgirl')
+        await client.send_message(message.channel, cat_fact)
 
     # Let me google that for you
     elif message.content.lower().startswith("!google"):
