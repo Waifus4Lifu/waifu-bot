@@ -134,6 +134,15 @@ async def change_status():
             status = discord.Status.dnd
         await client.change_presence(game=discord.Game(name=playing[1:]), status=status)
         await asyncio.sleep(random.randint(300, 600))
+        
+#Post message in promote_a_stream when a member starts streaming
+@client.event
+async def on_member_update(before, after):
+    if before.game != after.game:
+        if after.game != None:
+            if after.game.type == 1:
+                msg = "Hey {}, {} is streaming {}!\n{}".format(get_role("creeps").mention, after.name, after.game.name, after.game.url)
+                await client.send_message(get_channel("promote_a_stream"), msg)
 
 @client.event
 async def on_member_join(member):
