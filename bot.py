@@ -341,7 +341,8 @@ async def on_message(message):
         else:
             msg = "{user}, that game isn't listed. How'd you fuck that up?"
             await client.send_message(message.channel, msg.format(user=member.mention))
-            return
+
+        return
 
     if message.content.lower().startswith("!removerole"):
         if not is_super_waifu(member):
@@ -376,7 +377,8 @@ async def on_message(message):
         else:
             msg = "{user}, that role isn't listed. How'd you fuck that up?"
             await client.send_message(message.channel, msg.format(user=member.mention))
-            return
+
+        return
 
     if message.content.lower().startswith("!games"):
         if get_games():
@@ -389,6 +391,7 @@ async def on_message(message):
         else:
             reply_msg = "There are no games in the savefile!"
         await client.send_message(message.channel, reply_msg)
+        return
 
     if message.content.lower().startswith("!roles"):
         if get_roles():
@@ -401,6 +404,7 @@ async def on_message(message):
         else:
             reply_msg = "There are no roles in the savefile!"
         await client.send_message(message.channel, reply_msg)
+        return
 
     elif message.content.lower().startswith("!players"):
         log.info("[{0}] Requested a list of players".format(member.name))
@@ -428,6 +432,7 @@ async def on_message(message):
             msg = "{user}, that's not a valid game, stop being stupid."
             await client.send_message(message.channel, msg.format(user=member.mention))
             log.info("[{user}] requested to list invalid game: {game}".format(user=member.name, game=game))
+        return
 
     # Add user to a game/role
     elif message.content.lower().startswith("!join"):
@@ -454,6 +459,7 @@ async def on_message(message):
             msg = "{user}, that's not a valid game/role, stop being stupid."
             await client.send_message(message.channel, msg.format(user=member.mention))
             log.info("[{user}] requested to join invalid game/role: {role}".format(user=member.name, role=role))
+            return
 
         log.info("[{user}] requested to join game/role: {role}".format(user=member.name, role=role))
 
@@ -512,6 +518,7 @@ async def on_message(message):
             msg = "{user}, that's not a valid game/role, stop being stupid."
             await client.send_message(message.channel, msg.format(user=member.mention))
             log.info("[{user}] requested to join invalid game/role: {role}".format(user=member.name, role=role))
+            return
 
         log.info("[{user}] requested to leave game/role: {role}".format(user=member.name, role=role))
 
@@ -538,6 +545,7 @@ async def on_message(message):
             msg = "{user}, you have already unsubscribed from the list for {role}"
             await client.send_message(message.channel, msg.format(user=member.mention, role=role))
             log.info("[{0}] Role was already not assigned".format(member))
+        return
 
     elif message.content.lower().startswith("!invite"):
         # Check to see if the user has this role
@@ -566,6 +574,7 @@ async def on_message(message):
             msg = "{user}, you don't have access to create invites you cuck."
             await client.send_message(message.channel, msg.format(user=member.mention, shitposting=get_channel("nsfw_shitposting").mention))
             log.info("[{0}] Requested an invite but was denied".format(member))
+        return
 
     # Show a help/about dialog
     elif message.content.lower().startswith("!wtf") or message.content.lower().startswith("!help"):
@@ -591,6 +600,7 @@ async def on_message(message):
             "`!superwtf` - Show commands available only to super waifus (mods).\n" \
             "\nIf I'm not working correctly, go fuck yourself, you aren't my boss."
         await client.send_message(message.channel, msg)
+        return
 
     elif message.content.lower().startswith("!superwtf"):
         if is_super_waifu(member):
@@ -606,6 +616,7 @@ async def on_message(message):
         else:
             msg = "{user}, you aren't a super waifu! Access denied.".format(user=member.mention)
         await client.send_message(message.channel, msg)
+        return
 
     #Allow sanicxx to go pout in AFK
     elif message.content.lower().startswith("!pout"):
@@ -650,6 +661,7 @@ async def on_message(message):
             await client.move_member(message.author, get_channel("AFK"))
         else:
             log.error("User not in a voice channel")
+        return
 
     elif message.content.lower().startswith("!shitlist"):
         # Example: !shitlist
@@ -751,23 +763,28 @@ async def on_message(message):
                 msg = "{user}, that's not a valid command you moron."
                 await client.send_message(message.channel, msg.format(user=member.mention))
                 return
+        return
 
     # RFC 1149.5 specifies 4 as the standard IEEE-vetted random number.
     # https://xkcd.com/221/
     elif message.content.lower().startswith("!random"):
         await client.send_message(message.channel, "{user}, 4".format(user=member.mention))
+        return
 
     # Automatically fix tables
     elif "┻━┻" in message.content:
         await client.send_message(message.channel, "┬──┬ ﾉ(° -°ﾉ)\n{user} that wasn't nice.".format(user=member.mention))
+        return
 
     # #yeah
     elif message.content.lower().startswith("!yeah"):
         await client.send_message(message.channel, "( •\_•)\n( •\_•)>⌐■-■\n(⌐■\_■)")
+        return
 
     # ¯\_(ツ)_/¯
     elif message.content.lower().startswith("!shrug"):
         await client.send_message(message.channel, "¯\\_(ツ)_/¯")
+        return
 
     # Waifu Pink!
     elif message.content.lower().startswith("!color"):
@@ -776,6 +793,7 @@ async def on_message(message):
         else:
             msg = "{user}, Waifu Pink uses hex code: `#ff3fb4`, also known as Red: 255, Green: 63, Blue: 180"
         await client.send_message(message.channel, msg.format(user=member.mention))
+        return
 
     # Magic 8 Ball
     elif message.content.lower().startswith("!8ball"):
@@ -803,6 +821,7 @@ async def on_message(message):
             "Blame Pearce"
         ]
         await client.send_message(message.channel, "{user}: {phrase}".format(user=member.mention, phrase=random.choice(phrases)))
+        return
 
     elif message.content.lower().startswith("!catfact"):
         cat_facts = open(os.path.join(sys.path[0], 'cat_facts.txt')).read().splitlines()
@@ -810,6 +829,7 @@ async def on_message(message):
         if random.randint(1, 4) == 1:
             cat_fact = cat_fact.replace('cat', 'catgirl')
         await client.send_message(message.channel, cat_fact)
+        return
 
     # Let me google that for you
     elif message.content.lower().startswith("!google"):
@@ -823,6 +843,7 @@ async def on_message(message):
             query=urllib.parse.quote(message_parts[1])
         )
         await client.send_message(message.channel, help_msg)
+        return
 
     #Mock previous post when you're not smart enough to come up with anything clever
     elif message.content.lower().startswith("!sponge"):
@@ -840,6 +861,7 @@ async def on_message(message):
                             reply_message += previous_message.content[i].upper()
                     await client.send_file(message.channel, os.path.join(sys.path[0], 'sponge.jpg'), filename=None, content=reply_message, tts=False)
                     return
+        return
 
     #Game code lottery
     elif message.content.lower().startswith("!lottery"):
@@ -890,6 +912,7 @@ async def on_message(message):
             for code in codes:
                 codes_file.write(code + "\n")
             codes_file.close()
+        return
 
     #Did someone say hungry?
     lower = message.content.lower()
