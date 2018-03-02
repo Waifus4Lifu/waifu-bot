@@ -48,14 +48,22 @@ with open(os.path.join(sys.path[0], 'config.yaml'), "r") as f:
 try:
     message_limit = config['rate_limit']['message_limit']
 except KeyError:
-    # Defaul to 3
+    # Default to 3
     message_limit = 3
 
 try:
     cooldown_seconds = config['rate_limit']['cooldown_seconds']
 except KeyError:
-    # Defaul to 30
+    # Default to 30
     cooldown_seconds = 30
+    
+#Stream detection variables
+on_cooldown = {}
+try:
+    stream_cooldown = config['stream']['stream_cooldown']
+except KeyError:
+    # Default to 7200
+    stream_cooldown = 7200
 
 client = discord.Client()
 
@@ -141,8 +149,15 @@ async def on_member_update(before, after):
     if before.game != after.game:
         if after.game != None:
             if after.game.type == 1:
+                if after.id in on_cooldown:
+                    delta = (datetime.datetime.now() - on_cooldown[after.id]).total_seconds()
+                    cooldown_remaining = stream_cooldown - delta
+                    if delta < stream_cooldown:
+                        log.info("{} is streaming {}. Cooldown remaining: {}s".format(after.name, after.game.name, round(cooldown_remaining)))
+                        return
                 msg = "Hey {}, {} is streaming {}!\n{}".format(get_role("creeps").mention, after.name, after.game.name, after.game.url)
                 await client.send_message(get_channel("promote_a_stream"), msg)
+                on_cooldown[after.id] = datetime.datetime.now()
 
 @client.event
 async def on_member_join(member):
