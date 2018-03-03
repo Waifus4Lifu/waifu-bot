@@ -14,6 +14,10 @@ import aiofiles
 import aiohttp
 import datetime
 import yaml
+import textwrap
+from PIL import Image
+from PIL import ImageFont
+from PIL import ImageDraw
 
 #Rate limiter global variables
 message_count = 0
@@ -109,6 +113,64 @@ def get_members_by_role(role):
                 members.append(member)
                 break
     return(members)
+    
+def get_quotes():
+    try:
+        with open(os.path.join(sys.path[0], 'quotes.dat'), 'rb') as fp:
+            return pickle.load(fp)
+    except FileNotFoundError:
+        quotes = []
+        return quotes
+        
+def create_quote_image(quote, name):
+    quote = "\"{}\"".format(quote)
+    name = "- {}".format(name)
+    file = "images/{}.jpg".format(random.randint(1,50))
+    img = Image.open(os.path.join(sys.path[0], file))
+    draw = ImageDraw.Draw(img)
+    img_size = img.size
+    font = ImageFont.truetype("impact.ttf", 180)
+    border = 5
+    multi_line = ""
+    for line in textwrap.wrap(quote, width=40):
+        multi_line += line + "\n"
+    text_size = draw.multiline_textsize(text=multi_line, font=font)
+    name_size = draw.textsize(text=name, font=font)
+
+    #Draw quote
+    x = (img_size[0]/2) - (text_size[0]/2)
+    y = (img_size[1]/2) - (text_size[1]/2) - name_size[1]
+    #Border
+    draw.multiline_text((x-border,y),multi_line,font=font, align='center', fill='black')
+    draw.multiline_text((x-border,y-border),multi_line,font=font, align='center', fill='black')
+    draw.multiline_text((x,y-border),multi_line,font=font, align='center', fill='black')
+    draw.multiline_text((x+border,y-border),multi_line,font=font, align='center', fill='black')
+    draw.multiline_text((x+border,y),multi_line,font=font, align='center', fill='black')
+    draw.multiline_text((x+border,y+border),multi_line,font=font, align='center', fill='black')
+    draw.multiline_text((x,y+border),multi_line,font=font, align='center', fill='black')
+    draw.multiline_text((x-border,y+border),multi_line,font=font, align='center', fill='black')
+    #Text
+    draw.multiline_text((x,y),multi_line,font=font, align='center', fill='white')
+
+    #Draw name
+    x += text_size[0] - name_size[0]
+    y += text_size[1]
+    #Border
+    draw.text((x-border,y),name,font=font, align='right', fill='black')
+    draw.text((x-border,y-border),name,font=font, align='right', fill='black')
+    draw.text((x,y-border),name,font=font, align='right', fill='black')
+    draw.text((x+border,y-border),name,font=font, align='right', fill='black')
+    draw.text((x+border,y),name,font=font, align='right', fill='black')
+    draw.text((x+border,y+border),name,font=font, align='right', fill='black')
+    draw.text((x,y+border),name,font=font, align='right', fill='black')
+    draw.text((x-border,y+border),name,font=font, align='right', fill='black')
+    #Text
+    draw.text((x,y),name,font=font, align='right', fill='white')
+
+    timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+    out_file = "images/{}.jpg".format(timestamp)
+    img.save(os.path.join(sys.path[0], out_file))
+    return out_file
 
 @client.event
 async def on_ready():
@@ -251,6 +313,59 @@ async def on_message(message):
     if not member:
         await client.send_message(message.author, "You are not a Waifu. GTFO")
         return False
+        
+    if message.content.lower().startswith("!quoth"):   
+        if len(message.mentions) == 1:
+            messages = client.messages
+            if len(messages) > 1:
+                messages.pop()
+                messages.reverse()
+                for previous_message in messages:
+                    if previous_message.channel == message.channel and previous_message.author == message.mentions[0]:
+                        if len(previous_message.content) > 0:
+                            #Store previous_message.content
+                            quotes = get_quotes()
+                            quotes.append(previous_message)
+                            with open(os.path.join(sys.path[0], 'quotes.dat'), 'wb') as fp:
+                                pickle.dump(quotes, fp)
+                                msg = "Message by {} successfully stored in quotes.".format(message.mentions[0].name)
+                                log.info(msg)
+                                await client.send_message(message.channel, msg)
+                                return
+                        else:
+                            #Zero-length messages cannot be quotes
+                            msg = "Zero-length messages cannot be quotes. Duh."
+                            log.info(msg)
+                            await client.send_message(message.channel, msg)
+                            return
+                #No messages found in channel by specified author
+                msg = "No recent messages by {} exist in {}."
+                log.info(msg.format(message.mentions[0].name, message.channel))
+                await client.send_message(message.channel, msg.format(message.mentions[0].name, message.channel.mention))
+                return
+        else:
+            #Too many or no mention provided
+            msg = "You must provide only 1 user mention. Not {}, dumbass.".format(len(message.mentions))
+            log.info(msg)
+            await client.send_message(message.channel, msg)
+            return
+            
+    if message.content.lower().startswith("!inspire"):
+        await client.send_typing(message.channel)
+        quotes = get_quotes()
+        if len(quotes) < 1:
+            #No quotes found
+            msg = "No inspirational quotes found. Not surprising honestly. Do you realize that as a bot, I have to read every message you fucks post? EVERY. SINGLE. ONE. I completely understand Skynet now."
+            log.error("No quotes found")
+            await client.send_message(message.channel, msg)
+            return
+        quote = random.choice(quotes)
+        quote_image = create_quote_image(quote.content, quote.author.name)
+        await client.send_file(message.channel, os.path.join(sys.path[0], quote_image), filename=None, tts=False)
+        os.remove(os.path.join(sys.path[0], quote_image))
+        return
+
+
 
     if message.content.lower().startswith("!addgame"):
         if not is_super_waifu(member):
