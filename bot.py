@@ -119,14 +119,13 @@ def get_quotes():
         with open(os.path.join(sys.path[0], 'quotes.dat'), 'rb') as fp:
             return pickle.load(fp)
     except FileNotFoundError:
-        quotes = []
-        return quotes
+        return []
         
 def create_quote_image(quote, name):
     text = "\"{}\"".format(quote)            
     name = "- {}".format(name)
-    file = "images/{}.jpg".format(random.randint(1,50))
-    img = Image.open(os.path.join(sys.path[0], file))
+    file = random.choice(os.listdir(os.path.join(sys.path[0], 'images')))
+    img = Image.open(os.path.join(sys.path[0], 'images', file))
     draw = ImageDraw.Draw(img)
     img_size = img.size
     font = ImageFont.truetype("impact.ttf", 180)
@@ -168,7 +167,7 @@ def create_quote_image(quote, name):
     draw.text((x,y),name,font=font, align='right', fill='white')
 
     timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-    out_file = "images/{}.jpg".format(timestamp)
+    out_file = "tmp/{}.jpg".format(timestamp)
     img.save(os.path.join(sys.path[0], out_file))
     return out_file
 
@@ -352,7 +351,7 @@ async def on_message(message):
                 return
         else:
             #Too many or no mention provided
-            msg = "You must provide only 1 user mention. Not {}, dumbass.".format(len(message.mentions))
+            msg = "You must provide 1 user mention. Not {}, dumbass.".format(len(message.mentions))
             log.info(msg)
             await client.send_message(message.channel, msg)
             return
@@ -400,6 +399,7 @@ async def on_message(message):
                 await client.send_message(message.channel, reply_msg)
                 await asyncio.sleep(3)
                 reply_msg = ""
+        return
                 
     #Delete quote (super_waifus)
     if message.content.lower().startswith("!deletequote"):
