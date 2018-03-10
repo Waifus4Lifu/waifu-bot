@@ -442,7 +442,7 @@ async def on_message(message):
         # Verify that the role exists and is all caps
         if not get_role(game):
             # Create the role
-            await client.create_role(server, name=game)
+            await client.create_role(server, name=game, mentionable=True)
 
         games = get_games()
         if not games:
@@ -489,7 +489,7 @@ async def on_message(message):
         # Verify that the role exists and is all caps
         if not get_role(role):
             # Create the role
-            await client.create_role(server, name=role)
+            await client.create_role(server, name=role, mentionable=True)
 
         roles = get_roles()
         if not roles:
