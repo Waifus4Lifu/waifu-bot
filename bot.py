@@ -68,6 +68,22 @@ try:
 except KeyError:
     # Default to 7200
     stream_cooldown = 7200
+    
+#Sensitive channels
+try:
+    sensitive_channels = config['channels']['sensitive']
+except KeyError:
+    # Default
+    sensitive_channels = ["super_waifu_chat",
+                          "serious_business"]
+
+#Affirmative answers                          
+try:                         
+    answers_yes = config['answers']['yes']
+except KeyError:
+    # Default
+    answers_yes = ["yes",
+                   "yeah"]
 
 client = discord.Client()
 
@@ -329,6 +345,19 @@ async def on_message(message):
                                 if quote.id == previous_message.id:
                                     msg = "Can you not read? That quote has already been saved."
                                     log.info("Quote already exists")
+                                    await client.send_message(message.channel, msg)
+                                    return
+                            #Ask for confirmation
+                            if message.channel.name in sensitive_channels:
+                                msg = "Hey uh, {}, this is a sensitive_channel™.\nAre you sure you want to do this?".format(message.author.mention)
+                                await client.send_message(message.channel, msg)
+                                reply_msg = await client.wait_for_message(timeout=60, author=message.author, channel=message.channel)
+                                if reply_msg is None:
+                                    msg = "I'm going to take your silence as a 'no'."
+                                    await client.send_message(message.channel, msg)
+                                    return
+                                if reply_msg.content.lower() not in answers_yes:
+                                    msg = "I'm glad you came to your senses."
                                     await client.send_message(message.channel, msg)
                                     return
                             quotes.append(previous_message)
