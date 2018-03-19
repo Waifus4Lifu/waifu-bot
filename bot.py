@@ -14,6 +14,10 @@ import aiofiles
 import aiohttp
 import datetime
 import yaml
+import textwrap
+from PIL import Image
+from PIL import ImageFont
+from PIL import ImageDraw
 
 #Rate limiter global variables
 message_count = 0
@@ -64,6 +68,22 @@ try:
 except KeyError:
     # Default to 7200
     stream_cooldown = 7200
+    
+#Sensitive channels
+try:
+    sensitive_channels = config['channels']['sensitive']
+except KeyError:
+    # Default
+    sensitive_channels = ["super_waifu_chat",
+                          "serious_business"]
+
+#Affirmative answers                          
+try:                         
+    answers_yes = config['answers']['yes']
+except KeyError:
+    # Default
+    answers_yes = ["yes",
+                   "yeah"]
 
 client = discord.Client()
 
@@ -109,6 +129,63 @@ def get_members_by_role(role):
                 members.append(member)
                 break
     return(members)
+    
+def get_quotes():
+    try:
+        with open(os.path.join(sys.path[0], 'quotes.dat'), 'rb') as fp:
+            return pickle.load(fp)
+    except FileNotFoundError:
+        return []
+        
+def create_quote_image(quote, name):
+    text = "\"{}\"".format(quote)            
+    name = "- {}".format(name)
+    file = random.choice(os.listdir(os.path.join(sys.path[0], 'images')))
+    img = Image.open(os.path.join(sys.path[0], 'images', file))
+    draw = ImageDraw.Draw(img)
+    img_size = img.size
+    font = ImageFont.truetype("impact.ttf", 180)
+    border = 5
+    multi_line = ""
+    for line in textwrap.wrap(text, width=40):
+        multi_line += line + "\n"
+    text_size = draw.multiline_textsize(text=multi_line, font=font)
+    name_size = draw.textsize(text=name, font=font)
+
+    #Draw quote
+    x = (img_size[0]/2) - (text_size[0]/2)
+    y = (img_size[1]/2) - (text_size[1]/2) - name_size[1]
+    #Border
+    draw.multiline_text((x-border,y),multi_line,font=font, align='center', fill='black')
+    draw.multiline_text((x-border,y-border),multi_line,font=font, align='center', fill='black')
+    draw.multiline_text((x,y-border),multi_line,font=font, align='center', fill='black')
+    draw.multiline_text((x+border,y-border),multi_line,font=font, align='center', fill='black')
+    draw.multiline_text((x+border,y),multi_line,font=font, align='center', fill='black')
+    draw.multiline_text((x+border,y+border),multi_line,font=font, align='center', fill='black')
+    draw.multiline_text((x,y+border),multi_line,font=font, align='center', fill='black')
+    draw.multiline_text((x-border,y+border),multi_line,font=font, align='center', fill='black')
+    #Text
+    draw.multiline_text((x,y),multi_line,font=font, align='center', fill='white')
+
+    #Draw name
+    x += text_size[0] - name_size[0]
+    y += text_size[1]
+    #Border
+    draw.text((x-border,y),name,font=font, align='right', fill='black')
+    draw.text((x-border,y-border),name,font=font, align='right', fill='black')
+    draw.text((x,y-border),name,font=font, align='right', fill='black')
+    draw.text((x+border,y-border),name,font=font, align='right', fill='black')
+    draw.text((x+border,y),name,font=font, align='right', fill='black')
+    draw.text((x+border,y+border),name,font=font, align='right', fill='black')
+    draw.text((x,y+border),name,font=font, align='right', fill='black')
+    draw.text((x-border,y+border),name,font=font, align='right', fill='black')
+    #Text
+    draw.text((x,y),name,font=font, align='right', fill='white')
+
+    timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+    out_file = "tmp/{}.jpg".format(timestamp)
+    img.save(os.path.join(sys.path[0], out_file))
+    return out_file
 
 @client.event
 async def on_ready():
@@ -251,7 +328,131 @@ async def on_message(message):
     if not member:
         await client.send_message(message.author, "You are not a Waifu. GTFO")
         return False
+        
+    #Save a quote for later inspiration
+    if message.content.lower().startswith("!quoth"):   
+        if len(message.mentions) == 1:
+            messages = client.messages
+            if len(messages) > 1:
+                messages.pop()
+                messages.reverse()
+                for previous_message in messages:
+                    if previous_message.channel == message.channel and previous_message.author == message.mentions[0]:
+                        if len(previous_message.content) > 0:
+                            #Store previous_message.content
+                            quotes = get_quotes()
+                            for quote in quotes:
+                                if quote.id == previous_message.id:
+                                    msg = "Can you not read? That quote has already been saved."
+                                    log.info("Quote already exists")
+                                    await client.send_message(message.channel, msg)
+                                    return
+                            #Ask for confirmation
+                            if message.channel.name in sensitive_channels:
+                                msg = "Hey uh, {}, this is a sensitive_channel™.\nAre you sure you want to do this?".format(message.author.mention)
+                                await client.send_message(message.channel, msg)
+                                reply_msg = await client.wait_for_message(timeout=60, author=message.author, channel=message.channel)
+                                if reply_msg is None:
+                                    msg = "I'm going to take your silence as a 'no'."
+                                    await client.send_message(message.channel, msg)
+                                    return
+                                if reply_msg.content.lower() not in answers_yes:
+                                    msg = "I'm glad you came to your senses."
+                                    await client.send_message(message.channel, msg)
+                                    return
+                            quotes.append(previous_message)
+                            with open(os.path.join(sys.path[0], 'quotes.dat'), 'wb') as fp:
+                                pickle.dump(quotes, fp)
+                            msg = "Message by {} successfully stored in quotes.".format(message.mentions[0].name)
+                            log.info(msg)
+                            await client.send_message(message.channel, msg)
+                            return
+                        else:
+                            #Zero-length messages cannot be quotes
+                            msg = "Zero-length messages cannot be quotes. Duh."
+                            log.info(msg)
+                            await client.send_message(message.channel, msg)
+                            return
+                #No messages found in channel by specified author
+                msg = "No recent messages by {} exist in {}."
+                log.info(msg.format(message.mentions[0].name, message.channel))
+                await client.send_message(message.channel, msg.format(message.mentions[0].name, message.channel.mention))
+                return
+        else:
+            #Too many or no mention provided
+            msg = "You must provide 1 user mention. Not {}, dumbass.".format(len(message.mentions))
+            log.info(msg)
+            await client.send_message(message.channel, msg)
+            return
+    
+    #Draw and post image from inspirational quote database
+    if message.content.lower().startswith("!inspire"):
+        await client.send_typing(message.channel)
+        quotes = get_quotes()
+        if len(quotes) < 1:
+            #No quotes found
+            msg = "No inspirational quotes found. Not surprising honestly."
+            log.error("No quotes found")
+            await client.send_message(message.channel, msg)
+            return
+        quote = random.choice(quotes)
+        content = quote.content
+        if len(quote.mentions) > 0:
+            for member in quote.mentions:
+                content = content.replace(member.mention, member.name)
+        quote_image = create_quote_image(content, quote.author.name)
+        await client.send_file(message.channel, os.path.join(sys.path[0], quote_image), filename=None, tts=False)
+        os.remove(os.path.join(sys.path[0], quote_image))
+        return
 
+    #View quotes (super_waifus)
+    if message.content.lower().startswith("!viewquotes"):
+        if not is_super_waifu(member):
+            msg = "{user}, you are not authorized to do that!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+        quotes = get_quotes()
+        if len(quotes) < 1:
+            msg = "No quotes found."
+            log.error(msg)
+            await client.send_message(message.channel, msg)
+            return
+        reply_msg = ""
+        for i, quote in enumerate(quotes):
+            quote_info = "ID: {}\nAuthor: {}\nQuote: {}".format(quote.id, quote.author.name, quote.content)
+            if len(quote_info) > 190:
+                reply_msg += quote_info[:187] + "...\n\n"
+            else:
+                reply_msg += quote_info + "\n\n"
+            if (i%10 == 0 and i != 0) or i == len(quotes) - 1:
+                await client.send_message(message.channel, reply_msg)
+                await asyncio.sleep(3)
+                reply_msg = ""
+        return
+                
+    #Delete quote (super_waifus)
+    if message.content.lower().startswith("!deletequote"):
+        if not is_super_waifu(member):
+            msg = "{user}, you are not authorized to do that!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+        quote_id = message.content[13:]
+        quotes = get_quotes()
+        for i, quote in enumerate(quotes):
+            if quote.id == quote_id:
+                quotes.pop(i)
+                with open(os.path.join(sys.path[0], 'quotes.dat'), 'wb') as fp:
+                    pickle.dump(quotes, fp)
+                msg = "Quote {} successfully deleted.".format(quote_id)
+                log.info(msg)
+                await client.send_message(message.channel, msg)
+                return
+        #Quote not found
+        msg = "Quote {} not found.".format(quote_id)
+        log.info(msg)
+        await client.send_message(message.channel, msg)
+        return
+        
     if message.content.lower().startswith("!addgame"):
         if not is_super_waifu(member):
             msg = "{user}, you are not authorized to do that!"
@@ -270,7 +471,7 @@ async def on_message(message):
         # Verify that the role exists and is all caps
         if not get_role(game):
             # Create the role
-            await client.create_role(server, name=game)
+            await client.create_role(server, name=game, mentionable=True)
 
         games = get_games()
         if not games:
@@ -317,7 +518,7 @@ async def on_message(message):
         # Verify that the role exists and is all caps
         if not get_role(role):
             # Create the role
-            await client.create_role(server, name=role)
+            await client.create_role(server, name=role, mentionable=True)
 
         roles = get_roles()
         if not roles:
@@ -615,6 +816,8 @@ async def on_message(message):
             "`!random` - Request a random number, chosen by fair dice roll.\n" \
             "`!sponge` - Mock previous post even if you’re not smart enough to be clever.\n" \
             "`!color` - Get the hex and RGB values for Waifu Pink.\n" \
+            "`!quoth` - Save most recent message by @mention to inspirational quotes.\n" \
+            "`!inspire` - Request a random quote for inspiration.\n" \
             "`!yeah`\n" \
             "`!shrug`\n" \
             "`!catfact`\n" \
@@ -635,6 +838,8 @@ async def on_message(message):
                 "`!removegame` - Remove a game from the list.\n" \
                 "`!addrole` - Add a role people can join.\n" \
                 "`!removerole` - Remove a role from the list.\n" \
+                "`!viewquotes` - View list of partial quotes.\n" \
+                "`!deletequote` - Delete a quote by providing quote ID.\n" \
                 "\nEnd a message with `-WaifuBot` to make me say something, but remember this will be logged. Abuse will not be tolerated.\n" \
                 "\nIf I'm not working correctly, talk to aceat64 or HungryNinja."
         else:
