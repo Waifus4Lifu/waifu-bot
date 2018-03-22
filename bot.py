@@ -84,6 +84,14 @@ except KeyError:
     # Default
     answers_yes = ["yes",
                    "yeah"]
+                   
+#no_problem messages
+try:                         
+    no_problem = config['bot_phrases']['no_problem']
+except KeyError:
+    # Default
+    no_problem = ["No problemo",
+                   "Anytime"]
 
 client = discord.Client()
 
@@ -328,6 +336,12 @@ async def on_message(message):
     if not member:
         await client.send_message(message.author, "You are not a Waifu. GTFO")
         return False
+        
+    #Reply to human thankfullness
+    if 'thank' in message.content.lower() and client.user in message.mentions:
+        reply_msg = random.choice(no_problem)
+        await client.send_message(message.channel, reply_msg)
+        return
         
     #Save a quote for later inspiration
     if message.content.lower().startswith("!quoth"):   
