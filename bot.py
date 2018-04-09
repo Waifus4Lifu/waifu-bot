@@ -46,6 +46,9 @@ log.info("Started")
 with open(os.path.join(sys.path[0], 'config.yaml'), "r") as f:
     config = yaml.load(f)
 
+with open(os.path.join(sys.path[0], 'playing.txt'), "r") as f:    
+    playing_messages = f.read().splitlines()
+
 # TODO: Validate that required entries exist
 
 #Rate limiter config
@@ -217,8 +220,7 @@ async def on_ready():
 @asyncio.coroutine
 async def change_status():
     while True:
-        playing = open(os.path.join(sys.path[0], 'playing.txt')).read().splitlines()
-        playing = random.choice(playing)
+        playing = random.choice(playing_messages)
         if playing[:1] == "0":
             status = discord.Status.online
         elif playing[:1] == "1":
