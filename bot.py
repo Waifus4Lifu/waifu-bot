@@ -235,6 +235,7 @@ async def change_status():
 async def on_member_update(before, after):
     if before.game != after.game:
         if after.game != None:
+            # Streaming
             if after.game.type == 1:
                 if after.id in on_cooldown:
                     delta = (datetime.datetime.now() - on_cooldown[after.id]).total_seconds()
@@ -245,6 +246,22 @@ async def on_member_update(before, after):
                 msg = "Hey {}, {} is streaming {}!\n{}".format(get_role("creeps").mention, after.name, after.game.name, after.game.url)
                 await client.send_message(get_channel("promote_a_stream"), msg)
                 on_cooldown[after.id] = datetime.datetime.now()
+            # Not streaming
+            else:
+                if after.id == '131527313933336577':
+                    if random.randint(1,2) == 1:
+                        nag_messages = ["That doesn't look much like writing to me.",
+                                        "Less sniping, more typing.",
+                                        "Less ammunition, more composition.",
+                                        "How's that book coming along?",
+                                        "Taking a break from typing, eh?",
+                                        "Can't wait to read your book.",
+                                        "It's ok, we don't have to talk about it."
+                                        "You must be playing this for \"character research\"."]
+                        nag_msg = random.choice(nag_messages)
+                        await client.send_message(server.get_member('131527313933336577'), nag_msg)
+                        await client.send_message(server.get_member('221162619497611274'), nag_msg)
+    return
 
 @client.event
 async def on_member_join(member):
@@ -346,54 +363,55 @@ async def on_message(message):
         return
         
     #Save a quote for later inspiration
-    if message.content.lower().startswith("!quoth"):   
+    if message.content.lower().startswith("!quoth"):
         if len(message.mentions) == 1:
-            messages = client.messages
-            if len(messages) > 1:
-                messages.pop()
-                messages.reverse()
-                for previous_message in messages:
-                    if previous_message.channel == message.channel and previous_message.author == message.mentions[0]:
-                        if len(previous_message.content) > 0:
-                            #Store previous_message.content
-                            quotes = get_quotes()
-                            for quote in quotes:
-                                if quote.id == previous_message.id:
-                                    msg = "Can you not read? That quote has already been saved."
-                                    log.info("Quote already exists")
-                                    await client.send_message(message.channel, msg)
-                                    return
-                            #Ask for confirmation
-                            if message.channel.name in sensitive_channels:
-                                msg = "Hey uh, {}, this is a sensitive_channel™.\nAre you sure you want to do this?".format(message.author.mention)
-                                await client.send_message(message.channel, msg)
-                                reply_msg = await client.wait_for_message(timeout=60, author=message.author, channel=message.channel)
-                                if reply_msg is None:
-                                    msg = "I'm going to take your silence as a 'no'."
-                                    await client.send_message(message.channel, msg)
-                                    return
-                                if reply_msg.content.lower() not in answers_yes:
-                                    msg = "I'm glad you came to your senses."
-                                    await client.send_message(message.channel, msg)
-                                    return
-                            quotes.append(previous_message)
-                            with open(os.path.join(sys.path[0], 'quotes.dat'), 'wb') as fp:
-                                pickle.dump(quotes, fp)
-                            msg = "Message by {} successfully stored in quotes.".format(message.mentions[0].name)
-                            log.info(msg)
-                            await client.send_message(message.channel, msg)
-                            return
-                        else:
-                            #Zero-length messages cannot be quotes
-                            msg = "Zero-length messages cannot be quotes. Duh."
-                            log.info(msg)
-                            await client.send_message(message.channel, msg)
-                            return
-                #No messages found in channel by specified author
-                msg = "No recent messages by {} exist in {}."
-                log.info(msg.format(message.mentions[0].name, message.channel))
-                await client.send_message(message.channel, msg.format(message.mentions[0].name, message.channel.mention))
+            if message.author == message.mentions[0]:
+                msg = "No {}, you cannot quote yourself. Just how conceited are you?".format(message.author.mention)
+                log.info("{} tried to save their own quote.".format(message.author))
+                await client.send_message(message.channel, msg)
                 return
+            async for previous_message in client.logs_from(message.channel, limit=100):
+                if previous_message.author == message.mentions[0]:
+                    if len(previous_message.content) > 0:
+                        #Store previous_message.content
+                        quotes = get_quotes()
+                        for quote in quotes:
+                            if quote.id == previous_message.id:
+                                msg = "Can you not read? That quote has already been saved."
+                                log.info("Quote already exists")
+                                await client.send_message(message.channel, msg)
+                                return
+                        #Ask for confirmation
+                        if message.channel.name in sensitive_channels:
+                            msg = "Hey uh, {}, this is a sensitive_channel™.\nAre you sure you want to do this?".format(message.author.mention)
+                            await client.send_message(message.channel, msg)
+                            reply_msg = await client.wait_for_message(timeout=60, author=message.author, channel=message.channel)
+                            if reply_msg is None:
+                                msg = "I'm going to take your silence as a 'no'."
+                                await client.send_message(message.channel, msg)
+                                return
+                            if reply_msg.content.lower() not in answers_yes:
+                                msg = "I'm glad you came to your senses."
+                                await client.send_message(message.channel, msg)
+                                return
+                        quotes.append(previous_message)
+                        with open(os.path.join(sys.path[0], 'quotes.dat'), 'wb') as fp:
+                            pickle.dump(quotes, fp)
+                        msg = "Message by {} successfully stored in quotes.".format(message.mentions[0].name)
+                        log.info(msg)
+                        await client.send_message(message.channel, msg)
+                        return
+                    else:
+                        #Zero-length messages cannot be quotes
+                        msg = "Zero-length messages cannot be quotes. Duh."
+                        log.info(msg)
+                        await client.send_message(message.channel, msg)
+                        return
+            #No messages found in channel by specified author
+            msg = "No recent messages by {} exist in {}."
+            log.info(msg.format(message.mentions[0].name, message.channel))
+            await client.send_message(message.channel, msg.format(message.mentions[0].name, message.channel.mention))
+            return
         else:
             #Too many or no mention provided
             msg = "You must provide 1 user mention. Not {}, dumbass.".format(len(message.mentions))
