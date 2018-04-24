@@ -246,21 +246,6 @@ async def on_member_update(before, after):
                 msg = "Hey {}, {} is streaming {}!\n{}".format(get_role("creeps").mention, after.name, after.game.name, after.game.url)
                 await client.send_message(get_channel("promote_a_stream"), msg)
                 on_cooldown[after.id] = datetime.datetime.now()
-            # Not streaming
-            else:
-                if after.id == '131527313933336577':
-                    if random.randint(1,2) == 1:
-                        nag_messages = ["That doesn't look much like writing to me.",
-                                        "Less sniping, more typing.",
-                                        "Less ammunition, more composition.",
-                                        "How's that book coming along?",
-                                        "Taking a break from typing, eh?",
-                                        "Can't wait to read your book.",
-                                        "It's ok, we don't have to talk about it."
-                                        "You must be playing this for \"character research\"."]
-                        nag_msg = random.choice(nag_messages)
-                        await client.send_message(server.get_member('131527313933336577'), nag_msg)
-                        await client.send_message(server.get_member('221162619497611274'), nag_msg)
     return
 
 @client.event
