@@ -303,7 +303,7 @@ async def on_member_join(member):
 
 @client.event
 async def on_message_delete(message):
-    if "-WaifuBot" in message.content:
+    if "-WaifuBot" in message.content or message.channel.is_private:
         return
     description="Author: {0}\nChannel: {1}\nTimestamp: {2}".format(message.author.name, message.channel, message.timestamp)
     embed = discord.Embed(title="Message deleted by [see audit log]", description=description, color=0xff0000)
