@@ -103,6 +103,12 @@ def is_super_waifu(member):
         if author_role.name == "super_waifus":
             return True
     return False
+    
+def is_mod(member):
+    for author_role in member.roles:
+        if author_role.name == "mods":
+            return True
+    return False
 
 def get_games():
     try:
@@ -114,6 +120,13 @@ def get_games():
 def get_roles():
     try:
         with open(os.path.join(sys.path[0], 'roles.dat'), 'rb') as fp:
+            return pickle.load(fp)
+    except FileNotFoundError:
+        return False
+        
+def get_role_bans():
+    try:
+        with open(os.path.join(sys.path[0], 'role_bans.dat'), 'rb') as fp:
             return pickle.load(fp)
     except FileNotFoundError:
         return False
@@ -472,6 +485,151 @@ async def on_message(message):
         await client.send_message(message.channel, msg)
         return
         
+    if message.content.lower().startswith("!roleban"):
+        if not is_mod(member):
+            msg = "{user}, you are not authorized to do that!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            log.info("[{user}] requested to use !roleban but is not authorized.".format(user=member.name))
+            return
+            
+        if not (message.channel.name in ('super_waifu_chat', 'admin_chat', 'bot_testing', 'mod_chat') or message.channel.is_private):
+            msg = "{user}, this ain't the place for this kind of shit!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            log.info("[{user}] requested to use !roleban in an inappropriate channel: {channel}".format(user=member.name, channel=message.channel))
+            return
+        
+        message_parts = message.content.split(' ')
+        if len(message_parts) != 3:
+            msg = "{user}, you must supply two arguments: `!roleban user_id role_name`"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+        
+        banned = server.get_member(message_parts[1])
+        if banned == None:
+            msg = "{user}, that is not a valid ID for a member of this server."
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+            
+        role_name = message_parts[2]
+        if not get_role(role_name):
+            msg = "{user}, that is not a valid role name in this server."
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+            
+        role_bans = get_role_bans()
+        if not role_bans:
+            role_bans = {}
+
+        if banned.id in role_bans:
+            if role_name in role_bans[banned.id]:
+                msg = "{user} is already banned from that role."
+                await client.send_message(message.channel, msg.format(user=banned.name))
+                return
+            role_bans[banned.id].append(role_name)
+        else:
+            role_bans[banned.id] = [role_name]
+            
+        with open(os.path.join(sys.path[0], 'role_bans.dat'), 'wb') as fp:
+                pickle.dump(role_bans, fp)
+                
+        # Check to see if the user has this role
+        msg = "{banned} did not have the role so I didn't have to remove it\n".format(banned=banned.name)
+        for banned_user_role in banned.roles:
+            if banned_user_role.name == role_name:
+                try:
+                    await client.remove_roles(banned, banned_user_role)
+                    msg = "{banned} had the role but it has been removed\n".format(banned=banned.name)
+                    log.info("{banned} had the role but it has been removed".format(banned=banned.name))
+                except discord.errors.Forbidden:
+                    msg = "{banned} has the role but I am not able to remove it\n".format(banned=banned.name)
+                    log.info("{banned} has the role but I am not able to remove it".format(banned=banned.name))
+                    
+        msg = msg + "{user} is now banned from {role}".format(user=banned.name, role=role_name)
+        await client.send_message(message.channel, msg)
+        log.info("[{mod}] has banned {user} from {role}".format(mod=member.name, user=banned.name, role=role_name))
+        return
+        
+    if message.content.lower().startswith("!viewrolebans"):
+        if not is_mod(member):
+            msg = "{user}, you are not authorized to do that!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            log.info("[{user}] requested to use !viewrolebans but is not authorized.".format(user=member.name))
+            return
+            
+        if not (message.channel.name in ('super_waifu_chat', 'admin_chat', 'bot_testing', 'mod_chat') or message.channel.is_private):
+            msg = "{user}, this ain't the place for this kind of shit!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            log.info("[{user}] requested to use !viewrolebans in an inappropriate channel: {channel}".format(user=member.name, channel=message.channel))
+            return 
+        
+        role_bans = get_role_bans()
+        msg = ""
+        for banned_id in role_bans:
+            msg = msg + "{user}: ".format(user=server.get_member(banned_id).name)
+            for index, role_name in enumerate(role_bans[banned_id]):
+                if index > 0:
+                    msg += ', '
+                msg += role_name
+            msg += "\n"
+        await client.send_message(message.channel, msg)
+        log.info("[{mod}] has requested a list of role bans.".format(mod=member.name))
+        return
+        
+    if message.content.lower().startswith("!roleunban"):
+        if not is_mod(member):
+            msg = "{user}, you are not authorized to do that!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            log.info("[{user}] requested to use !roleunban but is not authorized.".format(user=member.name))
+            return
+            
+        if not (message.channel.name in ('super_waifu_chat', 'admin_chat', 'bot_testing', 'mod_chat') or message.channel.is_private):
+            msg = "{user}, this ain't the place for this kind of shit!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            log.info("[{user}] requested to use !roleunban in an inappropriate channel: {channel}".format(user=member.name, channel=message.channel))
+            return
+        
+        message_parts = message.content.split(' ')
+        if len(message_parts) != 3:
+            msg = "{user}, you must supply two arguments: `!roleunban user_id role_name`"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+        
+        unbanned = server.get_member(message_parts[1])
+        if unbanned == None:
+            msg = "{user}, that is not a valid ID for a member of this server."
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+            
+        role_name = message_parts[2]
+        if not get_role(role_name):
+            msg = "{user}, that is not a valid role name in this server."
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+            
+        role_bans = get_role_bans()
+        if not role_bans:
+            role_bans = {}
+
+        if unbanned.id in role_bans:
+            if role_name in role_bans[unbanned.id]:
+                role_bans[unbanned.id].remove(role_name)
+            else:
+                msg = "{user} is not banned from {role}."
+                await client.send_message(message.channel, msg.format(user=unbanned.name, role=role_name))
+                return
+        else:
+            msg = "{user} is not banned from any roles."
+            await client.send_message(message.channel, msg.format(user=unbanned.name))
+            return
+            
+        with open(os.path.join(sys.path[0], 'role_bans.dat'), 'wb') as fp:
+                pickle.dump(role_bans, fp)
+        
+        msg = "{user} is now unbanned from {role}"
+        await client.send_message(message.channel, msg.format(user=unbanned.name, role=role_name))
+        log.info("[{mod}] has unbanned {user} from {role}".format(mod=member.name, user=unbanned.name, role=role_name))
+        return
+        
     if message.content.lower().startswith("!addgame"):
         if not is_super_waifu(member):
             msg = "{user}, you are not authorized to do that!"
@@ -704,6 +862,15 @@ async def on_message(message):
             await client.send_message(message.channel, msg.format(user=member.mention))
             log.info("[{user}] requested to join invalid game/role: {role}".format(user=member.name, role=role))
             return
+            
+        # Check if user is banned from role
+        role_bans = get_role_bans()
+        if member.id in role_bans:
+            if role in role_bans[member.id]:
+                msg = "{user}, I am unable to add that role. Please contact one of the {role}."
+                await client.send_message(message.channel, msg.format(user=member.mention, role=get_role('mods').mention))
+                log.info("[{user}] requested to join {role} but is banned.".format(user=member.name, role=role))
+                return
 
         log.info("[{user}] requested to join game/role: {role}".format(user=member.name, role=role))
 
@@ -859,6 +1026,9 @@ async def on_message(message):
                 "`!removerole` - Remove a role from the list.\n" \
                 "`!viewquotes` - View list of partial quotes.\n" \
                 "`!deletequote` - Delete a quote by providing quote ID.\n" \
+                "`!roleban` - Ban a member from joining a specific role (removes role if applicable).\n" \
+                "`!roleunban` - Undo the ban imposed by !roleban (does not add role back).\n" \
+                "`!viewrolebans` - View list of role bans. Kinda obvious.\n" \
                 "\nEnd a message with `-WaifuBot` to make me say something, but remember this will be logged. Abuse will not be tolerated.\n" \
                 "\nIf I'm not working correctly, talk to aceat64 or HungryNinja."
         else:
