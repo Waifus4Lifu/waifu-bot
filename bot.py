@@ -1041,6 +1041,9 @@ async def on_message(message):
                 "`!removerole` - Remove a role from the list.\n" \
                 "`!viewquotes` - View list of partial quotes.\n" \
                 "`!deletequote` - Delete a quote by providing quote ID.\n" \
+                "`!roleban` - Ban a member from joining a specific role (removes role if applicable).\n" \
+                "`!roleunban` - Undo the ban imposed by !roleban (does not add role back).\n" \
+                "`!viewrolebans` - View list of role bans. Kinda obvious.\n" \
                 "\nEnd a message with `-WaifuBot` to make me say something, but remember this will be logged. Abuse will not be tolerated.\n" \
                 "\nIf I'm not working correctly, talk to aceat64 or HungryNinja."
         else:
