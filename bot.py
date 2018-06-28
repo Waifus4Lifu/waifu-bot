@@ -46,7 +46,7 @@ log.info("Started")
 with open(os.path.join(sys.path[0], 'config.yaml'), "r") as f:
     config = yaml.load(f)
 
-with open(os.path.join(sys.path[0], 'playing.txt'), "r") as f:    
+with open(os.path.join(sys.path[0], 'playing.txt'), "r") as f:
     playing_messages = f.read().splitlines()
 
 # TODO: Validate that required entries exist
@@ -63,7 +63,7 @@ try:
 except KeyError:
     # Default to 30
     cooldown_seconds = 30
-    
+
 #Stream detection variables
 on_cooldown = {}
 try:
@@ -71,7 +71,7 @@ try:
 except KeyError:
     # Default to 7200
     stream_cooldown = 7200
-    
+
 #Sensitive channels
 try:
     sensitive_channels = config['channels']['sensitive']
@@ -80,16 +80,16 @@ except KeyError:
     sensitive_channels = ["super_waifu_chat",
                           "serious_business"]
 
-#Affirmative answers                          
-try:                         
+#Affirmative answers
+try:
     answers_yes = config['answers']['yes']
 except KeyError:
     # Default
     answers_yes = ["yes",
                    "yeah"]
-                   
+
 #no_problem messages
-try:                         
+try:
     no_problem = config['bot_phrases']['no_problem']
 except KeyError:
     # Default
@@ -103,7 +103,7 @@ def is_super_waifu(member):
         if author_role.name == "super_waifus":
             return True
     return False
-    
+
 def is_mod(member):
     for author_role in member.roles:
         if author_role.name == "mods":
@@ -123,7 +123,7 @@ def get_roles():
             return pickle.load(fp)
     except FileNotFoundError:
         return False
-        
+
 def get_role_bans():
     try:
         with open(os.path.join(sys.path[0], 'role_bans.dat'), 'rb') as fp:
@@ -153,16 +153,16 @@ def get_members_by_role(role):
                 members.append(member)
                 break
     return(members)
-    
+
 def get_quotes():
     try:
         with open(os.path.join(sys.path[0], 'quotes.dat'), 'rb') as fp:
             return pickle.load(fp)
     except FileNotFoundError:
         return []
-        
+
 def create_quote_image(quote, name):
-    text = "\"{}\"".format(quote)            
+    text = "\"{}\"".format(quote)
     name = "- {}".format(name)
     file = random.choice(os.listdir(os.path.join(sys.path[0], 'images')))
     img = Image.open(os.path.join(sys.path[0], 'images', file))
@@ -242,7 +242,7 @@ async def change_status():
             status = discord.Status.dnd
         await client.change_presence(game=discord.Game(name=playing[1:]), status=status)
         await asyncio.sleep(random.randint(300, 600))
-        
+
 #Post message in promote_a_stream when a member starts streaming
 @client.event
 async def on_member_update(before, after):
@@ -353,13 +353,13 @@ async def on_message(message):
     if not member:
         await client.send_message(message.author, "You are not a Waifu. GTFO")
         return False
-        
+
     #Reply to human thankfullness
     if 'thank' in message.content.lower() and client.user in message.mentions:
         reply_msg = random.choice(no_problem)
         await client.send_message(message.channel, reply_msg)
         return
-        
+
     #Save a quote for later inspiration
     if message.content.lower().startswith("!quoth"):
         if len(message.mentions) == 1:
@@ -416,7 +416,7 @@ async def on_message(message):
             log.info(msg)
             await client.send_message(message.channel, msg)
             return
-    
+
     #Draw and post image from inspirational quote database
     if message.content.lower().startswith("!inspire"):
         await client.send_typing(message.channel)
@@ -461,7 +461,7 @@ async def on_message(message):
                 await asyncio.sleep(3)
                 reply_msg = ""
         return
-                
+
     #Delete quote (super_waifus)
     if message.content.lower().startswith("!deletequote"):
         if not is_super_waifu(member):
@@ -484,38 +484,38 @@ async def on_message(message):
         log.info(msg)
         await client.send_message(message.channel, msg)
         return
-        
+
     if message.content.lower().startswith("!roleban"):
         if not is_mod(member):
             msg = "{user}, you are not authorized to do that!"
             await client.send_message(message.channel, msg.format(user=member.mention))
             log.info("[{user}] requested to use !roleban but is not authorized.".format(user=member.name))
             return
-            
+
         if not (message.channel.name in ('super_waifu_chat', 'admin_chat', 'bot_testing', 'mod_chat') or message.channel.is_private):
             msg = "{user}, this ain't the place for this kind of shit!"
             await client.send_message(message.channel, msg.format(user=member.mention))
             log.info("[{user}] requested to use !roleban in an inappropriate channel: {channel}".format(user=member.name, channel=message.channel))
             return
-        
+
         message_parts = message.content.split(' ')
         if len(message_parts) != 3:
             msg = "{user}, you must supply two arguments: `!roleban user_id role_name`"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
-        
+
         banned = server.get_member(message_parts[1])
         if banned == None:
             msg = "{user}, that is not a valid ID for a member of this server."
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
-            
+
         role_name = message_parts[2]
         if not get_role(role_name):
             msg = "{user}, that is not a valid role name in this server."
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
-            
+
         role_bans = get_role_bans()
         if not role_bans:
             role_bans = {}
@@ -528,10 +528,10 @@ async def on_message(message):
             role_bans[banned.id].append(role_name)
         else:
             role_bans[banned.id] = [role_name]
-            
+
         with open(os.path.join(sys.path[0], 'role_bans.dat'), 'wb') as fp:
                 pickle.dump(role_bans, fp)
-                
+
         # Check to see if the user has this role
         msg = "{banned} did not have the role so I didn't have to remove it\n".format(banned=banned.name)
         for banned_user_role in banned.roles:
@@ -543,25 +543,25 @@ async def on_message(message):
                 except discord.errors.Forbidden:
                     msg = "{banned} has the role but I am not able to remove it\n".format(banned=banned.name)
                     log.info("{banned} has the role but I am not able to remove it".format(banned=banned.name))
-                    
+
         msg = msg + "{user} is now banned from {role}".format(user=banned.name, role=role_name)
         await client.send_message(message.channel, msg)
         log.info("[{mod}] has banned {user} from {role}".format(mod=member.name, user=banned.name, role=role_name))
         return
-        
+
     if message.content.lower().startswith("!viewrolebans"):
         if not is_mod(member):
             msg = "{user}, you are not authorized to do that!"
             await client.send_message(message.channel, msg.format(user=member.mention))
             log.info("[{user}] requested to use !viewrolebans but is not authorized.".format(user=member.name))
             return
-            
+
         if not (message.channel.name in ('super_waifu_chat', 'admin_chat', 'bot_testing', 'mod_chat') or message.channel.is_private):
             msg = "{user}, this ain't the place for this kind of shit!"
             await client.send_message(message.channel, msg.format(user=member.mention))
             log.info("[{user}] requested to use !viewrolebans in an inappropriate channel: {channel}".format(user=member.name, channel=message.channel))
-            return 
-        
+            return
+
         role_bans = get_role_bans()
         msg = ""
         for banned_id in role_bans:
@@ -574,38 +574,38 @@ async def on_message(message):
         await client.send_message(message.channel, msg)
         log.info("[{mod}] has requested a list of role bans.".format(mod=member.name))
         return
-        
+
     if message.content.lower().startswith("!roleunban"):
         if not is_mod(member):
             msg = "{user}, you are not authorized to do that!"
             await client.send_message(message.channel, msg.format(user=member.mention))
             log.info("[{user}] requested to use !roleunban but is not authorized.".format(user=member.name))
             return
-            
+
         if not (message.channel.name in ('super_waifu_chat', 'admin_chat', 'bot_testing', 'mod_chat') or message.channel.is_private):
             msg = "{user}, this ain't the place for this kind of shit!"
             await client.send_message(message.channel, msg.format(user=member.mention))
             log.info("[{user}] requested to use !roleunban in an inappropriate channel: {channel}".format(user=member.name, channel=message.channel))
             return
-        
+
         message_parts = message.content.split(' ')
         if len(message_parts) != 3:
             msg = "{user}, you must supply two arguments: `!roleunban user_id role_name`"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
-        
+
         unbanned = server.get_member(message_parts[1])
         if unbanned == None:
             msg = "{user}, that is not a valid ID for a member of this server."
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
-            
+
         role_name = message_parts[2]
         if not get_role(role_name):
             msg = "{user}, that is not a valid role name in this server."
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
-            
+
         role_bans = get_role_bans()
         if not role_bans:
             role_bans = {}
@@ -621,15 +621,15 @@ async def on_message(message):
             msg = "{user} is not banned from any roles."
             await client.send_message(message.channel, msg.format(user=unbanned.name))
             return
-            
+
         with open(os.path.join(sys.path[0], 'role_bans.dat'), 'wb') as fp:
                 pickle.dump(role_bans, fp)
-        
+
         msg = "{user} is now unbanned from {role}"
         await client.send_message(message.channel, msg.format(user=unbanned.name, role=role_name))
         log.info("[{mod}] has unbanned {user} from {role}".format(mod=member.name, user=unbanned.name, role=role_name))
         return
-        
+
     if message.content.lower().startswith("!addgame"):
         if not is_super_waifu(member):
             msg = "{user}, you are not authorized to do that!"
@@ -862,7 +862,7 @@ async def on_message(message):
             await client.send_message(message.channel, msg.format(user=member.mention))
             log.info("[{user}] requested to join invalid game/role: {role}".format(user=member.name, role=role))
             return
-            
+
         # Check if user is banned from role
         role_bans = get_role_bans()
         if member.id in role_bans:
@@ -1179,6 +1179,104 @@ async def on_message(message):
             else:
                 # abuse the moron for doing things wrong
                 msg = "{user}, that's not a valid command you moron."
+                await client.send_message(message.channel, msg.format(user=member.mention))
+                return
+        return
+
+    elif message.content.lower().startswith("!favorites"):
+        # Example: !favorites
+        # Example: !favorites add @PeasAndClams#7812 so nice
+        # Example: !favorites remove @PeasAndClams#7812
+        authorized_users = [
+            "115183069555589125", # aceat64
+            "194703127868473344"  # King Of The Rats
+        ]
+
+        try:
+            with open(os.path.join(sys.path[0], 'favorites.dat'), 'rb') as fp:
+                favorites = pickle.load(fp)
+        except FileNotFoundError:
+            # No previous file, so create an empty list
+            favorites = []
+
+        message_parts = message.clean_content.split(' ', 3)
+
+        if len(message_parts) == 1 or message_parts[1] == "":
+            # display favorites
+            reply_msg = "Ash has {count} favorite people.\n\n".format(count=len(favorites))
+            for bless_you in favorites:
+                if not bless_you['reason']:
+                    reply_msg += ("{0}\n".format(bless_you['name']))
+                else:
+                    reply_msg += ("{0}: {1}\n".format(bless_you['name'], bless_you['reason']))
+            await client.send_message(message.channel, reply_msg)
+        else:
+            if member.id not in authorized_users:
+                msg = "{user}, you aren't authorized to do this."
+                await client.send_message(message.channel, msg.format(user=member.mention))
+                return
+
+            # check if user is real
+            try:
+                bless_you = message_parts[2]
+            except IndexError:
+                msg = "{user}, add/remove who?"
+                await client.send_message(message.channel, msg.format(user=member.mention))
+                return
+
+            if bless_you[0] == '@':
+                bless_you = bless_you[1:]
+            elif bless_you[0] == '"':
+                bless_you = message.clean_content.split('"')[1]
+
+            if message_parts[1].lower() == "add":
+                # check if they are already on the favorites
+                for existing_bless in favorites:
+                    if bless_you == existing_bless['name']:
+                        msg = "{user}, that person {bless_you} is already on the favorites. They must be exceptional if you are trying to add them again."
+                        await client.send_message(message.channel, msg.format(user=member.mention, bless_you=bless_you))
+                        return
+
+                # Add them to the favorites and write to file
+                try:
+                    favorites.append({
+                        'name': bless_you,
+                        'reason': message_parts[3]
+                    })
+                except IndexError:
+                    favorites.append({
+                        'name': bless_you,
+                        'reason': None
+                    })
+
+                with open(os.path.join(sys.path[0], 'favorites.dat'), 'wb') as fp:
+                    pickle.dump(favorites, fp)
+
+                msg = "{user}, I've added {bless_you} to the favorites."
+                await client.send_message(message.channel, msg.format(user=member.mention, bless_you=bless_you))
+                return
+            elif message_parts[1].lower() == "remove":
+                # check if they are actually on the favorites
+                for existing_bless in favorites:
+                    if bless_you == existing_bless['name']:
+                        break
+                else:
+                    msg = "{user}, {bless_you} isn't on the favorites list."
+                    await client.send_message(message.channel, msg.format(user=member.mention, bless_you=bless_you))
+                    return
+
+                # Remove them to the favorites and write to file
+                favorites[:] = [d for d in favorites if d.get('name') != bless_you]
+
+                with open(os.path.join(sys.path[0], 'favorites.dat'), 'wb') as fp:
+                    pickle.dump(favorites, fp)
+
+                msg = "{user}, I've removed {bless_you} from the favorites."
+                await client.send_message(message.channel, msg.format(user=member.mention, bless_you=bless_you))
+                return
+            else:
+                # let them know that's not a valid command
+                msg = "{user}, that's not a valid command, bless your heart."
                 await client.send_message(message.channel, msg.format(user=member.mention))
                 return
         return
