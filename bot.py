@@ -116,6 +116,13 @@ def get_games():
             return pickle.load(fp)
     except FileNotFoundError:
         return False
+        
+def get_game_servers():
+    try:
+        with open(os.path.join(sys.path[0], 'game_servers.dat'), 'rb') as fp:
+            return pickle.load(fp)
+    except FileNotFoundError:
+        return False
 
 def get_roles():
     try:
@@ -662,6 +669,78 @@ async def on_message(message):
 
         msg = "{user}, I have added {game} to the list of games."
         await client.send_message(message.channel, msg.format(user=member.mention, game=game))
+        
+    if message.content.lower().startswith("!addserver"):
+        if not is_super_waifu(member):
+            msg = "{user}, you are not authorized to do that!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+        
+        message_parts = message.content.split(' ', 1)
+        if len(message_parts) == 1:
+            msg = "{user}, you didn't specify a game, dummy?"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+        
+        game_server = message_parts[1]
+        
+        game_servers = get_game_servers()
+        if not game_servers:
+            game_servers = []
+            
+        game_servers.append(game_server)
+        with open(os.path.join(sys.path[0], 'game_servers.dat'), 'wb') as fp:
+            pickle.dump(game_servers, fp)
+
+        msg = "{user}, it will be done."
+        await client.send_message(message.channel, msg.format(user=member.mention))
+        return
+        
+    if message.content.lower().startswith("!servers"):
+        if get_game_servers():
+            reply_msg = "The following servers may be available:\n```"
+            for game_server in get_game_servers():
+                reply_msg += ("{game_server}\n".format(game_server = game_server))
+            reply_msg += "```"
+        else:
+            reply_msg = "There are no servers in the savefile!"
+        await client.send_message(message.channel, reply_msg)
+        return
+        
+    if message.content.lower().startswith("!removeserver"):
+        if not is_super_waifu(member):
+            msg = "{user}, you are not authorized to do that!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        message_parts = message.content.split(' ', 1)
+
+        if len(message_parts) == 1:
+            msg = "{user}, you didn't specify a server. I'm not surprised given your track record."
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        game_server_name = message_parts[1]
+
+        # Check if the role is in the savefile, if it is delete it
+        game_servers = get_game_servers()
+        if not game_servers:
+            msg = "{user}, there are no servers in the savefile."
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        for game_server in game_servers:
+            if game_server.lower().startswith(game_server_name.lower()):
+                game_servers.remove(game_server)
+                with open(os.path.join(sys.path[0], 'game_servers.dat'), 'wb') as fp:
+                    pickle.dump(game_servers, fp)
+                msg = "{user}, it will be done."
+                await client.send_message(message.channel, msg.format(user=member.mention))
+                return
+
+        msg = "{user}, that server isn't listed. How'd you fuck that up?"
+        await client.send_message(message.channel, msg.format(user=member.mention))
+        return    
 
     if message.content.lower().startswith("!addrole"):
         if not is_super_waifu(member):
@@ -995,6 +1074,7 @@ async def on_message(message):
             "`!help` or `!wtf` - This help message.\n" \
             "`!games` - Show a list of games you can join for LFG notifications.\n" \
             "`!roles` - Show a list of roles/groups you can join.\n" \
+            "`!servers` - Show a list of game servers you can access.\n" \
             "`!players` - Who is available to play a game. Example: `!players PUBG`\n" \
             "`!join` - Add yourself to a role or the list of people who want to play a game. Example: `!join PUBG`\n" \
             "`!leave` - Remove yourself from a role or the list of people who want to play a game.\n" \
@@ -1022,6 +1102,8 @@ async def on_message(message):
                 "`!superwtf` - This help message.\n" \
                 "`!addgame` - Add a game to the list of games people can subscribe to for LFG notifications.\n" \
                 "`!removegame` - Remove a game from the list.\n" \
+                "`!addserver` - Add game server info to the list of dedicated game servers.\n" \
+                "`!removeserver` - Remove game server info from the list of dedicated game servers.\n" \
                 "`!addrole` - Add a role people can join.\n" \
                 "`!removerole` - Remove a role from the list.\n" \
                 "`!viewquotes` - View list of partial quotes.\n" \
@@ -1481,5 +1563,6 @@ async def on_message(message):
                     await client.send_message(message.channel, msg)
                     break
                 count+=1
+    return
 
 client.run(config['discord']['token'])
