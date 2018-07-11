@@ -646,7 +646,7 @@ async def on_message(message):
         message_parts = message.content.split(' ', 1)
 
         if len(message_parts) == 1:
-            msg = "{user}, you didn't specify a game, are you retarded?"
+            msg = "{user}, you didn't specify a game, are you a moron?"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
 
@@ -751,7 +751,7 @@ async def on_message(message):
         message_parts = message.content.split(' ', 1)
 
         if len(message_parts) == 1:
-            msg = "{user}, you didn't specify a role, are you retarded?"
+            msg = "{user}, you didn't specify a role, are you a moron?"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
 
@@ -798,7 +798,7 @@ async def on_message(message):
         message_parts = message.content.split(' ', 1)
 
         if len(message_parts) == 1:
-            msg = "{user}, you didn't specify a game, are you retarded?"
+            msg = "{user}, you didn't specify a game, are you a moron?"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
 
@@ -834,7 +834,7 @@ async def on_message(message):
         message_parts = message.content.split(' ', 1)
 
         if len(message_parts) == 1:
-            msg = "{user}, you didn't specify a role, are you retarded?"
+            msg = "{user}, you didn't specify a role, are you a moron?"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
 
@@ -894,7 +894,7 @@ async def on_message(message):
 
         if len(message_parts) == 1:
             log.info("[{0}] No game specified".format(member.name))
-            msg = "{user}, you didn't specify a game, are you retarded?"
+            msg = "{user}, you didn't specify a game, are you a moron?"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
 
@@ -921,7 +921,7 @@ async def on_message(message):
 
         if len(message_parts) == 1:
             log.info("[{0}] No game/role specified".format(member.name))
-            msg = "{user}, you didn't specify a game/role, are you retarded?"
+            msg = "{user}, you didn't specify a game/role, are you a moron?"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
 
@@ -989,7 +989,7 @@ async def on_message(message):
 
         if len(message_parts) == 1:
             log.info("[{0}] No game/role specified".format(member.name))
-            msg = "{user}, you didn't specify a game/role, are you retarded?"
+            msg = "{user}, you didn't specify a game/role, are you a moron?"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
 
