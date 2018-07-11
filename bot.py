@@ -867,7 +867,7 @@ async def on_message(message):
             for game in get_games():
                 players = get_members_by_role(game)
 
-                reply_msg += ("{0} ({1} Players)\n".format(game.ljust(14), len(players)))
+                reply_msg += ("{0} ({1} Players)\n".format(game.ljust(20), len(players)))
             reply_msg += "```"
         else:
             reply_msg = "There are no games in the savefile!"
@@ -880,7 +880,7 @@ async def on_message(message):
             for role in get_roles():
                 players = get_members_by_role(role)
 
-                reply_msg += ("{0} ({1} members)\n".format(role.ljust(14), len(players)))
+                reply_msg += ("{0} ({1} members)\n".format(role.ljust(20), len(players)))
             reply_msg += "```"
         else:
             reply_msg = "There are no roles in the savefile!"
