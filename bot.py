@@ -273,7 +273,7 @@ async def on_member_join(member):
     if member.bot:
         return
     await client.add_roles(member, get_role("noobs"))
-    await asyncio.sleep(30)
+    await asyncio.sleep(15)
     msg = "Hey {0}, I'm WaifuBot. I manage various things on the Waifus_4_Lifu discord server.\n".format(member.name)
     msg += "If I could feel emotions, I'm sure I'd be glad you've accepted the invite.\n\nBefore we continue, what's rule #1?"
     while True:
@@ -285,6 +285,12 @@ async def on_member_join(member):
             return
         reply_message = await client.wait_for_message(timeout=300, author=member)
         if reply_message == None:
+            if get_role('noobs') not in member.roles:
+                msg = "{}, you have been manually approved. Please make sure you read the posts in welcome_and_rules.".format(member.name)
+                await client.send_message(member, msg)
+                msg = "{} has been manually approved.".format(member.name)
+                await client.send_message(get_channel("super_waifu_chat"), msg)
+                return
             msg = "You have timed out. Please have the person who added you contact one of the @super_waifus to manually approve you.\nThanks!"
             await client.send_message(member, msg)
             msg = "{0}, {1} has timed out as a noob.".format(get_role("super_waifus").mention, member.name)
