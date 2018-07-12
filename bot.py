@@ -332,35 +332,39 @@ async def on_message(message):
     member = server.get_member_named(str(message.author))
 
     #Post a message as WaifuBot
-    if "-WaifuBot" in message.content:
-        if message.channel.is_private:
-            return
-
-        #Delay for member-side GUI update
-        asyncio.sleep(1)
-        if not is_super_waifu(member):
-            await client.delete_message(message)
-            return
-        if len(message.attachments) == 0:
-            msg = message.content.replace('-WaifuBot', '')
-            await client.send_message(message.channel, msg)
+    if message.content.lower().startswith("!say"):
+        if not message.channel.is_private and is_super_waifu(member):
+            message_parts = message.content.split(' ', 2)
+            if len(message.channel_mentions) == 1 and (len(message_parts) == 3 or len(message.attachments) > 0):
+                channel = message.channel_mentions[0]
+                if len(message.attachments) == 0:
+                    msg = ""
+                    if len(message_parts) == 3:
+                        msg = message_parts[2]
+                    await client.send_message(channel, msg)
+                else:
+                    for index, attachment in enumerate(message.attachments):
+                        url = attachment["url"]
+                        file_name = url.split('/')[-1]
+                        msg = ""
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(url) as resp:
+                                data = await resp.read()
+                            async with aiofiles.open(os.path.join(sys.path[0], file_name), 'wb') as file:
+                                await file.write(data)
+                        if index == 0:
+                            if len(message_parts) == 3:
+                                msg = message_parts[2]
+                        await client.send_file(channel, fp=os.path.join(sys.path[0], file_name), content=msg)
+                        os.remove(os.path.join(sys.path[0], file_name))
+                notification_msg = "{user} made me say something in {channel}."
+                await client.send_message(get_channel("super_waifu_chat"), notification_msg.format(user=member.mention, channel=channel.mention))
+            else:
+                msg = "Please use the following syntax: `!say [channel_mention] [message_body]`"
+                await client.send_message(message.channel, msg)
         else:
-            for index, attachment in enumerate(message.attachments):
-                url = attachment["url"]
-                file_name = url.split('/')[-1]
-                msg = ""
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(url) as resp:
-                        data = await resp.read()
-                    async with aiofiles.open(os.path.join(sys.path[0], file_name), 'wb') as file:
-                        await file.write(data)
-                if index == 0:
-                    msg = message.content.replace('-WaifuBot', '')
-                await client.send_file(message.channel, fp=os.path.join(sys.path[0], file_name), content=msg)
-                os.remove(os.path.join(sys.path[0], file_name))
-        await client.delete_message(message)
-        notification_msg = "{user} made me say something in {channel}."
-        await client.send_message(get_channel("super_waifu_chat"), notification_msg.format(user=member.mention, channel=message.channel.mention))
+            msg = "Just what do you think you're doing? You're not authorized."
+            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'), filename=None, content=msg, tts=False)
         return
 
     if not member:
@@ -1117,7 +1121,7 @@ async def on_message(message):
                 "`!roleban` - Ban a member from joining a specific role (removes role if applicable).\n" \
                 "`!roleunban` - Undo the ban imposed by !roleban (does not add role back).\n" \
                 "`!viewrolebans` - View list of role bans. Kinda obvious.\n" \
-                "\nEnd a message with `-WaifuBot` to make me say something, but remember this will be logged. Abuse will not be tolerated.\n" \
+                "`!say [channel_mention] [message_body]` - Make me say something.\n" \
                 "\nIf I'm not working correctly, talk to aceat64 or HungryNinja."
         else:
             msg = "{user}, you aren't a super waifu! Access denied.".format(user=member.mention)
