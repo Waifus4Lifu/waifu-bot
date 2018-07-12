@@ -171,8 +171,10 @@ def get_quotes():
 def create_quote_image(quote, name):
     text = "\"{}\"".format(quote)
     name = "- {}".format(name)
-    file = random.choice(os.listdir(os.path.join(sys.path[0], 'images')))
-    img = Image.open(os.path.join(sys.path[0], 'images', file))
+    files = os.listdir(os.path.join(sys.path[0], 'images', 'inspire'))
+    files.remove('empty')
+    file = random.choice(files)
+    img = Image.open(os.path.join(sys.path[0], 'images', 'inspire', file))
     draw = ImageDraw.Draw(img)
     img_size = img.size
     font = ImageFont.truetype("impact.ttf", 180)
@@ -376,6 +378,21 @@ async def on_message(message):
         reply_msg = random.choice(no_problem)
         await client.send_message(message.channel, reply_msg)
         return
+        
+    #Post a random message from the curse directory
+    if message.content.lower().startswith("!thatsmycurseidontknowyou"):
+        if message.channel.name != "nsfw_shitposting":
+            msg = "Hey {}, you know better. That shit don't belong here.".format(member.mention)
+            await client.send_message(message.channel, msg)
+            return
+        files = os.listdir(os.path.join(sys.path[0], 'images', 'curse'))
+        files.remove('empty')
+        file = random.choice(files)
+        filepath = os.path.join(sys.path[0], 'images', 'curse', file)
+        print(filepath)
+        await client.send_file(message.channel, filepath, filename=None, tts=False)
+        return
+        
 
     #Save a quote for later inspiration
     if message.content.lower().startswith("!quoth"):
