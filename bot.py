@@ -380,14 +380,14 @@ async def on_message(message):
         
     #Post a random image from the curse directory
     if message.content.lower().startswith("!thatsmycurseidontknowyou"):
-        if message.channel.name != "nsfw_shitposting":
+        if message.channel.name in ("nsfw_shitposting", "bot_testing") or message.channel.is_private:
+            files = os.listdir(os.path.join(sys.path[0], 'images', 'curse'))
+            file = random.choice(files)
+            filepath = os.path.join(sys.path[0], 'images', 'curse', file)
+            await client.send_file(message.channel, filepath, filename=None, tts=False)
+        else:
             msg = "Hey {}, you know better. That shit don't belong here.".format(member.mention)
             await client.send_message(message.channel, msg)
-            return
-        files = os.listdir(os.path.join(sys.path[0], 'images', 'curse'))
-        file = random.choice(files)
-        filepath = os.path.join(sys.path[0], 'images', 'curse', file)
-        await client.send_file(message.channel, filepath, filename=None, tts=False)
         return
         
 
@@ -1115,7 +1115,6 @@ async def on_message(message):
             "`!google`\n" \
             "`!join shitposting` - Gain access to nsfw/shitposting channel.\n" \
             "`!leave shitposting` - Give up access to nsfw/shitposting channel.\n" \
-            "`!lottery [channel_name] [prize_code] [minutes] [prize_name]` - Self-explanatory (DM WaifuBot).\n" \
             "`!superwtf` - Show commands available only to super waifus (mods).\n" \
             "\nIf I'm not working correctly, go fuck yourself, you aren't my boss."
         await client.send_message(message.channel, msg)
@@ -1138,6 +1137,7 @@ async def on_message(message):
                 "`!roleunban` - Undo the ban imposed by !roleban (does not add role back).\n" \
                 "`!viewrolebans` - View list of role bans. Kinda obvious.\n" \
                 "`!say [channel_mention] [message_body]` - Make me say something.\n" \
+                "`!lottery [channel_name] [prize_code] [minutes] [prize_name]` - Self-explanatory (DM WaifuBot).\n" \
                 "\nIf I'm not working correctly, talk to aceat64 or HungryNinja."
         else:
             msg = "{user}, you aren't a super waifu! Access denied.".format(user=member.mention)
@@ -1489,6 +1489,10 @@ async def on_message(message):
 
     #Game code lottery
     elif message.content.lower().startswith("!lottery"):
+        if not is_super_waifu(member):
+            msg = "Just what do you think you're doing? You're not authorized."
+            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'), filename=None, content=msg, tts=False)
+            return
         if not message.channel.is_private:
             await client.delete_message(message)
             msg = "{}, for that you'll need to slide into my DMs. I've gone ahead and deleted your message in case it contained a prize code.".format(member.mention)
