@@ -379,7 +379,7 @@ async def on_message(message):
         await client.send_message(message.channel, reply_msg)
         return
         
-    #Post a random message from the curse directory
+    #Post a random image from the curse directory
     if message.content.lower().startswith("!thatsmycurseidontknowyou"):
         if message.channel.name != "nsfw_shitposting":
             msg = "Hey {}, you know better. That shit don't belong here.".format(member.mention)
@@ -389,7 +389,6 @@ async def on_message(message):
         files.remove('empty')
         file = random.choice(files)
         filepath = os.path.join(sys.path[0], 'images', 'curse', file)
-        print(filepath)
         await client.send_file(message.channel, filepath, filename=None, tts=False)
         return
         
