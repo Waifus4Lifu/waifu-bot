@@ -314,7 +314,7 @@ async def on_member_join(member):
 
 @client.event
 async def on_message_delete(message):
-    if "-WaifuBot" in message.content or message.channel.is_private:
+    if "!lottery" in message.content or message.channel.is_private:
         return
     description="Author: {0}\nChannel: {1}\nTimestamp: {2}".format(message.author.name, message.channel, message.timestamp)
     embed = discord.Embed(title="Message deleted by [see audit log]", description=description, color=0xff0000)
@@ -1100,6 +1100,7 @@ async def on_message(message):
             "`!google`\n" \
             "`!join shitposting` - Gain access to nsfw/shitposting channel.\n" \
             "`!leave shitposting` - Give up access to nsfw/shitposting channel.\n" \
+            "`!lottery [channel_name] [prize_code] [minutes] [prize_name]` - Self-explanatory (DM WaifuBot).\n" \
             "`!superwtf` - Show commands available only to super waifus (mods).\n" \
             "\nIf I'm not working correctly, go fuck yourself, you aren't my boss."
         await client.send_message(message.channel, msg)
@@ -1473,53 +1474,57 @@ async def on_message(message):
 
     #Game code lottery
     elif message.content.lower().startswith("!lottery"):
-        await client.send_typing(message.channel)
-        await asyncio.sleep(1)
-        drawing_delay = 30
-        if not get_role("bot_testers") in member.roles:
-            msg = "Just what do you think you're doing? You're not authorized."
-            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'), filename=None, content=msg, tts=False)
+        if not message.channel.is_private:
+            await client.delete_message(message)
+            msg = "{}, for that you'll need to slide into my DMs. I've gone ahead and deleted your message in case it contained a prize code.".format(member.mention)
+            await client.send_message(message.channel, msg)
             return
-        msg = "Hey @everyone, {0} has initiated an indie game code lottery.\n"
-        msg+= "The game code drawing will be held in {1} minutes.\n"
-        msg+= "A winner will be drawn at random from those who **add a reaction to this post**.\n"
-        msg+= "You can react as many times as you want, only one entry will be counted.\n"
-        msg+= "Disclaimer: I believe these codes still work but make no guarantees. Good luck!"
-        lottery_post = await client.send_message(message.channel, msg.format(message.author.mention, drawing_delay))
-        end_time = time.time() + (drawing_delay * 60)
+        command_parts = message.content.split(' ', 4)
+        if len(command_parts) != 5:
+            msg = "I know you can do better: `!lottery [channel_name] [prize_code] [minutes] [prize_name]`"
+            await client.send_message(message.channel, msg)
+            return
+        channel = get_channel(command_parts[1])
+        if not channel:
+            msg = "That's not a valid channel, dummy."
+            await client.send_message(message.channel, msg)
+            return
+        prize_code = command_parts[2]
+        try:
+            minutes = int(command_parts[3])
+        except ValueError:
+            msg = "The value for minutes must be a positive integer."
+            await client.send_message(message.channel, msg)
+            return
+        prize_name = command_parts[4]
+        msg = "Hey @everyone, {0} has initiated a lottery for [{1}]. The drawing will be held in {2} minute"
+        if minutes != 1:
+            msg += "s"
+        msg += ". The winner will be drawn at random from those who **add a reaction to this post**. "
+        msg += "You can react as many times as you want, only one entry will be counted. "
+        msg += "**Disclaimer: The prize code isn't mine. Blame {0} if it doesn't work.**\n\nGood luck!"
+        lottery_post = await client.send_message(channel, msg.format(member.mention, prize_name, minutes))
+        end_time = time.time() + (minutes * 60)
         entrants = []
         while time.time() < end_time:
             seconds_left = end_time - time.time()
             reaction = await client.wait_for_reaction(timeout=seconds_left)
             if reaction != None:
-                if reaction.user not in entrants:
+                if reaction.user not in entrants and reaction.user != member:
                     entrants.append(reaction.user)
         if len(entrants) == 0:
-            msg = "Nobody entered the drawing. Nobody wins."
-            await client.send_message(message.channel, msg)
+            msg = "{}, nobody entered your drawing. Nobody wins.".format(member.mention)
+            await client.send_message(channel, msg)
         else:
             winner = random.choice(entrants)
-            msg = "Congratulations, {0}! You have won the lottery drawing. Check your DMs for your steam code.".format(winner.mention)
-            await client.send_message(message.channel, msg)
             try:
-                codes = open(os.path.join(sys.path[0], 'codes.txt')).read().splitlines()
-                if len(codes) > 0:
-                    code = codes[0]
-                    codes.pop(0)
-                else:
-                    code = "\nError: Code not found. Please contact PeasAndClams for details."
-            except FileNotFoundError:
-                code = "\nError: Code not found. Please contact PeasAndClams for details."
-            msg = "Hey {0}, here is your steam code: {1}".format(winner.mention, code)
-            try:
+                msg = "Hey {0}, here is your prize code: {1}".format(winner.mention, prize_code)
                 await client.send_message(winner, msg)
+                msg = "Congratulations, {0}! You have won the lottery drawing. Check your DMs for your prize code.".format(winner.mention)
+                await client.send_message(channel, msg)
             except discord.errors.Forbidden:
-                msg = "{0}, {1} won the drawing but does not accept DMs. The prize code is: {3}".format(get_role("super_waifus").mention, winner.name, code)
-                await client.send_message(get_channel("super_waifu_chat"), msg)
-            codes_file = open(os.path.join(sys.path[0], 'codes.txt'), "w")
-            for code in codes:
-                codes_file.write(code + "\n")
-            codes_file.close()
+                msg = "Hey {0}, {1} won your drawing but does not accept DMs from *strangers* like me :elacry:. Y'all work it out amongst yourselves.".format(member.mention, winner.mention)
+                await client.send_message(channel, msg)
         return
 
     #Did someone say hungry?
