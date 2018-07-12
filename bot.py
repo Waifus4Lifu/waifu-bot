@@ -1110,6 +1110,7 @@ async def on_message(message):
             "`!color` - Get the hex and RGB values for Waifu Pink.\n" \
             "`!quoth` - Save most recent message by @mention to inspirational quotes.\n" \
             "`!inspire` - Request a random quote for inspiration.\n" \
+            "`!thatsmycurseidontknowyou` - Channel the power of the GREMLIN.\n" \
             "`!yeah`\n" \
             "`!shrug`\n" \
             "`!catfact`\n" \
