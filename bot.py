@@ -172,7 +172,6 @@ def create_quote_image(quote, name):
     text = "\"{}\"".format(quote)
     name = "- {}".format(name)
     files = os.listdir(os.path.join(sys.path[0], 'images', 'inspire'))
-    files.remove('empty')
     file = random.choice(files)
     img = Image.open(os.path.join(sys.path[0], 'images', 'inspire', file))
     draw = ImageDraw.Draw(img)
@@ -386,7 +385,6 @@ async def on_message(message):
             await client.send_message(message.channel, msg)
             return
         files = os.listdir(os.path.join(sys.path[0], 'images', 'curse'))
-        files.remove('empty')
         file = random.choice(files)
         filepath = os.path.join(sys.path[0], 'images', 'curse', file)
         await client.send_file(message.channel, filepath, filename=None, tts=False)
