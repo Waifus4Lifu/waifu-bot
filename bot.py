@@ -1096,6 +1096,7 @@ async def on_message(message):
             "`!google`\n" \
             "`!join shitposting` - Gain access to nsfw/shitposting channel.\n" \
             "`!leave shitposting` - Give up access to nsfw/shitposting channel.\n" \
+            "`!lottery [channel_name] [prize_code] [minutes] [prize_name]` - Self-explanatory (DM WaifuBot).\n" \
             "`!superwtf` - Show commands available only to super waifus (mods).\n" \
             "\nIf I'm not working correctly, go fuck yourself, you aren't my boss."
         await client.send_message(message.channel, msg)
