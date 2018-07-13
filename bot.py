@@ -7,6 +7,7 @@ import asyncio
 import urllib
 import json
 import random
+import secrets
 import os
 import pickle
 import time
@@ -172,7 +173,7 @@ def create_quote_image(quote, name):
     text = "\"{}\"".format(quote)
     name = "- {}".format(name)
     files = os.listdir(os.path.join(sys.path[0], 'images', 'inspire'))
-    file = random.choice(files)
+    file = secrets.choice(files)
     img = Image.open(os.path.join(sys.path[0], 'images', 'inspire', file))
     draw = ImageDraw.Draw(img)
     img_size = img.size
@@ -241,7 +242,7 @@ async def on_ready():
 @asyncio.coroutine
 async def change_status():
     while True:
-        playing = random.choice(playing_messages)
+        playing = secrets.choice(playing_messages)
         if playing[:1] == "0":
             status = discord.Status.online
         elif playing[:1] == "1":
@@ -374,7 +375,7 @@ async def on_message(message):
 
     #Reply to human thankfullness
     if 'thank' in message.content.lower() and client.user in message.mentions:
-        reply_msg = random.choice(no_problem)
+        reply_msg = secrets.choice(no_problem)
         await client.send_message(message.channel, reply_msg)
         return
         
@@ -382,7 +383,7 @@ async def on_message(message):
     if message.content.lower().startswith("!thatsmycurseidontknowyou"):
         if message.channel.name in ("nsfw_shitposting", "bot_testing") or message.channel.is_private:
             files = os.listdir(os.path.join(sys.path[0], 'images', 'curse'))
-            file = random.choice(files)
+            file = secrets.choice(files)
             filepath = os.path.join(sys.path[0], 'images', 'curse', file)
             await client.send_file(message.channel, filepath, filename=None, tts=False)
         else:
@@ -458,7 +459,7 @@ async def on_message(message):
             log.error("No quotes found")
             await client.send_message(message.channel, msg)
             return
-        quote = random.choice(quotes)
+        quote = secrets.choice(quotes)
         content = quote.content
         if len(quote.mentions) > 0:
             for member in quote.mentions:
@@ -1444,12 +1445,12 @@ async def on_message(message):
             "You may rely on it.",
             "Blame Pearce"
         ]
-        await client.send_message(message.channel, "{user}: {phrase}".format(user=member.mention, phrase=random.choice(phrases)))
+        await client.send_message(message.channel, "{user}: {phrase}".format(user=member.mention, phrase=secrets.choice(phrases)))
         return
 
     elif message.content.lower().startswith("!catfact"):
         cat_facts = open(os.path.join(sys.path[0], 'cat_facts.txt')).read().splitlines()
-        cat_fact = random.choice(cat_facts)
+        cat_fact = secrets.choice(cat_facts)
         if random.randint(1, 4) == 1:
             cat_fact = cat_fact.replace('cat', 'catgirl')
         await client.send_message(message.channel, cat_fact)
@@ -1535,7 +1536,7 @@ async def on_message(message):
             msg = "{}, nobody entered your drawing. Nobody wins.".format(member.mention)
             await client.send_message(channel, msg)
         else:
-            winner = random.choice(entrants)
+            winner = secrets.choice(entrants)
             try:
                 msg = "Hey {0}, here is your prize code: {1}".format(winner.mention, prize_code)
                 await client.send_message(winner, msg)
