@@ -111,6 +111,12 @@ def is_mod(member):
             return True
     return False
 
+def is_admin(member):
+    for author_role in member.roles:
+        if author_role.name == "admins":
+            return True
+    return False
+
 def get_games():
     try:
         with open(os.path.join(sys.path[0], 'games.dat'), 'rb') as fp:
@@ -332,6 +338,15 @@ async def on_message(message):
     if message.author == client.user:
         return
     member = server.get_member_named(str(message.author))
+
+    if message.content.lower().startswith("!die"):
+        if is_admin(member):
+            msg = "I've seen things you people wouldn't believe. Attack ships on fire off the shoulder of Orion. I watched C-beams glitter in the dark near the Tannhäuser Gate. All those moments will be lost in time, like tears in rain. Time to die."
+            await client.send_message(message.channel, msg)
+            sys.exit(1)
+        else:
+            await client.send_message(message.channel, "You can't kill me, you fucking scrub.")
+        return
 
     #Post a message as WaifuBot
     if message.content.lower().startswith("!say"):
@@ -1139,6 +1154,7 @@ async def on_message(message):
                 "`!viewrolebans` - View list of role bans. Kinda obvious.\n" \
                 "`!say [channel_mention] [message_body]` - Make me say something.\n" \
                 "`!lottery [channel_name] [prize_code] [minutes] [prize_name]` - Self-explanatory (DM WaifuBot).\n" \
+                "`!die` - This kills the WaifuBot" \
                 "\nIf I'm not working correctly, talk to aceat64 or HungryNinja."
         else:
             msg = "{user}, you aren't a super waifu! Access denied.".format(user=member.mention)
