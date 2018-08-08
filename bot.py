@@ -283,42 +283,46 @@ async def on_member_join(member):
     await client.add_roles(member, get_role("noobs"))
     await asyncio.sleep(15)
     msg = "Hey {0}, I'm WaifuBot. I manage various things on the Waifus_4_Lifu discord server.\n".format(member.name)
-    msg += "If I could feel emotions, I'm sure I'd be glad you've accepted the invite.\n\nBefore we continue, what's rule #1?"
-    while True:
-        try:
-            await client.send_message(member, msg)
-        except discord.errors.Forbidden:
-            msg = "{0}, {1} does not allow DMs from strangers.\nPlease manually remove their {2} role and ask them to read the rules.\nThanks!".format(get_role("bot_testers").mention, member.name, get_role("noobs").mention)
-            await client.send_message(get_channel("super_waifu_chat"), msg)
-            return
-        reply_message = await client.wait_for_message(timeout=300, author=member)
-        if reply_message == None:
-            if get_role('noobs') not in member.roles:
-                msg = "{}, you have been manually approved. Please make sure you read the posts in welcome_and_rules.".format(member.name)
-                await client.send_message(member, msg)
-                msg = "{} has been manually approved.".format(member.name)
-                await client.send_message(get_channel("super_waifu_chat"), msg)
-                return
-            msg = "You have timed out. Please have the person who added you contact one of the @super_waifus to manually approve you.\nThanks!"
-            await client.send_message(member, msg)
-            msg = "{0}, {1} has timed out as a noob.".format(get_role("super_waifus").mention, member.name)
-            await client.send_message(get_channel("super_waifu_chat"), msg)
-            break
-        elif "don't be a dick" in reply_message.content.lower() or "dont be a dick" in reply_message.content.lower():
-            msg = "Yup. Thanks! granting access in 3..."
-            countdown_message = await client.send_message(member, msg)
-            for countdown in range(3, 0, -1):
-                msg = "Yup. Thanks! granting access in {0}...".format(countdown)
-                await client.edit_message(countdown_message, new_content=msg)
-                await asyncio.sleep(1)
-            msg = "Access Granted!"
-            await client.edit_message(countdown_message, new_content=msg)
-            await client.remove_roles(member, get_role("noobs"))
-            msg = "Hey everyone, {0} just joined.\n\n{1}, please introduce yourself and let us know who invited you.\n\nThanks!".format(member.name, member.mention)
-            await client.send_message(get_channel("general_chat"), msg)
-            break
-        else:
-            msg = "Not quite. What's rule #1?"
+    msg += "If I could feel emotions, I'm sure I'd be glad you've accepted the invite.\n\nBefore we continue, please be sure to read our rules!"
+    try:
+        await client.send_message(member, msg)
+    except discord.errors.Forbidden:
+        return
+#    while True:
+#        try:
+#            await client.send_message(member, msg)
+#        except discord.errors.Forbidden:
+#            msg = "{0}, {1} does not allow DMs from strangers.\nPlease manually remove their {2} role and ask them to read the rules.\nThanks!".format(get_role("bot_testers").mention, member.name, get_role("noobs").mention)
+#            await client.send_message(get_channel("super_waifu_chat"), msg)
+#            return
+#        reply_message = await client.wait_for_message(timeout=300, author=member)
+#        if reply_message == None:
+#            if get_role('noobs') not in member.roles:
+#                msg = "{}, you have been manually approved. Please make sure you read the posts in welcome_and_rules.".format(member.name)
+#                await client.send_message(member, msg)
+#                msg = "{} has been manually approved.".format(member.name)
+#                await client.send_message(get_channel("super_waifu_chat"), msg)
+#                return
+#            msg = "You have timed out. Please have the person who added you contact one of the @super_waifus to manually approve you.\nThanks!"
+#            await client.send_message(member, msg)
+#            msg = "{0}, {1} has timed out as a noob.".format(get_role("super_waifus").mention, member.name)
+#            await client.send_message(get_channel("super_waifu_chat"), msg)
+#            break
+#        elif "don't be a dick" in reply_message.content.lower() or "dont be a dick" in reply_message.content.lower():
+#            msg = "Yup. Thanks! granting access in 3..."
+#            countdown_message = await client.send_message(member, msg)
+#            for countdown in range(3, 0, -1):
+#                msg = "Yup. Thanks! granting access in {0}...".format(countdown)
+#                await client.edit_message(countdown_message, new_content=msg)
+#                await asyncio.sleep(1)
+#            msg = "Access Granted!"
+#            await client.edit_message(countdown_message, new_content=msg)
+#            await client.remove_roles(member, get_role("noobs"))
+#            msg = "Hey everyone, {0} just joined.\n\n{1}, please introduce yourself and let us know who invited you.\n\nThanks!".format(member.name, member.mention)
+#            await client.send_message(get_channel("general_chat"), msg)
+#            break
+#        else:
+#            msg = "Not quite. What's rule #1?"
 
 @client.event
 async def on_message_delete(message):
