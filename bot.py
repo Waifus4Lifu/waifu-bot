@@ -16,9 +16,7 @@ import aiohttp
 import datetime
 import yaml
 import textwrap
-from PIL import Image
-from PIL import ImageFont
-from PIL import ImageDraw
+from PIL import Image, ImageSequence, ImageFont, ImageDraw
 
 #Rate limiter global variables
 message_count = 0
@@ -206,55 +204,74 @@ def get_quotes():
     except FileNotFoundError:
         return []
 
-def create_quote_image(quote, name):
+def create_quote_image(id, type, quote, name):
     text = "\"{}\"".format(quote)
     name = "- {}".format(name)
-    files = os.listdir(os.path.join(sys.path[0], 'images', 'inspire'))
+    if type == 'gif':
+        path = os.path.join(sys.path[0], 'images', 'gif')
+    else:
+        path = os.path.join(sys.path[0], 'images', 'inspire')
+    files = os.listdir(path)
     file = secrets.choice(files)
-    img = Image.open(os.path.join(sys.path[0], 'images', 'inspire', file))
+    img = Image.open(os.path.join(path, file))
     draw = ImageDraw.Draw(img)
     img_size = img.size
-    font = ImageFont.truetype("impact.ttf", 180)
-    border = 5
+    font_size = int(((img.width + img.height) / 2) / 15)
+    line_width = int(img.width / (font_size * .5))
+    if id == "194703127868473344":
+        font = ImageFont.truetype("comic.ttf", font_size)
+    else:
+        font = ImageFont.truetype("impact.ttf", font_size)
+    border = int(((img.width + img.height) / 2) / 768)
     multi_line = ""
-    for line in textwrap.wrap(text, width=40):
+    for line in textwrap.wrap(text, width=line_width):
         multi_line += line + "\n"
     text_size = draw.multiline_textsize(text=multi_line, font=font)
     name_size = draw.textsize(text=name, font=font)
+    
+    frames = []
+    for frame in ImageSequence.Iterator(img):
+        frame = frame.convert('RGBA')
+        draw = ImageDraw.Draw(frame)
 
-    #Draw quote
-    x = (img_size[0]/2) - (text_size[0]/2)
-    y = (img_size[1]/2) - (text_size[1]/2) - name_size[1]
-    #Border
-    draw.multiline_text((x-border,y),multi_line,font=font, align='center', fill='black')
-    draw.multiline_text((x-border,y-border),multi_line,font=font, align='center', fill='black')
-    draw.multiline_text((x,y-border),multi_line,font=font, align='center', fill='black')
-    draw.multiline_text((x+border,y-border),multi_line,font=font, align='center', fill='black')
-    draw.multiline_text((x+border,y),multi_line,font=font, align='center', fill='black')
-    draw.multiline_text((x+border,y+border),multi_line,font=font, align='center', fill='black')
-    draw.multiline_text((x,y+border),multi_line,font=font, align='center', fill='black')
-    draw.multiline_text((x-border,y+border),multi_line,font=font, align='center', fill='black')
-    #Text
-    draw.multiline_text((x,y),multi_line,font=font, align='center', fill='white')
+        #Draw quote
+        x = (img_size[0]/2) - (text_size[0]/2)
+        y = (img_size[1]/2) - (text_size[1]/2) - name_size[1]
+        #Border
+        draw.multiline_text((x-border,y),multi_line,font=font, align='center', fill='black')
+        draw.multiline_text((x-border,y-border),multi_line,font=font, align='center', fill='black')
+        draw.multiline_text((x,y-border),multi_line,font=font, align='center', fill='black')
+        draw.multiline_text((x+border,y-border),multi_line,font=font, align='center', fill='black')
+        draw.multiline_text((x+border,y),multi_line,font=font, align='center', fill='black')
+        draw.multiline_text((x+border,y+border),multi_line,font=font, align='center', fill='black')
+        draw.multiline_text((x,y+border),multi_line,font=font, align='center', fill='black')
+        draw.multiline_text((x-border,y+border),multi_line,font=font, align='center', fill='black')
+        #Text
+        draw.multiline_text((x,y),multi_line,font=font, align='center', fill='white')
 
-    #Draw name
-    x += text_size[0] - name_size[0]
-    y += text_size[1]
-    #Border
-    draw.text((x-border,y),name,font=font, align='right', fill='black')
-    draw.text((x-border,y-border),name,font=font, align='right', fill='black')
-    draw.text((x,y-border),name,font=font, align='right', fill='black')
-    draw.text((x+border,y-border),name,font=font, align='right', fill='black')
-    draw.text((x+border,y),name,font=font, align='right', fill='black')
-    draw.text((x+border,y+border),name,font=font, align='right', fill='black')
-    draw.text((x,y+border),name,font=font, align='right', fill='black')
-    draw.text((x-border,y+border),name,font=font, align='right', fill='black')
-    #Text
-    draw.text((x,y),name,font=font, align='right', fill='white')
+        #Draw name
+        x += text_size[0] - name_size[0]
+        y += text_size[1]
+        #Border
+        draw.text((x-border,y),name,font=font, align='right', fill='black')
+        draw.text((x-border,y-border),name,font=font, align='right', fill='black')
+        draw.text((x,y-border),name,font=font, align='right', fill='black')
+        draw.text((x+border,y-border),name,font=font, align='right', fill='black')
+        draw.text((x+border,y),name,font=font, align='right', fill='black')
+        draw.text((x+border,y+border),name,font=font, align='right', fill='black')
+        draw.text((x,y+border),name,font=font, align='right', fill='black')
+        draw.text((x-border,y+border),name,font=font, align='right', fill='black')
+        #Text
+        draw.text((x,y),name,font=font, align='right', fill='white')
+        
+        del draw
+        frames.append(frame)
 
     timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-    out_file = "tmp/{}.jpg".format(timestamp)
-    img.save(os.path.join(sys.path[0], out_file))
+    extension = file.split('.')[-1]
+    out_file = "tmp/{}.{}".format(timestamp, extension)
+    with open(os.path.join(sys.path[0], out_file), "wb") as file:
+        frames[0].save(file, format="GIF", save_all=True, append_images=frames[1:])
     return out_file
 
 @client.event
@@ -529,7 +546,10 @@ async def on_message(message):
         if len(quote.mentions) > 0:
             for member in quote.mentions:
                 content = content.replace(member.mention, member.name)
-        quote_image = create_quote_image(content, quote.author.name)
+        if 'gif' in message.content.lower():
+            quote_image = create_quote_image(member.id, 'gif', content, quote.author.name)
+        else:
+            quote_image = create_quote_image(member.id, None, content, quote.author.name)
         await client.send_file(message.channel, os.path.join(sys.path[0], quote_image), filename=None, tts=False)
         os.remove(os.path.join(sys.path[0], quote_image))
         return
