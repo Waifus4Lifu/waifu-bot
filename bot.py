@@ -99,6 +99,37 @@ except KeyError:
 
 client = discord.Client()
 
+#Funtion shamelessly stolen from a shameless thief
+#https://github.com/DigTheDoug/SyllableCounter
+def CountSyllables(word, isName=True):
+    vowels = "aeiouy"
+    #single syllables in words like bread and lead, but split in names like Breanne and Adreann
+    specials = ["ia","ea"] if isName else ["ia"]
+    specials_except_end = ["ie","ya","es","ed"]  #seperate syllables unless ending the word
+    currentWord = word.lower()
+    numVowels = 0
+    lastWasVowel = False
+    last_letter = ""
+    for letter in currentWord:
+        if letter in vowels:
+            #don't count diphthongs unless special cases
+            combo = last_letter+letter
+            if lastWasVowel and combo not in specials and combo not in specials_except_end:
+                lastWasVowel = True
+            else:
+                numVowels += 1
+                lastWasVowel = True
+        else:
+            lastWasVowel = False
+        last_letter = letter
+    #remove es & ed which are usually silent
+    if len(currentWord) > 2 and currentWord[-2:] in specials_except_end:
+        numVowels -= 1
+    #remove silent single e, but not ee since it counted it before and we should be correct
+    elif len(currentWord) > 2 and currentWord[-1:] == "e" and currentWord[-2:] != "ee":
+        numVowels -= 1
+    return numVowels
+
 def is_super_waifu(member):
     for author_role in member.roles:
         if author_role.name == "super_waifus":
@@ -406,6 +437,25 @@ async def on_message(message):
             await client.send_message(message.channel, msg)
         return
         
+    #Write a haiku from previous messages
+    if message.content.lower().startswith("!haiku"):
+        await client.send_typing(message.channel)
+        five = []
+        seven = []
+        msg = ""
+        async for previous_message in client.logs_from(message.channel, limit=1000):
+            count = 0
+            for word in previous_message.content.split(' '):
+                word = ''.join(filter(str.isalpha, word)).lower()
+                count += CountSyllables(word)
+            if count == 5:
+                five.append(previous_message.content)
+            if count == 7:
+                seven.append(previous_message.content)
+        msg = msg + random.choice(five) + "\n"
+        msg = msg + random.choice(seven) + "\n"
+        msg = msg + random.choice(five)
+        await client.send_message(message.channel, msg)
 
     #Save a quote for later inspiration
     if message.content.lower().startswith("!quoth"):
@@ -1125,6 +1175,7 @@ async def on_message(message):
             "`!quoth` - Save most recent message by @mention to inspirational quotes.\n" \
             "`!inspire` - Request a random quote for inspiration.\n" \
             "`!thatsmycurseidontknowyou` - Channel the power of the GREMLIN.\n" \
+            "`!haiku` - Write a haiku from previous messages in channel.\n" \
             "`!yeah`\n" \
             "`!shrug`\n" \
             "`!catfact`\n" \
