@@ -1610,7 +1610,7 @@ async def on_message(message):
                 if "@" in previous_message.content:
                     break
                 elif count > 8:
-                    msg = "Hey {0} and friends, let's move this conversation to {1}.\nThanks!".format(message.author.mention, get_channel("general_chat").mention)
+                    msg = "Hey {0} and friends, let's move this conversation to {1}.\nThanks!".format(message.author.mention, get_channel("gaming").mention)
                     await client.send_message(message.channel, msg)
                     break
                 count+=1
