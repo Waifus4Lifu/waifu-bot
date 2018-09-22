@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python3.6
 import argparse
 import logging as log
 import sys
@@ -7,6 +7,7 @@ import asyncio
 import urllib
 import json
 import random
+import secrets
 import os
 import pickle
 import time
@@ -15,9 +16,7 @@ import aiohttp
 import datetime
 import yaml
 import textwrap
-from PIL import Image
-from PIL import ImageFont
-from PIL import ImageDraw
+from PIL import Image, ImageSequence, ImageFont, ImageDraw
 
 #Rate limiter global variables
 message_count = 0
@@ -46,6 +45,9 @@ log.info("Started")
 with open(os.path.join(sys.path[0], 'config.yaml'), "r") as f:
     config = yaml.load(f)
 
+with open(os.path.join(sys.path[0], 'playing.txt'), "r") as f:
+    playing_messages = f.read().splitlines()
+
 # TODO: Validate that required entries exist
 
 #Rate limiter config
@@ -60,7 +62,7 @@ try:
 except KeyError:
     # Default to 30
     cooldown_seconds = 30
-    
+
 #Stream detection variables
 on_cooldown = {}
 try:
@@ -68,7 +70,7 @@ try:
 except KeyError:
     # Default to 7200
     stream_cooldown = 7200
-    
+
 #Sensitive channels
 try:
     sensitive_channels = config['channels']['sensitive']
@@ -77,19 +79,70 @@ except KeyError:
     sensitive_channels = ["super_waifu_chat",
                           "serious_business"]
 
-#Affirmative answers                          
-try:                         
+#Affirmative answers
+try:
     answers_yes = config['answers']['yes']
 except KeyError:
     # Default
     answers_yes = ["yes",
                    "yeah"]
 
+#no_problem messages
+try:
+    no_problem = config['bot_phrases']['no_problem']
+except KeyError:
+    # Default
+    no_problem = ["No problemo",
+                   "Anytime"]
+
 client = discord.Client()
+
+#Funtion shamelessly stolen from a shameless thief
+#https://github.com/DigTheDoug/SyllableCounter
+def CountSyllables(word, isName=True):
+    vowels = "aeiouy"
+    #single syllables in words like bread and lead, but split in names like Breanne and Adreann
+    specials = ["ia","ea"] if isName else ["ia"]
+    specials_except_end = ["ie","ya","es","ed"]  #seperate syllables unless ending the word
+    currentWord = word.lower()
+    numVowels = 0
+    lastWasVowel = False
+    last_letter = ""
+    for letter in currentWord:
+        if letter in vowels:
+            #don't count diphthongs unless special cases
+            combo = last_letter+letter
+            if lastWasVowel and combo not in specials and combo not in specials_except_end:
+                lastWasVowel = True
+            else:
+                numVowels += 1
+                lastWasVowel = True
+        else:
+            lastWasVowel = False
+        last_letter = letter
+    #remove es & ed which are usually silent
+    if len(currentWord) > 2 and currentWord[-2:] in specials_except_end:
+        numVowels -= 1
+    #remove silent single e, but not ee since it counted it before and we should be correct
+    elif len(currentWord) > 2 and currentWord[-1:] == "e" and currentWord[-2:] != "ee":
+        numVowels -= 1
+    return numVowels
 
 def is_super_waifu(member):
     for author_role in member.roles:
         if author_role.name == "super_waifus":
+            return True
+    return False
+
+def is_mod(member):
+    for author_role in member.roles:
+        if author_role.name == "mods":
+            return True
+    return False
+
+def is_admin(member):
+    for author_role in member.roles:
+        if author_role.name == "admins":
             return True
     return False
 
@@ -99,10 +152,24 @@ def get_games():
             return pickle.load(fp)
     except FileNotFoundError:
         return False
+        
+def get_game_servers():
+    try:
+        with open(os.path.join(sys.path[0], 'game_servers.dat'), 'rb') as fp:
+            return pickle.load(fp)
+    except FileNotFoundError:
+        return False
 
 def get_roles():
     try:
         with open(os.path.join(sys.path[0], 'roles.dat'), 'rb') as fp:
+            return pickle.load(fp)
+    except FileNotFoundError:
+        return False
+
+def get_role_bans():
+    try:
+        with open(os.path.join(sys.path[0], 'role_bans.dat'), 'rb') as fp:
             return pickle.load(fp)
     except FileNotFoundError:
         return False
@@ -129,62 +196,82 @@ def get_members_by_role(role):
                 members.append(member)
                 break
     return(members)
-    
+
 def get_quotes():
     try:
         with open(os.path.join(sys.path[0], 'quotes.dat'), 'rb') as fp:
             return pickle.load(fp)
     except FileNotFoundError:
         return []
-        
-def create_quote_image(quote, name):
-    text = "\"{}\"".format(quote)            
+
+def create_quote_image(id, type, quote, name):
+    text = "\"{}\"".format(quote)
     name = "- {}".format(name)
-    file = random.choice(os.listdir(os.path.join(sys.path[0], 'images')))
-    img = Image.open(os.path.join(sys.path[0], 'images', file))
+    if type == 'gif':
+        path = os.path.join(sys.path[0], 'images', 'gif')
+    else:
+        path = os.path.join(sys.path[0], 'images', 'inspire')
+    files = os.listdir(path)
+    file = secrets.choice(files)
+    img = Image.open(os.path.join(path, file))
     draw = ImageDraw.Draw(img)
     img_size = img.size
-    font = ImageFont.truetype("impact.ttf", 180)
-    border = 5
+    font_size = int(((img.width + img.height) / 2) / 15)
+    line_width = int(img.width / (font_size * .5))
+    if id == "194703127868473344":
+        font = ImageFont.truetype("comic.ttf", font_size)
+    else:
+        font = ImageFont.truetype("impact.ttf", font_size)
+    border = int(((img.width + img.height) / 2) / 768)
     multi_line = ""
-    for line in textwrap.wrap(text, width=40):
+    for line in textwrap.wrap(text, width=line_width):
         multi_line += line + "\n"
     text_size = draw.multiline_textsize(text=multi_line, font=font)
     name_size = draw.textsize(text=name, font=font)
+    
+    frames = []
+    for frame in ImageSequence.Iterator(img):
+        frame = frame.convert('RGBA')
+        draw = ImageDraw.Draw(frame)
 
-    #Draw quote
-    x = (img_size[0]/2) - (text_size[0]/2)
-    y = (img_size[1]/2) - (text_size[1]/2) - name_size[1]
-    #Border
-    draw.multiline_text((x-border,y),multi_line,font=font, align='center', fill='black')
-    draw.multiline_text((x-border,y-border),multi_line,font=font, align='center', fill='black')
-    draw.multiline_text((x,y-border),multi_line,font=font, align='center', fill='black')
-    draw.multiline_text((x+border,y-border),multi_line,font=font, align='center', fill='black')
-    draw.multiline_text((x+border,y),multi_line,font=font, align='center', fill='black')
-    draw.multiline_text((x+border,y+border),multi_line,font=font, align='center', fill='black')
-    draw.multiline_text((x,y+border),multi_line,font=font, align='center', fill='black')
-    draw.multiline_text((x-border,y+border),multi_line,font=font, align='center', fill='black')
-    #Text
-    draw.multiline_text((x,y),multi_line,font=font, align='center', fill='white')
+        #Draw quote
+        x = (img_size[0]/2) - (text_size[0]/2)
+        y = (img_size[1]/2) - (text_size[1]/2) - name_size[1]
+        #Border
+        draw.multiline_text((x-border,y),multi_line,font=font, align='center', fill='black')
+        draw.multiline_text((x-border,y-border),multi_line,font=font, align='center', fill='black')
+        draw.multiline_text((x,y-border),multi_line,font=font, align='center', fill='black')
+        draw.multiline_text((x+border,y-border),multi_line,font=font, align='center', fill='black')
+        draw.multiline_text((x+border,y),multi_line,font=font, align='center', fill='black')
+        draw.multiline_text((x+border,y+border),multi_line,font=font, align='center', fill='black')
+        draw.multiline_text((x,y+border),multi_line,font=font, align='center', fill='black')
+        draw.multiline_text((x-border,y+border),multi_line,font=font, align='center', fill='black')
+        #Text
+        draw.multiline_text((x,y),multi_line,font=font, align='center', fill='white')
 
-    #Draw name
-    x += text_size[0] - name_size[0]
-    y += text_size[1]
-    #Border
-    draw.text((x-border,y),name,font=font, align='right', fill='black')
-    draw.text((x-border,y-border),name,font=font, align='right', fill='black')
-    draw.text((x,y-border),name,font=font, align='right', fill='black')
-    draw.text((x+border,y-border),name,font=font, align='right', fill='black')
-    draw.text((x+border,y),name,font=font, align='right', fill='black')
-    draw.text((x+border,y+border),name,font=font, align='right', fill='black')
-    draw.text((x,y+border),name,font=font, align='right', fill='black')
-    draw.text((x-border,y+border),name,font=font, align='right', fill='black')
-    #Text
-    draw.text((x,y),name,font=font, align='right', fill='white')
+        #Draw name
+        x += text_size[0] - name_size[0]
+        y += text_size[1]
+        #Border
+        draw.text((x-border,y),name,font=font, align='right', fill='black')
+        draw.text((x-border,y-border),name,font=font, align='right', fill='black')
+        draw.text((x,y-border),name,font=font, align='right', fill='black')
+        draw.text((x+border,y-border),name,font=font, align='right', fill='black')
+        draw.text((x+border,y),name,font=font, align='right', fill='black')
+        draw.text((x+border,y+border),name,font=font, align='right', fill='black')
+        draw.text((x,y+border),name,font=font, align='right', fill='black')
+        draw.text((x-border,y+border),name,font=font, align='right', fill='black')
+        #Text
+        draw.text((x,y),name,font=font, align='right', fill='white')
+        
+        del draw
+        frames.append(frame)
 
     timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-    out_file = "tmp/{}.jpg".format(timestamp)
-    img.save(os.path.join(sys.path[0], out_file))
+    extension = file.split('.')[-1]
+    out_file = "tmp/{}.{}".format(timestamp, extension)
+    with open(os.path.join(sys.path[0], out_file), "wb") as file:
+        frames[0].save(file, format="GIF", save_all=True, append_images=frames[1:])
     return out_file
 
 @client.event
@@ -209,8 +296,7 @@ async def on_ready():
 @asyncio.coroutine
 async def change_status():
     while True:
-        playing = open(os.path.join(sys.path[0], 'playing.txt')).read().splitlines()
-        playing = random.choice(playing)
+        playing = secrets.choice(playing_messages)
         if playing[:1] == "0":
             status = discord.Status.online
         elif playing[:1] == "1":
@@ -219,12 +305,13 @@ async def change_status():
             status = discord.Status.dnd
         await client.change_presence(game=discord.Game(name=playing[1:]), status=status)
         await asyncio.sleep(random.randint(300, 600))
-        
+
 #Post message in promote_a_stream when a member starts streaming
 @client.event
 async def on_member_update(before, after):
     if before.game != after.game:
         if after.game != None:
+            # Streaming
             if after.game.type == 1:
                 if after.id in on_cooldown:
                     delta = (datetime.datetime.now() - on_cooldown[after.id]).total_seconds()
@@ -235,13 +322,14 @@ async def on_member_update(before, after):
                 msg = "Hey {}, {} is streaming {}!\n{}".format(get_role("creeps").mention, after.name, after.game.name, after.game.url)
                 await client.send_message(get_channel("promote_a_stream"), msg)
                 on_cooldown[after.id] = datetime.datetime.now()
+    return
 
 @client.event
 async def on_member_join(member):
     if member.bot:
         return
     await client.add_roles(member, get_role("noobs"))
-    await asyncio.sleep(30)
+    await asyncio.sleep(15)
     msg = "Hey {0}, I'm WaifuBot. I manage various things on the Waifus_4_Lifu discord server.\n".format(member.name)
     msg += "If I could feel emotions, I'm sure I'd be glad you've accepted the invite.\n\nBefore we continue, what's rule #1?"
     while True:
@@ -253,6 +341,12 @@ async def on_member_join(member):
             return
         reply_message = await client.wait_for_message(timeout=300, author=member)
         if reply_message == None:
+            if get_role('noobs') not in member.roles:
+                msg = "{}, you have been manually approved. Please make sure you read the posts in welcome_and_rules.".format(member.name)
+                await client.send_message(member, msg)
+                msg = "{} has been manually approved.".format(member.name)
+                await client.send_message(get_channel("super_waifu_chat"), msg)
+                return
             msg = "You have timed out. Please have the person who added you contact one of the @super_waifus to manually approve you.\nThanks!"
             await client.send_message(member, msg)
             msg = "{0}, {1} has timed out as a noob.".format(get_role("super_waifus").mention, member.name)
@@ -276,7 +370,7 @@ async def on_member_join(member):
 
 @client.event
 async def on_message_delete(message):
-    if "-WaifuBot" in message.content:
+    if "!lottery" in message.content or message.channel.is_private:
         return
     description="Author: {0}\nChannel: {1}\nTimestamp: {2}".format(message.author.name, message.channel, message.timestamp)
     embed = discord.Embed(title="Message deleted by [see audit log]", description=description, color=0xff0000)
@@ -293,98 +387,150 @@ async def on_message(message):
         return
     member = server.get_member_named(str(message.author))
 
-    #Post a message as WaifuBot
-    if "-WaifuBot" in message.content:
-        if message.channel.is_private:
-            return
-
-        #Delay for member-side GUI update
-        asyncio.sleep(1)
-        if not is_super_waifu(member):
-            await client.delete_message(message)
-            return
-        if len(message.attachments) == 0:
-            msg = message.content.replace('-WaifuBot', '')
+    if message.content.lower().startswith("!die"):
+        if is_admin(member):
+            msg = "I've seen things you people wouldn't believe. Attack ships on fire off the shoulder of Orion. I watched C-beams glitter in the dark near the Tannhäuser Gate. All those moments will be lost in time, like tears in rain. Time to die."
             await client.send_message(message.channel, msg)
+            sys.exit(1)
         else:
-            for index, attachment in enumerate(message.attachments):
-                url = attachment["url"]
-                file_name = url.split('/')[-1]
-                msg = ""
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(url) as resp:
-                        data = await resp.read()
-                    async with aiofiles.open(os.path.join(sys.path[0], file_name), 'wb') as file:
-                        await file.write(data)
-                if index == 0:
-                    msg = message.content.replace('-WaifuBot', '')
-                await client.send_file(message.channel, fp=os.path.join(sys.path[0], file_name), content=msg)
-                os.remove(os.path.join(sys.path[0], file_name))
-        await client.delete_message(message)
-        notification_msg = "{user} made me say something in {channel}."
-        await client.send_message(get_channel("super_waifu_chat"), notification_msg.format(user=member.mention, channel=message.channel.mention))
+            await client.send_message(message.channel, "You can't kill me, you fucking scrub.")
+        return
+
+    #Post a message as WaifuBot
+    if message.content.lower().startswith("!say"):
+        if not message.channel.is_private and is_super_waifu(member):
+            message_parts = message.content.split(' ', 2)
+            if len(message.channel_mentions) == 1 and (len(message_parts) == 3 or len(message.attachments) > 0):
+                channel = message.channel_mentions[0]
+                if len(message.attachments) == 0:
+                    msg = ""
+                    if len(message_parts) == 3:
+                        msg = message_parts[2]
+                    await client.send_message(channel, msg)
+                else:
+                    for index, attachment in enumerate(message.attachments):
+                        url = attachment["url"]
+                        file_name = url.split('/')[-1]
+                        msg = ""
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(url) as resp:
+                                data = await resp.read()
+                            async with aiofiles.open(os.path.join(sys.path[0], file_name), 'wb') as file:
+                                await file.write(data)
+                        if index == 0:
+                            if len(message_parts) == 3:
+                                msg = message_parts[2]
+                        await client.send_file(channel, fp=os.path.join(sys.path[0], file_name), content=msg)
+                        os.remove(os.path.join(sys.path[0], file_name))
+                notification_msg = "{user} made me say something in {channel}."
+                await client.send_message(get_channel("super_waifu_chat"), notification_msg.format(user=member.mention, channel=channel.mention))
+            else:
+                msg = "Please use the following syntax: `!say [channel_mention] [message_body]`"
+                await client.send_message(message.channel, msg)
+        else:
+            msg = "Just what do you think you're doing? You're not authorized."
+            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'), filename=None, content=msg, tts=False)
         return
 
     if not member:
         await client.send_message(message.author, "You are not a Waifu. GTFO")
         return False
+
+    #Reply to human thankfullness
+    if 'thank' in message.content.lower() and client.user in message.mentions:
+        reply_msg = secrets.choice(no_problem)
+        await client.send_message(message.channel, reply_msg)
+        return
         
+    #Post a random image from the curse directory
+    if message.content.lower().startswith("!thatsmycurseidontknowyou"):
+        if message.channel.name in ("nsfw_shitposting", "bot_testing") or message.channel.is_private:
+            files = os.listdir(os.path.join(sys.path[0], 'images', 'curse'))
+            file = secrets.choice(files)
+            filepath = os.path.join(sys.path[0], 'images', 'curse', file)
+            await client.send_file(message.channel, filepath, filename=None, tts=False)
+        else:
+            msg = "Hey {}, you know better. That shit don't belong here.".format(member.mention)
+            await client.send_message(message.channel, msg)
+        return
+        
+    #Write a haiku from previous messages
+    if message.content.lower().startswith("!haiku"):
+        await client.send_typing(message.channel)
+        five = []
+        seven = []
+        msg = ""
+        async for previous_message in client.logs_from(message.channel, limit=1000):
+            count = 0
+            for word in previous_message.content.split(' '):
+                word = ''.join(filter(str.isalpha, word)).lower()
+                count += CountSyllables(word)
+            if count == 5:
+                five.append(previous_message.content)
+            if count == 7:
+                seven.append(previous_message.content)
+        msg = msg + random.choice(five) + "\n"
+        msg = msg + random.choice(seven) + "\n"
+        msg = msg + random.choice(five)
+        await client.send_message(message.channel, msg)
+
     #Save a quote for later inspiration
-    if message.content.lower().startswith("!quoth"):   
+    if message.content.lower().startswith("!quoth"):
         if len(message.mentions) == 1:
-            messages = client.messages
-            if len(messages) > 1:
-                messages.pop()
-                messages.reverse()
-                for previous_message in messages:
-                    if previous_message.channel == message.channel and previous_message.author == message.mentions[0]:
-                        if len(previous_message.content) > 0:
-                            #Store previous_message.content
-                            quotes = get_quotes()
-                            for quote in quotes:
-                                if quote.id == previous_message.id:
-                                    msg = "Can you not read? That quote has already been saved."
-                                    log.info("Quote already exists")
-                                    await client.send_message(message.channel, msg)
-                                    return
-                            #Ask for confirmation
-                            if message.channel.name in sensitive_channels:
-                                msg = "Hey uh, {}, this is a sensitive_channel™.\nAre you sure you want to do this?".format(message.author.mention)
-                                await client.send_message(message.channel, msg)
-                                reply_msg = await client.wait_for_message(timeout=60, author=message.author, channel=message.channel)
-                                if reply_msg is None:
-                                    msg = "I'm going to take your silence as a 'no'."
-                                    await client.send_message(message.channel, msg)
-                                    return
-                                if reply_msg.content.lower() not in answers_yes:
-                                    msg = "I'm glad you came to your senses."
-                                    await client.send_message(message.channel, msg)
-                                    return
-                            quotes.append(previous_message)
-                            with open(os.path.join(sys.path[0], 'quotes.dat'), 'wb') as fp:
-                                pickle.dump(quotes, fp)
-                            msg = "Message by {} successfully stored in quotes.".format(message.mentions[0].name)
-                            log.info(msg)
-                            await client.send_message(message.channel, msg)
-                            return
-                        else:
-                            #Zero-length messages cannot be quotes
-                            msg = "Zero-length messages cannot be quotes. Duh."
-                            log.info(msg)
-                            await client.send_message(message.channel, msg)
-                            return
-                #No messages found in channel by specified author
-                msg = "No recent messages by {} exist in {}."
-                log.info(msg.format(message.mentions[0].name, message.channel))
-                await client.send_message(message.channel, msg.format(message.mentions[0].name, message.channel.mention))
+            if message.author == message.mentions[0]:
+                msg = "No {}, you cannot quote yourself. Just how conceited are you?".format(message.author.mention)
+                log.info("{} tried to save their own quote.".format(message.author))
+                await client.send_message(message.channel, msg)
                 return
+            async for previous_message in client.logs_from(message.channel, limit=100):
+                if previous_message.author == message.mentions[0]:
+                    if len(previous_message.content) > 0:
+                        #Store previous_message.content
+                        quotes = get_quotes()
+                        for quote in quotes:
+                            if quote.id == previous_message.id:
+                                msg = "Can you not read? That quote has already been saved."
+                                log.info("Quote already exists")
+                                await client.send_message(message.channel, msg)
+                                return
+                        #Ask for confirmation
+                        if message.channel.name in sensitive_channels:
+                            msg = "Hey uh, {}, this is a sensitive_channel™.\nAre you sure you want to do this?".format(message.author.mention)
+                            await client.send_message(message.channel, msg)
+                            reply_msg = await client.wait_for_message(timeout=60, author=message.author, channel=message.channel)
+                            if reply_msg is None:
+                                msg = "I'm going to take your silence as a 'no'."
+                                await client.send_message(message.channel, msg)
+                                return
+                            if reply_msg.content.lower() not in answers_yes:
+                                msg = "I'm glad you came to your senses."
+                                await client.send_message(message.channel, msg)
+                                return
+                        quotes.append(previous_message)
+                        with open(os.path.join(sys.path[0], 'quotes.dat'), 'wb') as fp:
+                            pickle.dump(quotes, fp)
+                        msg = "Message by {} successfully stored in quotes.".format(message.mentions[0].name)
+                        log.info(msg)
+                        await client.send_message(message.channel, msg)
+                        return
+                    else:
+                        #Zero-length messages cannot be quotes
+                        msg = "Zero-length messages cannot be quotes. Duh."
+                        log.info(msg)
+                        await client.send_message(message.channel, msg)
+                        return
+            #No messages found in channel by specified author
+            msg = "No recent messages by {} exist in {}."
+            log.info(msg.format(message.mentions[0].name, message.channel))
+            await client.send_message(message.channel, msg.format(message.mentions[0].name, message.channel.mention))
+            return
         else:
             #Too many or no mention provided
             msg = "You must provide 1 user mention. Not {}, dumbass.".format(len(message.mentions))
             log.info(msg)
             await client.send_message(message.channel, msg)
             return
-    
+
     #Draw and post image from inspirational quote database
     if message.content.lower().startswith("!inspire"):
         await client.send_typing(message.channel)
@@ -395,12 +541,15 @@ async def on_message(message):
             log.error("No quotes found")
             await client.send_message(message.channel, msg)
             return
-        quote = random.choice(quotes)
+        quote = secrets.choice(quotes)
         content = quote.content
         if len(quote.mentions) > 0:
             for member in quote.mentions:
                 content = content.replace(member.mention, member.name)
-        quote_image = create_quote_image(content, quote.author.name)
+        if 'gif' in message.content.lower():
+            quote_image = create_quote_image(member.id, 'gif', content, quote.author.name)
+        else:
+            quote_image = create_quote_image(member.id, None, content, quote.author.name)
         await client.send_file(message.channel, os.path.join(sys.path[0], quote_image), filename=None, tts=False)
         os.remove(os.path.join(sys.path[0], quote_image))
         return
@@ -429,7 +578,7 @@ async def on_message(message):
                 await asyncio.sleep(3)
                 reply_msg = ""
         return
-                
+
     #Delete quote (super_waifus)
     if message.content.lower().startswith("!deletequote"):
         if not is_super_waifu(member):
@@ -452,7 +601,152 @@ async def on_message(message):
         log.info(msg)
         await client.send_message(message.channel, msg)
         return
-        
+
+    if message.content.lower().startswith("!roleban"):
+        if not is_mod(member):
+            msg = "{user}, you are not authorized to do that!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            log.info("[{user}] requested to use !roleban but is not authorized.".format(user=member.name))
+            return
+
+        if not (message.channel.name in ('super_waifu_chat', 'admin_chat', 'bot_testing', 'mod_chat') or message.channel.is_private):
+            msg = "{user}, this ain't the place for this kind of shit!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            log.info("[{user}] requested to use !roleban in an inappropriate channel: {channel}".format(user=member.name, channel=message.channel))
+            return
+
+        message_parts = message.content.split(' ')
+        if len(message_parts) != 3:
+            msg = "{user}, you must supply two arguments: `!roleban user_id role_name`"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        banned = server.get_member(message_parts[1])
+        if banned == None:
+            msg = "{user}, that is not a valid ID for a member of this server."
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        role_name = message_parts[2]
+        if not get_role(role_name):
+            msg = "{user}, that is not a valid role name in this server."
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        role_bans = get_role_bans()
+        if not role_bans:
+            role_bans = {}
+
+        if banned.id in role_bans:
+            if role_name in role_bans[banned.id]:
+                msg = "{user} is already banned from that role."
+                await client.send_message(message.channel, msg.format(user=banned.name))
+                return
+            role_bans[banned.id].append(role_name)
+        else:
+            role_bans[banned.id] = [role_name]
+
+        with open(os.path.join(sys.path[0], 'role_bans.dat'), 'wb') as fp:
+                pickle.dump(role_bans, fp)
+
+        # Check to see if the user has this role
+        msg = "{banned} did not have the role so I didn't have to remove it\n".format(banned=banned.name)
+        for banned_user_role in banned.roles:
+            if banned_user_role.name == role_name:
+                try:
+                    await client.remove_roles(banned, banned_user_role)
+                    msg = "{banned} had the role but it has been removed\n".format(banned=banned.name)
+                    log.info("{banned} had the role but it has been removed".format(banned=banned.name))
+                except discord.errors.Forbidden:
+                    msg = "{banned} has the role but I am not able to remove it\n".format(banned=banned.name)
+                    log.info("{banned} has the role but I am not able to remove it".format(banned=banned.name))
+
+        msg = msg + "{user} is now banned from {role}".format(user=banned.name, role=role_name)
+        await client.send_message(message.channel, msg)
+        log.info("[{mod}] has banned {user} from {role}".format(mod=member.name, user=banned.name, role=role_name))
+        return
+
+    if message.content.lower().startswith("!viewrolebans"):
+        if not is_mod(member):
+            msg = "{user}, you are not authorized to do that!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            log.info("[{user}] requested to use !viewrolebans but is not authorized.".format(user=member.name))
+            return
+
+        if not (message.channel.name in ('super_waifu_chat', 'admin_chat', 'bot_testing', 'mod_chat') or message.channel.is_private):
+            msg = "{user}, this ain't the place for this kind of shit!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            log.info("[{user}] requested to use !viewrolebans in an inappropriate channel: {channel}".format(user=member.name, channel=message.channel))
+            return
+
+        role_bans = get_role_bans()
+        msg = ""
+        for banned_id in role_bans:
+            msg = msg + "{user}: ".format(user=server.get_member(banned_id).name)
+            for index, role_name in enumerate(role_bans[banned_id]):
+                if index > 0:
+                    msg += ', '
+                msg += role_name
+            msg += "\n"
+        await client.send_message(message.channel, msg)
+        log.info("[{mod}] has requested a list of role bans.".format(mod=member.name))
+        return
+
+    if message.content.lower().startswith("!roleunban"):
+        if not is_mod(member):
+            msg = "{user}, you are not authorized to do that!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            log.info("[{user}] requested to use !roleunban but is not authorized.".format(user=member.name))
+            return
+
+        if not (message.channel.name in ('super_waifu_chat', 'admin_chat', 'bot_testing', 'mod_chat') or message.channel.is_private):
+            msg = "{user}, this ain't the place for this kind of shit!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            log.info("[{user}] requested to use !roleunban in an inappropriate channel: {channel}".format(user=member.name, channel=message.channel))
+            return
+
+        message_parts = message.content.split(' ')
+        if len(message_parts) != 3:
+            msg = "{user}, you must supply two arguments: `!roleunban user_id role_name`"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        unbanned = server.get_member(message_parts[1])
+        if unbanned == None:
+            msg = "{user}, that is not a valid ID for a member of this server."
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        role_name = message_parts[2]
+        if not get_role(role_name):
+            msg = "{user}, that is not a valid role name in this server."
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        role_bans = get_role_bans()
+        if not role_bans:
+            role_bans = {}
+
+        if unbanned.id in role_bans:
+            if role_name in role_bans[unbanned.id]:
+                role_bans[unbanned.id].remove(role_name)
+            else:
+                msg = "{user} is not banned from {role}."
+                await client.send_message(message.channel, msg.format(user=unbanned.name, role=role_name))
+                return
+        else:
+            msg = "{user} is not banned from any roles."
+            await client.send_message(message.channel, msg.format(user=unbanned.name))
+            return
+
+        with open(os.path.join(sys.path[0], 'role_bans.dat'), 'wb') as fp:
+                pickle.dump(role_bans, fp)
+
+        msg = "{user} is now unbanned from {role}"
+        await client.send_message(message.channel, msg.format(user=unbanned.name, role=role_name))
+        log.info("[{mod}] has unbanned {user} from {role}".format(mod=member.name, user=unbanned.name, role=role_name))
+        return
+
     if message.content.lower().startswith("!addgame"):
         if not is_super_waifu(member):
             msg = "{user}, you are not authorized to do that!"
@@ -462,7 +756,7 @@ async def on_message(message):
         message_parts = message.content.split(' ', 1)
 
         if len(message_parts) == 1:
-            msg = "{user}, you didn't specify a game, are you retarded?"
+            msg = "{user}, you didn't specify a game, are you a moron?"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
 
@@ -485,6 +779,78 @@ async def on_message(message):
 
         msg = "{user}, I have added {game} to the list of games."
         await client.send_message(message.channel, msg.format(user=member.mention, game=game))
+        
+    if message.content.lower().startswith("!addserver"):
+        if not is_super_waifu(member):
+            msg = "{user}, you are not authorized to do that!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+        
+        message_parts = message.content.split(' ', 1)
+        if len(message_parts) == 1:
+            msg = "{user}, you didn't specify a game, dummy?"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+        
+        game_server = message_parts[1]
+        
+        game_servers = get_game_servers()
+        if not game_servers:
+            game_servers = []
+            
+        game_servers.append(game_server)
+        with open(os.path.join(sys.path[0], 'game_servers.dat'), 'wb') as fp:
+            pickle.dump(game_servers, fp)
+
+        msg = "{user}, it will be done."
+        await client.send_message(message.channel, msg.format(user=member.mention))
+        return
+        
+    if message.content.lower().startswith("!servers"):
+        if get_game_servers():
+            reply_msg = "The following servers may be available:\n```"
+            for game_server in get_game_servers():
+                reply_msg += ("{game_server}\n".format(game_server = game_server))
+            reply_msg += "```"
+        else:
+            reply_msg = "There are no servers in the savefile!"
+        await client.send_message(message.channel, reply_msg)
+        return
+        
+    if message.content.lower().startswith("!removeserver"):
+        if not is_super_waifu(member):
+            msg = "{user}, you are not authorized to do that!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        message_parts = message.content.split(' ', 1)
+
+        if len(message_parts) == 1:
+            msg = "{user}, you didn't specify a server. I'm not surprised given your track record."
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        game_server_name = message_parts[1]
+
+        # Check if the role is in the savefile, if it is delete it
+        game_servers = get_game_servers()
+        if not game_servers:
+            msg = "{user}, there are no servers in the savefile."
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+
+        for game_server in game_servers:
+            if game_server.lower().startswith(game_server_name.lower()):
+                game_servers.remove(game_server)
+                with open(os.path.join(sys.path[0], 'game_servers.dat'), 'wb') as fp:
+                    pickle.dump(game_servers, fp)
+                msg = "{user}, it will be done."
+                await client.send_message(message.channel, msg.format(user=member.mention))
+                return
+
+        msg = "{user}, that server isn't listed. How'd you fuck that up?"
+        await client.send_message(message.channel, msg.format(user=member.mention))
+        return    
 
     if message.content.lower().startswith("!addrole"):
         if not is_super_waifu(member):
@@ -495,7 +861,7 @@ async def on_message(message):
         message_parts = message.content.split(' ', 1)
 
         if len(message_parts) == 1:
-            msg = "{user}, you didn't specify a role, are you retarded?"
+            msg = "{user}, you didn't specify a role, are you a moron?"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
 
@@ -542,7 +908,7 @@ async def on_message(message):
         message_parts = message.content.split(' ', 1)
 
         if len(message_parts) == 1:
-            msg = "{user}, you didn't specify a game, are you retarded?"
+            msg = "{user}, you didn't specify a game, are you a moron?"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
 
@@ -578,7 +944,7 @@ async def on_message(message):
         message_parts = message.content.split(' ', 1)
 
         if len(message_parts) == 1:
-            msg = "{user}, you didn't specify a role, are you retarded?"
+            msg = "{user}, you didn't specify a role, are you a moron?"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
 
@@ -611,7 +977,7 @@ async def on_message(message):
             for game in get_games():
                 players = get_members_by_role(game)
 
-                reply_msg += ("{0} ({1} Players)\n".format(game.ljust(14), len(players)))
+                reply_msg += ("{0} ({1} Players)\n".format(game.ljust(20), len(players)))
             reply_msg += "```"
         else:
             reply_msg = "There are no games in the savefile!"
@@ -624,7 +990,7 @@ async def on_message(message):
             for role in get_roles():
                 players = get_members_by_role(role)
 
-                reply_msg += ("{0} ({1} members)\n".format(role.ljust(14), len(players)))
+                reply_msg += ("{0} ({1} members)\n".format(role.ljust(20), len(players)))
             reply_msg += "```"
         else:
             reply_msg = "There are no roles in the savefile!"
@@ -638,7 +1004,7 @@ async def on_message(message):
 
         if len(message_parts) == 1:
             log.info("[{0}] No game specified".format(member.name))
-            msg = "{user}, you didn't specify a game, are you retarded?"
+            msg = "{user}, you didn't specify a game, are you a moron?"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
 
@@ -665,7 +1031,7 @@ async def on_message(message):
 
         if len(message_parts) == 1:
             log.info("[{0}] No game/role specified".format(member.name))
-            msg = "{user}, you didn't specify a game/role, are you retarded?"
+            msg = "{user}, you didn't specify a game/role, are you a moron?"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
 
@@ -685,6 +1051,15 @@ async def on_message(message):
             await client.send_message(message.channel, msg.format(user=member.mention))
             log.info("[{user}] requested to join invalid game/role: {role}".format(user=member.name, role=role))
             return
+
+        # Check if user is banned from role
+        role_bans = get_role_bans()
+        if member.id in role_bans:
+            if role in role_bans[member.id]:
+                msg = "{user}, I am unable to add that role. Please contact one of the {role}."
+                await client.send_message(message.channel, msg.format(user=member.mention, role=get_role('mods').mention))
+                log.info("[{user}] requested to join {role} but is banned.".format(user=member.name, role=role))
+                return
 
         log.info("[{user}] requested to join game/role: {role}".format(user=member.name, role=role))
 
@@ -724,7 +1099,7 @@ async def on_message(message):
 
         if len(message_parts) == 1:
             log.info("[{0}] No game/role specified".format(member.name))
-            msg = "{user}, you didn't specify a game/role, are you retarded?"
+            msg = "{user}, you didn't specify a game/role, are you a moron?"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
 
@@ -809,6 +1184,7 @@ async def on_message(message):
             "`!help` or `!wtf` - This help message.\n" \
             "`!games` - Show a list of games you can join for LFG notifications.\n" \
             "`!roles` - Show a list of roles/groups you can join.\n" \
+            "`!servers` - Show a list of game servers you can access.\n" \
             "`!players` - Who is available to play a game. Example: `!players PUBG`\n" \
             "`!join` - Add yourself to a role or the list of people who want to play a game. Example: `!join PUBG`\n" \
             "`!leave` - Remove yourself from a role or the list of people who want to play a game.\n" \
@@ -818,6 +1194,8 @@ async def on_message(message):
             "`!color` - Get the hex and RGB values for Waifu Pink.\n" \
             "`!quoth` - Save most recent message by @mention to inspirational quotes.\n" \
             "`!inspire` - Request a random quote for inspiration.\n" \
+            "`!thatsmycurseidontknowyou` - Channel the power of the GREMLIN.\n" \
+            "`!haiku` - Write a haiku from previous messages in channel.\n" \
             "`!yeah`\n" \
             "`!shrug`\n" \
             "`!catfact`\n" \
@@ -836,11 +1214,18 @@ async def on_message(message):
                 "`!superwtf` - This help message.\n" \
                 "`!addgame` - Add a game to the list of games people can subscribe to for LFG notifications.\n" \
                 "`!removegame` - Remove a game from the list.\n" \
+                "`!addserver` - Add game server info to the list of dedicated game servers.\n" \
+                "`!removeserver` - Remove game server info from the list of dedicated game servers.\n" \
                 "`!addrole` - Add a role people can join.\n" \
                 "`!removerole` - Remove a role from the list.\n" \
                 "`!viewquotes` - View list of partial quotes.\n" \
                 "`!deletequote` - Delete a quote by providing quote ID.\n" \
-                "\nEnd a message with `-WaifuBot` to make me say something, but remember this will be logged. Abuse will not be tolerated.\n" \
+                "`!roleban` - Ban a member from joining a specific role (removes role if applicable).\n" \
+                "`!roleunban` - Undo the ban imposed by !roleban (does not add role back).\n" \
+                "`!viewrolebans` - View list of role bans. Kinda obvious.\n" \
+                "`!say [channel_mention] [message_body]` - Make me say something.\n" \
+                "`!lottery [channel_name] [prize_code] [minutes] [prize_name]` - Self-explanatory (DM WaifuBot).\n" \
+                "`!die` - This kills the WaifuBot" \
                 "\nIf I'm not working correctly, talk to aceat64 or HungryNinja."
         else:
             msg = "{user}, you aren't a super waifu! Access denied.".format(user=member.mention)
@@ -994,6 +1379,104 @@ async def on_message(message):
                 return
         return
 
+    elif message.content.lower().startswith("!favorites"):
+        # Example: !favorites
+        # Example: !favorites add @PeasAndClams#7812 so nice
+        # Example: !favorites remove @PeasAndClams#7812
+        authorized_users = [
+            "115183069555589125", # aceat64
+            "194703127868473344"  # King Of The Rats
+        ]
+
+        try:
+            with open(os.path.join(sys.path[0], 'favorites.dat'), 'rb') as fp:
+                favorites = pickle.load(fp)
+        except FileNotFoundError:
+            # No previous file, so create an empty list
+            favorites = []
+
+        message_parts = message.clean_content.split(' ', 3)
+
+        if len(message_parts) == 1 or message_parts[1] == "":
+            # display favorites
+            reply_msg = "Ash has {count} favorite people.\n\n".format(count=len(favorites))
+            for bless_you in favorites:
+                if not bless_you['reason']:
+                    reply_msg += ("{0}\n".format(bless_you['name']))
+                else:
+                    reply_msg += ("{0}: {1}\n".format(bless_you['name'], bless_you['reason']))
+            await client.send_message(message.channel, reply_msg)
+        else:
+            if member.id not in authorized_users:
+                msg = "{user}, you aren't authorized to do this."
+                await client.send_message(message.channel, msg.format(user=member.mention))
+                return
+
+            # check if user is real
+            try:
+                bless_you = message_parts[2]
+            except IndexError:
+                msg = "{user}, add/remove who?"
+                await client.send_message(message.channel, msg.format(user=member.mention))
+                return
+
+            if bless_you[0] == '@':
+                bless_you = bless_you[1:]
+            elif bless_you[0] == '"':
+                bless_you = message.clean_content.split('"')[1]
+
+            if message_parts[1].lower() == "add":
+                # check if they are already on the favorites
+                for existing_bless in favorites:
+                    if bless_you == existing_bless['name']:
+                        msg = "{user}, that person {bless_you} is already on the favorites. They must be exceptional if you are trying to add them again."
+                        await client.send_message(message.channel, msg.format(user=member.mention, bless_you=bless_you))
+                        return
+
+                # Add them to the favorites and write to file
+                try:
+                    favorites.append({
+                        'name': bless_you,
+                        'reason': message_parts[3]
+                    })
+                except IndexError:
+                    favorites.append({
+                        'name': bless_you,
+                        'reason': None
+                    })
+
+                with open(os.path.join(sys.path[0], 'favorites.dat'), 'wb') as fp:
+                    pickle.dump(favorites, fp)
+
+                msg = "{user}, I've added {bless_you} to the favorites."
+                await client.send_message(message.channel, msg.format(user=member.mention, bless_you=bless_you))
+                return
+            elif message_parts[1].lower() == "remove":
+                # check if they are actually on the favorites
+                for existing_bless in favorites:
+                    if bless_you == existing_bless['name']:
+                        break
+                else:
+                    msg = "{user}, {bless_you} isn't on the favorites list."
+                    await client.send_message(message.channel, msg.format(user=member.mention, bless_you=bless_you))
+                    return
+
+                # Remove them to the favorites and write to file
+                favorites[:] = [d for d in favorites if d.get('name') != bless_you]
+
+                with open(os.path.join(sys.path[0], 'favorites.dat'), 'wb') as fp:
+                    pickle.dump(favorites, fp)
+
+                msg = "{user}, I've removed {bless_you} from the favorites."
+                await client.send_message(message.channel, msg.format(user=member.mention, bless_you=bless_you))
+                return
+            else:
+                # let them know that's not a valid command
+                msg = "{user}, that's not a valid command, bless your heart."
+                await client.send_message(message.channel, msg.format(user=member.mention))
+                return
+        return
+
     # RFC 1149.5 specifies 4 as the standard IEEE-vetted random number.
     # https://xkcd.com/221/
     elif message.content.lower().startswith("!random"):
@@ -1049,12 +1532,12 @@ async def on_message(message):
             "You may rely on it.",
             "Blame Pearce"
         ]
-        await client.send_message(message.channel, "{user}: {phrase}".format(user=member.mention, phrase=random.choice(phrases)))
+        await client.send_message(message.channel, "{user}: {phrase}".format(user=member.mention, phrase=secrets.choice(phrases)))
         return
 
     elif message.content.lower().startswith("!catfact"):
         cat_facts = open(os.path.join(sys.path[0], 'cat_facts.txt')).read().splitlines()
-        cat_fact = random.choice(cat_facts)
+        cat_fact = secrets.choice(cat_facts)
         if random.randint(1, 4) == 1:
             cat_fact = cat_fact.replace('cat', 'catgirl')
         await client.send_message(message.channel, cat_fact)
@@ -1094,53 +1577,61 @@ async def on_message(message):
 
     #Game code lottery
     elif message.content.lower().startswith("!lottery"):
-        await client.send_typing(message.channel)
-        await asyncio.sleep(1)
-        drawing_delay = 30
-        if not get_role("bot_testers") in member.roles:
+        if not is_super_waifu(member):
             msg = "Just what do you think you're doing? You're not authorized."
             await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'), filename=None, content=msg, tts=False)
             return
-        msg = "Hey @everyone, {0} has initiated an indie game code lottery.\n"
-        msg+= "The game code drawing will be held in {1} minutes.\n"
-        msg+= "A winner will be drawn at random from those who **add a reaction to this post**.\n"
-        msg+= "You can react as many times as you want, only one entry will be counted.\n"
-        msg+= "Disclaimer: I believe these codes still work but make no guarantees. Good luck!"
-        lottery_post = await client.send_message(message.channel, msg.format(message.author.mention, drawing_delay))
-        end_time = time.time() + (drawing_delay * 60)
+        if not message.channel.is_private:
+            await client.delete_message(message)
+            msg = "{}, for that you'll need to slide into my DMs. I've gone ahead and deleted your message in case it contained a prize code.".format(member.mention)
+            await client.send_message(message.channel, msg)
+            return
+        command_parts = message.content.split(' ', 4)
+        if len(command_parts) != 5:
+            msg = "I know you can do better: `!lottery [channel_name] [prize_code] [minutes] [prize_name]`"
+            await client.send_message(message.channel, msg)
+            return
+        channel = get_channel(command_parts[1])
+        if not channel:
+            msg = "That's not a valid channel, dummy."
+            await client.send_message(message.channel, msg)
+            return
+        prize_code = command_parts[2]
+        try:
+            minutes = int(command_parts[3])
+        except ValueError:
+            msg = "The value for minutes must be a positive integer."
+            await client.send_message(message.channel, msg)
+            return
+        prize_name = command_parts[4]
+        msg = "Hey @everyone, {0} has initiated a lottery for [{1}]. The drawing will be held in {2} minute"
+        if minutes != 1:
+            msg += "s"
+        msg += ". The winner will be drawn at random from those who **add a reaction to this post**. "
+        msg += "You can react as many times as you want, only one entry will be counted. "
+        msg += "**Disclaimer: The prize code isn't mine. Blame {0} if it doesn't work.**\n\nGood luck!"
+        lottery_post = await client.send_message(channel, msg.format(member.mention, prize_name, minutes))
+        end_time = time.time() + (minutes * 60)
         entrants = []
         while time.time() < end_time:
             seconds_left = end_time - time.time()
             reaction = await client.wait_for_reaction(timeout=seconds_left)
             if reaction != None:
-                if reaction.user not in entrants:
+                if reaction.user not in entrants and reaction.user != member:
                     entrants.append(reaction.user)
         if len(entrants) == 0:
-            msg = "Nobody entered the drawing. Nobody wins."
-            await client.send_message(message.channel, msg)
+            msg = "{}, nobody entered your drawing. Nobody wins.".format(member.mention)
+            await client.send_message(channel, msg)
         else:
-            winner = random.choice(entrants)
-            msg = "Congratulations, {0}! You have won the lottery drawing. Check your DMs for your steam code.".format(winner.mention)
-            await client.send_message(message.channel, msg)
+            winner = secrets.choice(entrants)
             try:
-                codes = open(os.path.join(sys.path[0], 'codes.txt')).read().splitlines()
-                if len(codes) > 0:
-                    code = codes[0]
-                    codes.pop(0)
-                else:
-                    code = "\nError: Code not found. Please contact PeasAndClams for details."
-            except FileNotFoundError:
-                code = "\nError: Code not found. Please contact PeasAndClams for details."
-            msg = "Hey {0}, here is your steam code: {1}".format(winner.mention, code)
-            try:
+                msg = "Hey {0}, here is your prize code: {1}".format(winner.mention, prize_code)
                 await client.send_message(winner, msg)
+                msg = "Congratulations, {0}! You have won the lottery drawing. Check your DMs for your prize code.".format(winner.mention)
+                await client.send_message(channel, msg)
             except discord.errors.Forbidden:
-                msg = "{0}, {1} won the drawing but does not accept DMs. The prize code is: {3}".format(get_role("super_waifus").mention, winner.name, code)
-                await client.send_message(get_channel("super_waifu_chat"), msg)
-            codes_file = open(os.path.join(sys.path[0], 'codes.txt'), "w")
-            for code in codes:
-                codes_file.write(code + "\n")
-            codes_file.close()
+                msg = "Hey {0}, {1} won your drawing but does not accept DMs from *strangers* like me :elacry:. Y'all work it out amongst yourselves.".format(member.mention, winner.mention)
+                await client.send_message(channel, msg)
         return
 
     #Did someone say hungry?
@@ -1190,9 +1681,10 @@ async def on_message(message):
                 if "@" in previous_message.content:
                     break
                 elif count > 8:
-                    msg = "Hey {0} and friends, let's move this conversation to {1}.\nThanks!".format(message.author.mention, get_channel("general_chat").mention)
+                    msg = "Hey {0} and friends, let's move this conversation to {1}.\nThanks!".format(message.author.mention, get_channel("gaming").mention)
                     await client.send_message(message.channel, msg)
                     break
                 count+=1
+    return
 
 client.run(config['discord']['token'])
