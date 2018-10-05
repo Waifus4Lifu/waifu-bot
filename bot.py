@@ -16,6 +16,8 @@ import aiohttp
 import datetime
 import yaml
 import textwrap
+from discord.ext import commands
+from discord.ext.commands import Bot
 from PIL import Image, ImageSequence, ImageFont, ImageDraw
 
 #Rate limiter global variables
@@ -95,7 +97,8 @@ except KeyError:
     no_problem = ["No problemo",
                    "Anytime"]
 
-client = discord.Client()
+# client = discord.Client()
+client = commands.Bot(command_prefix='!')
 
 #Funtion shamelessly stolen from a shameless thief
 #https://github.com/DigTheDoug/SyllableCounter
@@ -383,6 +386,7 @@ async def on_message_delete(message):
 @client.event
 async def on_message(message):
     #Prevent WaifuBot from responding to itself
+    await client.process_commands(message)  
     if message.author == client.user:
         return
     member = server.get_member_named(str(message.author))
@@ -1686,5 +1690,18 @@ async def on_message(message):
                     break
                 count+=1
     return
+
+@client.command(pass_context=True)
+async def spoop(ctx, target: discord.Member = None):
+    if target:
+        spoopString = 0
+        spoopList = os.listdir("./spoop")  # List of filenames
+        spoopString = random.choice(spoopList) # Select random file from the list
+
+        path = "./spoop/" + spoopString # Creates a string for the path to the file
+        await client.say('_dials up the Spook-O-Meter.._\n\nAhh yes...🧐  ' + target.mention +'\'s rating is..')
+        await client.send_file(ctx.message.channel, path) # , filename=None, tts=False
+    else:
+        await client.say('You need to provide a user to rate!')
 
 client.run(config['discord']['token'])
