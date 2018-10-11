@@ -1,0 +1,35 @@
+discord:
+    token: DISCORD_TOKEN
+    server_id: 'DISCORD_SERVER_ID'
+stream:
+    stream_cooldown: 7200
+rate_limit:
+    message_limit: 3
+    cooldown_seconds: 30
+channels:
+    sensitive:
+        - super_waifu_chat
+        - serious_business
+answers:
+    yes:
+        - affirmative
+        - yes
+        - yup
+        - yep
+        - yuh
+        - absofuckinglutely
+        - yeah
+        - yarp
+        - y
+        - of course
+        - absolutely
+        - just do it
+        - hurry up
+bot_phrases:
+    no_problem:
+        - No problemo
+        - Np fam
+        - I gotchu
+        - Anytime
+        - No, thank *you*
+        - Don't patronize me
