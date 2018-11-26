@@ -1202,7 +1202,12 @@ async def on_message(message):
             "`!google`\n" \
             "`!join shitposting` - Gain access to nsfw/shitposting channel.\n" \
             "`!leave shitposting` - Give up access to nsfw/shitposting channel.\n" \
-            "`!superwtf` - Show commands available only to super waifus (mods).\n" \
+            "`!superwtf` - Show commands available only to super waifus (mods).\n\n" \
+            "These seasonal commands may also be used:\n\n" \
+            "`!naughty` - Join the W4L secret santa gift exchange.\n" \
+            "`!nice` - Leave the W4L secret santa gift exchange.\n" \
+            "`!hailsanta` - Show the current naughty list.\n" \
+            "`!christmasdaddy` - Ask me to remind you of your secret child by DM.\n" \
             "\nIf I'm not working correctly, go fuck yourself, you aren't my boss."
         await client.send_message(message.channel, msg)
         return
@@ -1225,7 +1230,9 @@ async def on_message(message):
                 "`!viewrolebans` - View list of role bans. Kinda obvious.\n" \
                 "`!say [channel_mention] [message_body]` - Make me say something.\n" \
                 "`!lottery [channel_name] [prize_code] [minutes] [prize_name]` - Self-explanatory (DM WaifuBot).\n" \
-                "`!die` - This kills the WaifuBot" \
+                "`!die` - This kills the WaifuBot.\n" \
+                "`!itsbeginningtolookalotlikechristmas` - Process the list and DM participants.\n" \
+                "`!noticemesanta` - Send reminder DMs to all participants.\n" \
                 "\nIf I'm not working correctly, talk to aceat64 or HungryNinja."
         else:
             msg = "{user}, you aren't a super waifu! Access denied.".format(user=member.mention)
@@ -1632,6 +1639,200 @@ async def on_message(message):
             except discord.errors.Forbidden:
                 msg = "Hey {0}, {1} won your drawing but does not accept DMs from *strangers* like me :elacry:. Y'all work it out amongst yourselves.".format(member.mention, winner.mention)
                 await client.send_message(channel, msg)
+        return
+        
+    #Add self to naughty_list
+    elif message.content.lower().startswith("!naughty"):
+        #Check for existing role
+        for author_role in member.roles:
+            if author_role.name == "naughty_list":
+                #They already have the role
+                msg = "{user}, you are already on the naughty list."
+                await client.send_message(message.channel, msg.format(user=member.mention))
+                log.info("[{0}] Role already assigned".format(member))
+                break
+        else:
+            #They didn't have the role, assign it to them
+            if os.path.isfile(os.path.join(sys.path[0], 'naughtylist.dat')):
+                msg = "{user}, sign-ups are over. You'll have to try again next year."
+                await client.send_message(message.channel, msg.format(user=member.mention))
+                return
+            role = get_role("naughty_list")
+            if not role:
+                return
+            await client.add_roles(member, role)
+            log.info("[{0}] Role added".format(member))
+            reply = "{user}, you have been added to the naughty list."
+            await client.send_message(message.channel, reply.format(user=member.mention))
+    
+    #Remove self from secret santa
+    elif message.content.lower().startswith("!nice"):
+        #Check for existing role
+        for author_role in member.roles:
+            if author_role.name == "naughty_list":
+                if os.path.isfile(os.path.join(sys.path[0], 'naughtylist.dat')):
+                    msg = "{user}, assignments have already been made. If you absolutely cannot participate, please contact one of the @admins and they'll sort things out."
+                    await client.send_message(message.channel, msg.format(user=member.mention))
+                    return
+                #They have the role, revoke it
+                await client.remove_roles(member, author_role)
+                msg = "{user}, you managed to take yourself off the naughty list but we all know you'll be back on it soon."
+                await client.send_message(message.channel, msg.format(user=member.mention))
+                log.info("[{0}] Role removed".format(member))
+                break
+        else:
+            #They didn't have the role, berate them and do nothing
+            msg = "{user}, are you stupid? You weren't on the list, but I can think of another list where you belong..."
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            log.info("[{0}] Role removed".format(member))
+    
+    #Request current naughty_list
+    elif message.content.lower().startswith("!hailsanta"):
+        log.info("[{0}] Requested the naughty list".format(member.name))
+        elves = get_members_by_role("naughty_list")
+        if len(elves) == 1:
+            reply_msg = "There is 1 naughty elf or your shelf.\n\n"
+        else:
+            reply_msg = "There are {count} naughty elves on your shelves.\n\n".format(count=len(elves))
+        for elf in elves:
+            reply_msg += ("{0}\n".format(elf.name))
+        await client.send_message(message.channel, reply_msg)
+    
+    #Process list and assign santas
+    elif message.content.lower().startswith("!itsbeginningtolookalotlikechristmas"):
+        if not is_admin(member):
+            msg = "Just what do you think you're doing?\nYou're not the boss of me."
+            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'), filename=None, content=msg, tts=False)
+            return
+        log.info("[{0}] Requested processing the list".format(member.name))
+        #Check if assignments have already been made
+        if os.path.isfile(os.path.join(sys.path[0], 'naughtylist.dat')):
+            msg = "Hey uh, {}, assignments have already been made.\nAre you sure you want to do this?".format(message.author.mention)
+            await client.send_message(message.channel, msg)
+            reply_msg = await client.wait_for_message(timeout=60, author=message.author, channel=message.channel)
+            if reply_msg is None:
+                msg = "I'm going to take your silence as a 'no'."
+                await client.send_message(message.channel, msg)
+                return
+            if reply_msg.content.lower() not in answers_yes:
+                msg = "I'm glad you came to your senses."
+                await client.send_message(message.channel, msg)
+                return
+        #Make sure there are at least two naughty elves
+        elves = get_members_by_role("naughty_list")
+        if len(elves) < 2:
+            log.info("Not enough naughty elves")
+            msg = "YOU MUST CONSTRUCT ADDITIONAL ELVES"
+            await client.send_message(message.channel, msg)
+        else:
+            #Deputize naughty elves as Santas
+            santas = []
+            children = []
+            for elf in elves:
+                santas.append(elf)
+                children.append(elf)
+            santas1 = []
+            children1 = []
+            #Randomly assign giver/receiver pairs
+            while len(santas) > 0:
+                santa = random.choice(santas)
+                child = random.choice(children)
+                #If the pair is valid or is the last option, store giver/receiver to arrays
+                if child != santa or len(santas) == 1:
+                    santas1.append(santa)
+                    children1.append(child)
+                    santas.remove(santa)
+                    children.remove(child)
+            #If the last participant is assigned to themselves, switch the last and second-last receiver
+            if santas1[-1] == children1[-1]:
+                temp = children1[-1]
+                children1[-1] = children1[-2]
+                children1[-2] = temp
+            #Log results with pickle and DM each deputy santa the name of their child
+            naughtylist = []
+            for index, santa in enumerate(santas1):
+                log.info(santa.name + ", your child is " + children1[index].name + ".")
+                msg = "Deputy Santa " + santa.name + ", your secret child (I know that sounds weird) is " + children1[index].name + "."
+                try:
+                    await client.send_message(santa, msg)
+                except:
+                    log.error("Bot is on naughty_list")
+                try:
+                    naughtylist.append(santa)
+                    naughtylist.append(children1[index])
+                except IndexError:
+                    log.error("Santa index error")
+            with open(os.path.join(sys.path[0], 'naughtylist.dat'), 'wb') as fp:
+                pickle.dump(naughtylist, fp)
+            msg = "Dear degenerates on the {0}, I've slid into your DMs and let's just say I left a little something in your stockings.".format(get_role("naughty_list").mention)
+            await client.send_message(message.channel, msg)
+    
+    elif message.content.lower().startswith("!christmasdaddy"):
+        log.info("[{0}] requested a private secret santa reminder".format(member))
+        try:
+            with open(os.path.join(sys.path[0], 'naughtylist.dat'), 'rb') as fp:
+                naughtylist = pickle.load(fp)
+        except FileNotFoundError:
+            # No assigned pairs yet
+            msg = "Just what do you think you're doing? It's not time for this shit yet."
+            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'), filename=None, content=msg, tts=False)
+            return
+        msg = "{user}, check your DMs. I've heard that's where it's going down."
+        await client.send_message(message.channel, msg.format(user=member.mention))
+        while len(naughtylist)>1:
+            santa = naughtylist.pop(0)
+            child = naughtylist.pop(0)
+            if santa == message.author:
+                msg = "Some Santa you are, " + santa.name + ". You forgot about " + child.name + "."
+                log.info(msg)
+                await client.send_message(message.author, msg)
+                return
+        #Their name was not found
+        msg = "Looks like you fucked up, " + message.author.name + ", your name isn't on the list.\nBetter luck next year!"
+        await client.send_message(message.author, msg)
+    
+    #Send reminder DMs to all participants
+    elif message.content.lower().startswith("!noticemesanta"):
+        log.info("[{0}] requested mass reminder".format(member))
+        if not is_admin(member):
+            msg = "Just what do you think you're doing?\nYou're not the boss of me."
+            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'), filename=None, content=msg, tts=False)
+            return
+        try:
+            with open(os.path.join(sys.path[0], 'naughtylist.dat'), 'rb') as fp:
+                naughtylist = pickle.load(fp)
+        except FileNotFoundError:
+            #No assigned pairs yet
+            msg = "You must have forgotten that there is nothing to remember."
+            await client.send_message(message.channel, msg)
+            return
+        while len(naughtylist)>1:
+            santa = naughtylist.pop(0)
+            child = naughtylist.pop(0)
+            msg = "Hey " + santa.name + ", just a reminder, if you are mailing your gift, it should be sent with enough time to arrive by December 20th.\nAlso, I'm sure you are well aware, but your secret child is " + child.name + "."
+            await client.send_message(santa, msg)
+        return
+    
+    #USE SPARINGLY: Send custom reminder DMs to all participants
+    elif message.content.lower().startswith("!letterfromsanta"):
+        log.info("[{0}] requested custom mass reminder".format(member))
+        if not is_admin(member):
+            msg = "Just what do you think you're doing?\nYou're not the boss of me."
+            await client.send_file(message.channel, os.path.join(sys.path[0], 'dennis.gif'), filename=None, content=msg, tts=False)
+            return
+        try:
+            with open(os.path.join(sys.path[0], 'naughtylist.dat'), 'rb') as fp:
+                naughtylist = pickle.load(fp)
+        except FileNotFoundError:
+            #No assigned pairs yet
+            msg = "You must have forgotten that there is nothing to remember."
+            await client.send_message(message.channel, msg)
+            return
+        while len(naughtylist)>1:
+            santa = naughtylist.pop(0)
+            child = naughtylist.pop(0)
+            msg = message.content.replace("!letterfromsanta ", "")
+            await client.send_message(santa, msg)
         return
 
     #Did someone say hungry?
