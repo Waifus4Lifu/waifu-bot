@@ -145,6 +145,12 @@ def is_admin(member):
         if author_role.name == "admins":
             return True
     return False
+    
+def is_waifu(member):
+    for author_role in member.roles:
+        if author_role.name == "waifu_4_lifu":
+            return True
+    return False
 
 def get_games():
     try:
@@ -1643,6 +1649,10 @@ async def on_message(message):
         
     #Add self to naughty_list
     elif message.content.lower().startswith("!naughty"):
+        if not is_waifu(member):
+            msg = "Sorry {user}, secret santa is open to Waifus only, please consider joining us at the next LAN party!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
         #Check for existing role
         for author_role in member.roles:
             if author_role.name == "naughty_list":
@@ -1667,6 +1677,10 @@ async def on_message(message):
     
     #Remove self from secret santa
     elif message.content.lower().startswith("!nice"):
+        if not is_waifu(member):
+            msg = "Sorry {user}, secret santa is open to Waifus only, please consider joining us at the next LAN party!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
         #Check for existing role
         for author_role in member.roles:
             if author_role.name == "naughty_list":
@@ -1689,6 +1703,10 @@ async def on_message(message):
     #Request current naughty_list
     elif message.content.lower().startswith("!hailsanta"):
         log.info("[{0}] Requested the naughty list".format(member.name))
+        if not is_waifu(member):
+            msg = "Sorry {user}, secret santa is open to Waifus only, please consider joining us at the next LAN party!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
         elves = get_members_by_role("naughty_list")
         if len(elves) == 1:
             reply_msg = "There is 1 naughty elf or your shelf.\n\n"
@@ -1769,6 +1787,10 @@ async def on_message(message):
     
     elif message.content.lower().startswith("!christmasdaddy"):
         log.info("[{0}] requested a private secret santa reminder".format(member))
+        if not is_waifu(member):
+            msg = "Sorry {user}, secret santa is open to Waifus only, please consider joining us at the next LAN party!"
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
         try:
             with open(os.path.join(sys.path[0], 'naughtylist.dat'), 'rb') as fp:
                 naughtylist = pickle.load(fp)
