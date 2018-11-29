@@ -1856,7 +1856,43 @@ async def on_message(message):
             msg = message.content.replace("!letterfromsanta ", "")
             await client.send_message(santa, msg)
         return
-
+        
+    elif message.content.lower().startswith("!timeout"):
+        if not is_mod(member):
+            msg = "I'm sorry, {user}. I'm afraid I can't do that.".format(user=member.mention)
+            await client.send_message(message.channel, msg)
+            return
+        message_parts = message.content.split(' ')
+        if len(message_parts) != 3:
+            msg = "Please use following syntax: `!timeout [member_id] [minutes]`"
+            await client.send_message(message.channel, msg)
+            return
+        trouble = server.get_member(message_parts[1])
+        if trouble == None:
+            msg = "{user}, that is not a valid ID for a member of this server."
+            await client.send_message(message.channel, msg.format(user=member.mention))
+            return
+        try:
+            duration = int(message_parts[2])
+        except ValueError:
+            msg = "Please use following syntax: `!timeout [member_id] [minutes]`"
+            await client.send_message(message.channel, msg)
+            return
+        role = get_role('timeout')
+        if role in trouble.roles:
+            msg = "{trouble} is already in timeout".format(trouble=trouble.name)
+            await client.send_message(message.channel, msg)
+            return
+        await client.add_roles(trouble, role)
+        msg = "{trouble} is in timeout for {duration} minutes.\nType `!timein {id}` to cancel.".format(trouble=trouble.name, duration=duration, id=trouble.id)
+        await client.send_message(message.channel, msg)
+        content = "!timein {id}".format(id=trouble.id)
+        reply_msg = await client.wait_for_message(timeout=duration*60, content=content, channel=message.channel)
+        await client.remove_roles(trouble, role)
+        msg = "{trouble} has been removed from timeout.".format(trouble=trouble.name)
+        await client.send_message(message.channel, msg)
+        return
+        
     #Did someone say hungry?
     lower = message.content.lower()
     if "m hungry" in lower or "s hungry" in lower or "e hungry" in lower or "y hungry" in lower:
