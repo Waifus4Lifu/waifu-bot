@@ -1234,6 +1234,7 @@ async def on_message(message):
                 "`!roleban` - Ban a member from joining a specific role (removes role if applicable).\n" \
                 "`!roleunban` - Undo the ban imposed by !roleban (does not add role back).\n" \
                 "`!viewrolebans` - View list of role bans. Kinda obvious.\n" \
+                "`!timeout [member_id] [minutes]` - Prevent a member from posting anything.\n" \
                 "`!say [channel_mention] [message_body]` - Make me say something.\n" \
                 "`!lottery [channel_name] [prize_code] [minutes] [prize_name]` - Self-explanatory (DM WaifuBot).\n" \
                 "`!die` - This kills the WaifuBot.\n" \
@@ -1886,8 +1887,12 @@ async def on_message(message):
         await client.add_roles(trouble, role)
         msg = "{trouble} is in timeout for {duration} minutes.\nType `!timein {id}` to cancel.".format(trouble=trouble.name, duration=duration, id=trouble.id)
         await client.send_message(message.channel, msg)
+        msg = "Hey {trouble}, a moderator for Waifus_4_Lifu has placed you in timeout.\n" \
+              "I'm not sure why, but you were probably doing something that broke rule #1 is a big way.\n" \
+              "A mod will likely reach out to you soon by direct message."
+        await client.send_message(trouble, msg.format(trouble=trouble.mention))
         content = "!timein {id}".format(id=trouble.id)
-        reply_msg = await client.wait_for_message(timeout=duration*60, content=content, channel=message.channel)
+        reply_msg = await client.wait_for_message(author=member, timeout=duration*60, content=content)
         await client.remove_roles(trouble, role)
         msg = "{trouble} has been removed from timeout.".format(trouble=trouble.name)
         await client.send_message(message.channel, msg)
