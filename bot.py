@@ -94,7 +94,13 @@ except KeyError:
     # Default
     no_problem = ["No problemo",
                    "Anytime"]
-
+                   
+try:
+    profane_words = config['profane']
+except KeyError:
+    profane_words = ["damn",
+                     "shit"]
+    
 client = discord.Client()
 
 #Funtion shamelessly stolen from a shameless thief
@@ -1949,6 +1955,15 @@ async def on_message(message):
                     await client.send_message(message.channel, msg)
                     break
                 count+=1
+                
+    #Is someone being profane?
+    content = message.content.lower().replace(' ', '')
+    for profane_word in profane_words:
+        if profane_word in content:
+            if random.randint(1, 8) == 1:
+                msg = "Hey {member}! Shame on you. This is a christian server.\nSister <@194703127868473344> is always watching.".format(member=member.mention)
+                await client.send_message(message.channel, msg)
+                
     return
 
 client.run(config['discord']['token'])
