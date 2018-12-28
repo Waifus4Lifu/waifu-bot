@@ -33,3 +33,7 @@ bot_phrases:
         - Anytime
         - No, thank *you*
         - Don't patronize me
+profane:
+    - damn
+    - darn
+    - dang
