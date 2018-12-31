@@ -1955,15 +1955,16 @@ async def on_message(message):
                     await client.send_message(message.channel, msg)
                     break
                 count+=1
-                
+
     #Is someone being profane?
-    content = message.content.lower().replace(' ', '')
-    for profane_word in profane_words:
-        if profane_word in content:
-            if random.randint(1, 8) == 1:
-                msg = "Hey {member}! Shame on you. This is a christian server.\nSister <@194703127868473344> is always watching.".format(member=member.mention)
-                await client.send_message(message.channel, msg)
-                
+    if message.channel.name != "serious_business":
+        content = message.content.lower().replace(' ', '')
+        for profane_word in profane_words:
+            if profane_word in content:
+                if random.randint(1, 50) == 1:
+                    msg = "Hey {member}! Shame on you. This is a christian server.\nSister <@194703127868473344> is always watching.".format(member=member.mention)
+                    await client.send_message(message.channel, msg)
+
     return
 
 client.run(config['discord']['token'])
