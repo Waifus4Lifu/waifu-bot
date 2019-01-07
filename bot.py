@@ -485,6 +485,44 @@ async def on_message(message):
         msg = msg + random.choice(seven) + "\n"
         msg = msg + random.choice(five)
         await client.send_message(message.channel, msg)
+        
+    # Intensify
+    if message.content.lower().startswith("!intensify"):
+        text = message.content.lower().split(' ', 1)
+        if len(text) > 0:
+            text = text[1]
+        else:
+            return
+        frames = []
+        img = Image.new('RGB', (1,1))
+        draw = ImageDraw.Draw(img)
+        text = '[ ' + text + ' intensifies ]'
+        if id == "194703127868473344":
+            font = ImageFont.truetype("comic.ttf", 15)
+        else:
+            font = ImageFont.truetype("arial.ttf", 15)
+        text_size = draw.textsize(text=text, font=font) + (10, 10)
+        text_size = (text_size[0] + 10, text_size[1] + 10)
+        for index in range(100):
+            img = Image.new('RGB', text_size)
+            img = img.convert('P', palette=Image.ADAPTIVE, colors=256)
+            draw = ImageDraw.Draw(img)
+            draw.rectangle(((0, 0), text_size), fill = (54, 57, 62))
+            x = random.randint(3, 7)
+            y = random.randint(3, 7)
+            if id == "194703127868473344":
+                colors = ['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet']
+                color = random.choice(colors)
+            else:
+                color = 'white'
+            draw.text((x, y),text,font=font, fill = color)
+            frames.append(img)
+        timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+        filename = "{}.gif".format(timestamp)
+        frames[0].save(os.path.join(sys.path[0], 'tmp', filename), format='GIF', optimize = True, append_images=frames[1:], save_all=True, duration=25, loop=0)
+        await client.send_file(message.channel, os.path.join(sys.path[0], 'tmp', filename), filename=None, tts=False)
+        os.remove(os.path.join(sys.path[0], 'tmp', filename))
+        return
 
     #Save a quote for later inspiration
     if message.content.lower().startswith("!quoth"):
