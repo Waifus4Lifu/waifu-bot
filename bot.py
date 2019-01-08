@@ -488,7 +488,7 @@ async def on_message(message):
         
     # Intensify
     if message.content.lower().startswith("!intensify"):
-        text = message.content.lower().split(' ', 1)
+        text = message.clean_content.lower().split(' ', 1)
         if len(text) > 0:
             text = text[1]
         else:
