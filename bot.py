@@ -497,7 +497,7 @@ async def on_message(message):
         img = Image.new('RGB', (1,1))
         draw = ImageDraw.Draw(img)
         text = '[ ' + text + ' intensifies ]'
-        if id == "194703127868473344":
+        if member.id == "194703127868473344":
             font = ImageFont.truetype("comic.ttf", 15)
         else:
             font = ImageFont.truetype("arial.ttf", 15)
@@ -510,7 +510,7 @@ async def on_message(message):
             draw.rectangle(((0, 0), text_size), fill = (54, 57, 62))
             x = random.randint(3, 7)
             y = random.randint(3, 7)
-            if id == "194703127868473344":
+            if member.id == "194703127868473344":
                 colors = ['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet']
                 color = random.choice(colors)
             else:
