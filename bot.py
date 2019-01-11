@@ -496,7 +496,6 @@ async def on_message(message):
         async for previous_message in client.logs_from(message.channel, limit=2000):
             for line in previous_message.clean_content.split('\n'):
                 line_clean = re.sub('[^a-z A-Z]', '', line)
-                print(line_clean)
                 line_clean = line_clean.split(' ')
                 if len(line_clean) < 6 or len(line_clean) > 12:
                     continue
@@ -510,14 +509,12 @@ async def on_message(message):
                         rhyming_lines[rhyme_key].append(line)
                 else:
                     rhyming_lines[rhyme_key] = [line]
-        print(rhyming_lines)
         for rhyme_key in rhyming_lines:
             count = len(rhyming_lines[rhyme_key])
             if count > 2:
                 rhymes.append(rhyme_key)
             else:
                 continue
-        print(rhymes)
         if len(rhymes) < 2:
             msg = 'Not enough rhymes found in channel'
             await client.send_message(message.channel, msg)
