@@ -1,4 +1,5 @@
 #!/usr/bin/python3.6
+import re
 import argparse
 import logging as log
 import sys
@@ -16,6 +17,7 @@ import aiohttp
 import datetime
 import yaml
 import textwrap
+import pronouncing
 from PIL import Image, ImageSequence, ImageFont, ImageDraw
 
 #Rate limiter global variables
@@ -485,6 +487,54 @@ async def on_message(message):
         msg = msg + random.choice(seven) + "\n"
         msg = msg + random.choice(five)
         await client.send_message(message.channel, msg)
+        
+    # Create a limerick from previous messages
+    if message.content.lower().startswith("!limerick"):
+        await client.send_typing(message.channel)
+        rhyming_lines = {}
+        rhymes = []
+        async for previous_message in client.logs_from(message.channel, limit=2000):
+            for line in previous_message.clean_content.split('\n'):
+                line_clean = re.sub('[^a-z A-Z]', '', line)
+                line_clean = line_clean.split(' ')
+                if len(line_clean) < 6 or len(line_clean) > 12:
+                    continue
+                last_word = line_clean[-1]
+                rhyming_words = pronouncing.rhymes(last_word)
+                if len(rhyming_words) < 2:
+                    continue
+                rhyme_key = min(last_word, rhyming_words[0])
+                if rhyme_key in rhyming_lines:
+                    if line not in rhyming_lines[rhyme_key]:
+                        rhyming_lines[rhyme_key].append(line)
+                else:
+                    rhyming_lines[rhyme_key] = [line]
+        for rhyme_key in rhyming_lines:
+            count = len(rhyming_lines[rhyme_key])
+            if count > 2:
+                rhymes.append(rhyme_key)
+            else:
+                continue
+        if len(rhymes) < 2:
+            msg = 'Not enough rhymes found in channel'
+            await client.send_message(message.channel, msg)
+            return
+        
+        random.shuffle(rhymes)
+        a_key = rhymes.pop()
+        b_key = rhymes.pop()
+        a = rhyming_lines[a_key]
+        b = rhyming_lines[b_key]
+        random.shuffle(a)
+        random.shuffle(b)
+        poem = ''
+        poem += a.pop() + "\n"
+        poem += a.pop() + "\n"
+        poem += b.pop() + "\n"
+        poem += b.pop() + "\n"
+        poem += a.pop()
+        await client.send_message(message.channel, poem)
+        return
         
     # Intensify
     if message.content.lower().startswith("!intensify"):
