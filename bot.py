@@ -96,13 +96,13 @@ except KeyError:
     # Default
     no_problem = ["No problemo",
                    "Anytime"]
-                   
+
 try:
     profane_words = config['profane']
 except KeyError:
     profane_words = ["damn",
                      "shit"]
-    
+
 client = discord.Client()
 
 #Funtion shamelessly stolen from a shameless thief
@@ -153,7 +153,7 @@ def is_admin(member):
         if author_role.name == "admins":
             return True
     return False
-    
+
 def is_waifu(member):
     for author_role in member.roles:
         if author_role.name == "waifu_4_lifu":
@@ -166,7 +166,7 @@ def get_games():
             return pickle.load(fp)
     except FileNotFoundError:
         return False
-        
+
 def get_game_servers():
     try:
         with open(os.path.join(sys.path[0], 'game_servers.dat'), 'rb') as fp:
@@ -242,7 +242,7 @@ def create_quote_image(id, type, quote, name):
         multi_line += line + "\n"
     text_size = draw.multiline_textsize(text=multi_line, font=font)
     name_size = draw.textsize(text=name, font=font)
-    
+
     frames = []
     for frame in ImageSequence.Iterator(img):
         frame = frame.convert('RGBA')
@@ -277,7 +277,7 @@ def create_quote_image(id, type, quote, name):
         draw.text((x-border,y+border),name,font=font, align='right', fill='black')
         #Text
         draw.text((x,y),name,font=font, align='right', fill='white')
-        
+
         del draw
         frames.append(frame)
 
@@ -338,49 +338,49 @@ async def on_member_update(before, after):
                 on_cooldown[after.id] = datetime.datetime.now()
     return
 
-@client.event
-async def on_member_join(member):
-    if member.bot:
-        return
-    await client.add_roles(member, get_role("noobs"))
-    await asyncio.sleep(15)
-    msg = "Hey {0}, I'm WaifuBot. I manage various things on the Waifus_4_Lifu discord server.\n".format(member.name)
-    msg += "If I could feel emotions, I'm sure I'd be glad you've accepted the invite.\n\nBefore we continue, what's rule #1?"
-    while True:
-        try:
-            await client.send_message(member, msg)
-        except discord.errors.Forbidden:
-            msg = "{0}, {1} does not allow DMs from strangers.\nPlease manually remove their {2} role and ask them to read the rules.\nThanks!".format(get_role("bot_testers").mention, member.name, get_role("noobs").mention)
-            await client.send_message(get_channel("super_waifu_chat"), msg)
-            return
-        reply_message = await client.wait_for_message(timeout=300, author=member)
-        if reply_message == None:
-            if get_role('noobs') not in member.roles:
-                msg = "{}, you have been manually approved. Please make sure you read the posts in welcome_and_rules.".format(member.name)
-                await client.send_message(member, msg)
-                msg = "{} has been manually approved.".format(member.name)
-                await client.send_message(get_channel("super_waifu_chat"), msg)
-                return
-            msg = "You have timed out. Please have the person who added you contact one of the @super_waifus to manually approve you.\nThanks!"
-            await client.send_message(member, msg)
-            msg = "{0}, {1} has timed out as a noob.".format(get_role("super_waifus").mention, member.name)
-            await client.send_message(get_channel("super_waifu_chat"), msg)
-            break
-        elif "don't be a dick" in reply_message.content.lower() or "dont be a dick" in reply_message.content.lower():
-            msg = "Yup. Thanks! granting access in 3..."
-            countdown_message = await client.send_message(member, msg)
-            for countdown in range(3, 0, -1):
-                msg = "Yup. Thanks! granting access in {0}...".format(countdown)
-                await client.edit_message(countdown_message, new_content=msg)
-                await asyncio.sleep(1)
-            msg = "Access Granted!"
-            await client.edit_message(countdown_message, new_content=msg)
-            await client.remove_roles(member, get_role("noobs"))
-            msg = "Hey everyone, {0} just joined.\n\n{1}, please introduce yourself and let us know who invited you.\n\nThanks!".format(member.name, member.mention)
-            await client.send_message(get_channel("general_chat"), msg)
-            break
-        else:
-            msg = "Not quite. What's rule #1?"
+# @client.event
+# async def on_member_join(member):
+#     if member.bot:
+#         return
+#     await client.add_roles(member, get_role("noobs"))
+#     await asyncio.sleep(15)
+#     msg = "Hey {0}, I'm WaifuBot. I manage various things on the Waifus_4_Lifu discord server.\n".format(member.name)
+#     msg += "If I could feel emotions, I'm sure I'd be glad you've accepted the invite.\n\nBefore we continue, what's rule #1?"
+#     while True:
+#         try:
+#             await client.send_message(member, msg)
+#         except discord.errors.Forbidden:
+#             msg = "{0}, {1} does not allow DMs from strangers.\nPlease manually remove their {2} role and ask them to read the rules.\nThanks!".format(get_role("bot_testers").mention, member.name, get_role("noobs").mention)
+#             await client.send_message(get_channel("super_waifu_chat"), msg)
+#             return
+#         reply_message = await client.wait_for_message(timeout=300, author=member)
+#         if reply_message == None:
+#             if get_role('noobs') not in member.roles:
+#                 msg = "{}, you have been manually approved. Please make sure you read the posts in welcome_and_rules.".format(member.name)
+#                 await client.send_message(member, msg)
+#                 msg = "{} has been manually approved.".format(member.name)
+#                 await client.send_message(get_channel("super_waifu_chat"), msg)
+#                 return
+#             msg = "You have timed out. Please have the person who added you contact one of the @super_waifus to manually approve you.\nThanks!"
+#             await client.send_message(member, msg)
+#             msg = "{0}, {1} has timed out as a noob.".format(get_role("super_waifus").mention, member.name)
+#             await client.send_message(get_channel("super_waifu_chat"), msg)
+#             break
+#         elif "don't be a dick" in reply_message.content.lower() or "dont be a dick" in reply_message.content.lower():
+#             msg = "Yup. Thanks! granting access in 3..."
+#             countdown_message = await client.send_message(member, msg)
+#             for countdown in range(3, 0, -1):
+#                 msg = "Yup. Thanks! granting access in {0}...".format(countdown)
+#                 await client.edit_message(countdown_message, new_content=msg)
+#                 await asyncio.sleep(1)
+#             msg = "Access Granted!"
+#             await client.edit_message(countdown_message, new_content=msg)
+#             await client.remove_roles(member, get_role("noobs"))
+#             msg = "Hey everyone, {0} just joined.\n\n{1}, please introduce yourself and let us know who invited you.\n\nThanks!".format(member.name, member.mention)
+#             await client.send_message(get_channel("general_chat"), msg)
+#             break
+#         else:
+#             msg = "Not quite. What's rule #1?"
 
 @client.event
 async def on_message_delete(message):
@@ -455,7 +455,7 @@ async def on_message(message):
         reply_msg = secrets.choice(no_problem)
         await client.send_message(message.channel, reply_msg)
         return
-        
+
     #Post a random image from the curse directory
     if message.content.lower().startswith("!thatsmycurseidontknowyou"):
         if message.channel.name in ("nsfw_shitposting", "bot_testing") or message.channel.is_private:
@@ -467,7 +467,7 @@ async def on_message(message):
             msg = "Hey {}, you know better. That shit don't belong here.".format(member.mention)
             await client.send_message(message.channel, msg)
         return
-        
+
     #Write a haiku from previous messages
     if message.content.lower().startswith("!haiku"):
         await client.send_typing(message.channel)
@@ -487,7 +487,7 @@ async def on_message(message):
         msg = msg + random.choice(seven) + "\n"
         msg = msg + random.choice(five)
         await client.send_message(message.channel, msg)
-        
+
     # Create a limerick from previous messages
     if message.content.lower().startswith("!limerick"):
         await client.send_typing(message.channel)
@@ -519,7 +519,7 @@ async def on_message(message):
             msg = 'Not enough rhymes found in channel'
             await client.send_message(message.channel, msg)
             return
-        
+
         random.shuffle(rhymes)
         a_key = rhymes.pop()
         b_key = rhymes.pop()
@@ -535,7 +535,7 @@ async def on_message(message):
         poem += a.pop()
         await client.send_message(message.channel, poem)
         return
-        
+
     # Intensify
     if message.content.lower().startswith("!intensify"):
         text = message.clean_content.lower().split(' ', 1)
@@ -879,25 +879,25 @@ async def on_message(message):
 
         msg = "{user}, I have added {game} to the list of games."
         await client.send_message(message.channel, msg.format(user=member.mention, game=game))
-        
+
     if message.content.lower().startswith("!addserver"):
         if not is_super_waifu(member):
             msg = "{user}, you are not authorized to do that!"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
-        
+
         message_parts = message.content.split(' ', 1)
         if len(message_parts) == 1:
             msg = "{user}, you didn't specify a game, dummy?"
             await client.send_message(message.channel, msg.format(user=member.mention))
             return
-        
+
         game_server = message_parts[1]
-        
+
         game_servers = get_game_servers()
         if not game_servers:
             game_servers = []
-            
+
         game_servers.append(game_server)
         with open(os.path.join(sys.path[0], 'game_servers.dat'), 'wb') as fp:
             pickle.dump(game_servers, fp)
@@ -905,7 +905,7 @@ async def on_message(message):
         msg = "{user}, it will be done."
         await client.send_message(message.channel, msg.format(user=member.mention))
         return
-        
+
     if message.content.lower().startswith("!servers"):
         if get_game_servers():
             reply_msg = "The following servers may be available:\n```"
@@ -916,7 +916,7 @@ async def on_message(message):
             reply_msg = "There are no servers in the savefile!"
         await client.send_message(message.channel, reply_msg)
         return
-        
+
     if message.content.lower().startswith("!removeserver"):
         if not is_super_waifu(member):
             msg = "{user}, you are not authorized to do that!"
@@ -950,7 +950,7 @@ async def on_message(message):
 
         msg = "{user}, that server isn't listed. How'd you fuck that up?"
         await client.send_message(message.channel, msg.format(user=member.mention))
-        return    
+        return
 
     if message.content.lower().startswith("!addrole"):
         if not is_super_waifu(member):
@@ -1741,7 +1741,7 @@ async def on_message(message):
                 msg = "Hey {0}, {1} won your drawing but does not accept DMs from *strangers* like me :elacry:. Y'all work it out amongst yourselves.".format(member.mention, winner.mention)
                 await client.send_message(channel, msg)
         return
-        
+
     #Add self to naughty_list
     elif message.content.lower().startswith("!naughty"):
         if not is_waifu(member):
@@ -1769,7 +1769,7 @@ async def on_message(message):
             log.info("[{0}] Role added".format(member))
             reply = "{user}, you have been added to the naughty list."
             await client.send_message(message.channel, reply.format(user=member.mention))
-    
+
     #Remove self from secret santa
     elif message.content.lower().startswith("!nice"):
         if not is_waifu(member):
@@ -1794,7 +1794,7 @@ async def on_message(message):
             msg = "{user}, are you stupid? You weren't on the list, but I can think of another list where you belong..."
             await client.send_message(message.channel, msg.format(user=member.mention))
             log.info("[{0}] Role removed".format(member))
-    
+
     #Request current naughty_list
     elif message.content.lower().startswith("!hailsanta"):
         log.info("[{0}] Requested the naughty list".format(member.name))
@@ -1810,7 +1810,7 @@ async def on_message(message):
         for elf in elves:
             reply_msg += ("{0}\n".format(elf.name))
         await client.send_message(message.channel, reply_msg)
-    
+
     #Process list and assign santas
     elif message.content.lower().startswith("!itsbeginningtolookalotlikechristmas"):
         if not is_admin(member):
@@ -1879,7 +1879,7 @@ async def on_message(message):
                 pickle.dump(naughtylist, fp)
             msg = "Dear degenerates on the {0}, I've slid into your DMs and let's just say I left a little something in your stockings.".format(get_role("naughty_list").mention)
             await client.send_message(message.channel, msg)
-    
+
     elif message.content.lower().startswith("!christmasdaddy"):
         log.info("[{0}] requested a private secret santa reminder".format(member))
         if not is_waifu(member):
@@ -1907,7 +1907,7 @@ async def on_message(message):
         #Their name was not found
         msg = "Looks like you fucked up, " + message.author.name + ", your name isn't on the list.\nBetter luck next year!"
         await client.send_message(message.author, msg)
-    
+
     #Send reminder DMs to all participants
     elif message.content.lower().startswith("!noticemesanta"):
         log.info("[{0}] requested mass reminder".format(member))
@@ -1929,7 +1929,7 @@ async def on_message(message):
             msg = "Hey " + santa.name + ", just a reminder, if you are mailing your gift, it should be sent with enough time to arrive by December 20th.\nAlso, I'm sure you are well aware, but your secret child is " + child.name + "."
             await client.send_message(santa, msg)
         return
-    
+
     #USE SPARINGLY: Send custom reminder DMs to all participants
     elif message.content.lower().startswith("!letterfromsanta"):
         log.info("[{0}] requested custom mass reminder".format(member))
@@ -1951,7 +1951,7 @@ async def on_message(message):
             msg = message.content.replace("!letterfromsanta ", "")
             await client.send_message(santa, msg)
         return
-        
+
     elif message.content.lower().startswith("!timeout"):
         if not is_mod(member):
             msg = "I'm sorry, {user}. I'm afraid I can't do that.".format(user=member.mention)
@@ -1991,7 +1991,7 @@ async def on_message(message):
         msg = "{trouble} has been removed from timeout.".format(trouble=trouble.name)
         await client.send_message(message.channel, msg)
         return
-        
+
     #Did someone say hungry?
     lower = message.content.lower()
     if "m hungry" in lower or "s hungry" in lower or "e hungry" in lower or "y hungry" in lower:
