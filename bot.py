@@ -2046,13 +2046,16 @@ async def on_message(message):
 
     #Is someone being profane?
     if message.channel.name != "serious_business":
-        content = message.content.lower().replace(' ', '')
+        content = message.content.lower()
         for profane_word in profane_words:
             if profane_word in content:
-                if random.randint(1, 50) == 1:
-                    msg = "Hey {member}! Shame on you. This is a christian server.\nSister <@194703127868473344> is always watching.".format(member=member.mention)
+                if random.randint(1, 1) == 1:
+                    for profane_word in profane_words:
+                        content = content.replace(profane_word, '||' + profane_word + '||')
+                    content = '. '.join(sentence.capitalize() for sentence in content.split('. '))
+                    msg = "Hey {member}! Shame on you. This is a christian server.\nSister <@194703127868473344> is always watching. I have fixed your message for you.\n\n {member} said: \"{content}\"".format(member=member.mention, content=content)
                     await client.send_message(message.channel, msg)
-
+                    await client.delete_message(message)
     return
 
 client.run(config['discord']['token'])
