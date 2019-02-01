@@ -2045,11 +2045,11 @@ async def on_message(message):
                 count+=1
 
     #Is someone being profane?
-    if message.channel.name != "serious_business":
+    if message.channel.name not in sensitive_channels:
         content = message.content.lower()
         for profane_word in profane_words:
             if profane_word in content:
-                if random.randint(1, 1) == 1:
+                if random.randint(1, 50) == 1:
                     for profane_word in profane_words:
                         content = content.replace(profane_word, '||' + profane_word + '||')
                     content = '. '.join(sentence.capitalize() for sentence in content.split('. '))
