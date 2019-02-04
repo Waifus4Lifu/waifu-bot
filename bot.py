@@ -2056,6 +2056,7 @@ async def on_message(message):
                     msg = "Hey {member}! Shame on you. This is a christian server.\nSister <@194703127868473344> is always watching. I have fixed your message for you.\n\n {member} said: \"{content}\"".format(member=member.mention, content=content)
                     await client.send_message(message.channel, msg)
                     await client.delete_message(message)
+                    return
     return
 
 client.run(config['discord']['token'])
