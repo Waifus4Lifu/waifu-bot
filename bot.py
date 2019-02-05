@@ -2046,17 +2046,23 @@ async def on_message(message):
 
     #Is someone being profane?
     if message.channel.name not in sensitive_channels:
-        content = message.content.lower()
+        content = message.content
+        lower = content.lower()
+        sister = server.get_member('194703127868473344')
         for profane_word in profane_words:
-            if profane_word in content:
+            if profane_word in lower:
                 if random.randint(1, 50) == 1:
                     for profane_word in profane_words:
-                        content = content.replace(profane_word, '||' + profane_word + '||')
-                    content = '. '.join(sentence.capitalize() for sentence in content.split('. '))
-                    msg = "Hey {member}! Shame on you. This is a christian server.\nSister <@194703127868473344> is always watching. I have fixed your message for you.\n\n {member} said: \"{content}\"".format(member=member.mention, content=content)
+                        while profane_word in lower:
+                            # Surround each occurence of a profane word with double pipes without changing the case of the original text
+                            start = lower.find(profane_word)
+                            end = lower.find(profane_word) + len(profane_word)
+                            content = content[:start] + '||' + content[start:end] + '||' + content[end:]
+                            lower = lower.replace(profane_word, '||' + profane_word.upper() + '||', 1)
+                    msg = "Hey {member}! Shame on you. This is a christian server.\nSister {sister} is always watching. I have fixed your message for you.\n\n {member} said: \"{content}\"".format(member=member.mention, content=content, sister=sister.display_name)
                     await client.send_message(message.channel, msg)
                     await client.delete_message(message)
-                    return
+                return
     return
 
 client.run(config['discord']['token'])
