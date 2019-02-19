@@ -97,12 +97,6 @@ except KeyError:
     no_problem = ["No problemo",
                    "Anytime"]
 
-try:
-    profane_words = config['profane']
-except KeyError:
-    profane_words = ["damn",
-                     "shit"]
-
 client = discord.Client()
 
 #Funtion shamelessly stolen from a shameless thief
@@ -2044,25 +2038,6 @@ async def on_message(message):
                     break
                 count+=1
 
-    #Is someone being profane?
-    if message.channel.name not in sensitive_channels:
-        content = message.content
-        lower = content.lower()
-        sister = server.get_member('194703127868473344')
-        for profane_word in profane_words:
-            if profane_word in lower:
-                if random.randint(1, 50) == 1:
-                    for profane_word in profane_words:
-                        while profane_word in lower:
-                            # Surround each occurence of a profane word with double pipes without changing the case of the original text
-                            start = lower.find(profane_word)
-                            end = lower.find(profane_word) + len(profane_word)
-                            content = content[:start] + '||' + content[start:end] + '||' + content[end:]
-                            lower = lower.replace(profane_word, '||' + profane_word.upper() + '||', 1)
-                    msg = "Hey {member}! Shame on you. This is a christian server.\nSister {sister} is always watching. I have fixed your message for you.\n\n {member} said: \"{content}\"".format(member=member.mention, content=content, sister=sister.display_name)
-                    await client.send_message(message.channel, msg)
-                    await client.delete_message(message)
-                return
     return
 
 client.run(config['discord']['token'])
