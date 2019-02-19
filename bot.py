@@ -2038,4 +2038,6 @@ async def on_message(message):
                     break
                 count+=1
 
+    return
+
 client.run(config['discord']['token'])
