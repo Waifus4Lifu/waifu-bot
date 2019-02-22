@@ -380,13 +380,17 @@ async def on_member_join(member):
 async def on_message_delete(message):
     if "!lottery" in message.content or message.channel.is_private:
         return
+    if message.channel.name == 'thots_of_dallas':
+        channel = get_channel("deleted_thots")
+    else:
+        channel = get_channel("deleted_text")
     description="Author: {0}\nChannel: {1}\nTimestamp: {2}".format(message.author.name, message.channel, message.timestamp)
     embed = discord.Embed(title="Message deleted by [see audit log]", description=description, color=0xff0000)
     if len(message.content) > 0:
         embed.add_field(name="Message", value=message.content, inline=False)
     if len(message.attachments) > 0:
         embed.add_field(name="Attachments", value=message.attachments, inline=False)
-    await client.send_message(get_channel("deleted_text"), embed=embed)
+    await client.send_message(channel, embed=embed)
 
 @client.event
 async def on_message(message):
