@@ -1228,7 +1228,7 @@ async def on_message(message):
                 log.info("[{0}] Role removed".format(member))
                 if role in get_games():
                     reply = "Hello {user}, you have been removed from list for {role}, to re-join send `!join {role}` in any channel.".format(user=member.mention, role=role)
-                    notification_msg = "{user} no longer wants to play {role} like a bitch. There are currently {players} players available."
+                    notification_msg = "{user} no longer wants to play {role} like a scrub. There are currently {players} players available."
                     await client.send_message(get_channel("looking_for_group"), notification_msg.format(user=member.mention, role=role, players=len(get_members_by_role(role))))
                 elif role == "shitty_people":
                     reply = "Alright {user}, I see how it is. {channel} is now off-limits to you.".format(user=member.mention, channel=get_channel("nsfw_shitposting").mention)
