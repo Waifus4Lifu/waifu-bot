@@ -1,35 +1,95 @@
 discord:
-    token: DISCORD_TOKEN
-    server_id: 'DISCORD_SERVER_ID'
-stream:
-    stream_cooldown: 7200
-rate_limit:
-    message_limit: 3
-    cooldown_seconds: 30
+    token: BOT_TOKEN
+    guild_id: GUILD_ID_INTEGER
+    database: waifubot.db
 channels:
+    female_only:
+        - deleted_thots
+        - thots_of_dallas
+    ignore_commands:
+        - welcome_noob
+    ignore_delete:
+        - deleted_text
+        - deleted_thots
     sensitive:
-        - super_waifu_chat
         - serious_business
+        - super_waifu_chat
+    serious:
+        - serious_business
+    super_waifu:
+        - admin_chat
+        - bot_testing
+        - deleted_text
+        - deleted_thots
+        - mod_chat
+        - super_waifu_chat
 answers:
-    yes:
-        - affirmative
-        - yes
-        - yup
-        - yep
-        - yuh
-        - absofuckinglutely
-        - yeah
-        - yarp
-        - y
-        - of course
+    True:
         - absolutely
-        - just do it
-        - hurry up
-bot_phrases:
-    no_problem:
-        - No problemo
-        - Np fam
-        - I gotchu
-        - Anytime
-        - No, thank *you*
-        - Don't patronize me
+        - affirmative
+        - all right
+        - amen
+        - aye
+        - beyond a doubt
+        - by all means
+        - certainly
+        - definitely
+        - exactly
+        - fine
+        - gladly
+        - good
+        - granted
+        - indubitably
+        - just so
+        - most assuredly
+        - naturally
+        - of course
+        - okay
+        - positively
+        - precisely
+        - sure thing
+        - surely
+        - true
+        - undoubtedly
+        - unquestionably
+        - without fail
+        - y
+        - yarp
+        - yea
+        - yeah
+        - yep
+        - yes
+        - yuh
+        - yup
+statuses:
+    - 0hooky
+    - 0it safe
+    - 0too much
+    - 0it by ear
+    - 0to win
+    - 0as bastion
+    - 0as hanzo
+    - 0as genji
+    - 0for keeps
+    - 0favorites
+    - 0fast and loose
+    - 0AI simulator
+    - 1it cool
+    - 1around
+    - 1mind games
+    - 1quidditch
+    - 1outside
+    - 1the lottery
+    - 1house
+    - 1dumb
+    - 1coy
+    - 2with your toys
+    - 2doctor
+    - 2hard to get
+    - 2with portals
+    - 2with fire
+    - 2the victim
+    - 2russian roulette
+    - 2the field
+    - 2possum
+    - 2footsie
