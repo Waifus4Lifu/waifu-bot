@@ -124,17 +124,18 @@ def update_invite_details(invite, invitee):
 def seconds_since(then):
     return abs((datetime.utcnow() - then).total_seconds())
     
-def quote_is_new(message):
+def quote_exists(id):
     with open_database() as database:
-        id = message.id
         cursor = database.cursor()
         sql = """
             SELECT *
             FROM quotes
-            WHERE id=?
+            WHERE id = ?
             """
         cursor.execute(sql, (id,))
-        return cursor.fetchone() == None
+        if cursor.fetchone() == None:
+            return False
+        return True
     
 def store_quote(message, ctx):
     with open_database() as database:
@@ -183,6 +184,25 @@ def get_quote(channel, phrase):
                 """
             cursor.execute(sql, (channel_name, pattern))
         return cursor.fetchone()
+        
+def delete_quote(id):
+    with open_database() as database:
+        cursor = database.cursor()
+        sql = """
+            SELECT *
+            FROM quotes
+            WHERE id = ?
+            """
+        cursor.execute(sql, (id,))
+        quote = cursor.fetchone()
+        sql = """
+            DELETE
+            FROM quotes
+            WHERE id=?
+            """
+        cursor.execute(sql, (id,))
+        database.commit()
+        return quote
 
 def is_super_channel(ctx):
     if ctx.channel.name not in config["channels"]["super_waifu"]:
@@ -212,12 +232,30 @@ def get_channel_by_topic(topic):
     
 def get_role(name):
     for role in get_guild().roles:
-        if role.name == name:
+        if role.name.lower() == name.lower():
             return role
     return None
     
 def get_members_by_role(name):
     return get_role(name).members
+    
+async def yes_no_timeout(ctx, message):
+    await ctx.send(message)
+    def check(answer):
+        return answer.author == ctx.author and answer.channel == ctx.channel
+    try:
+        answer = await bot.wait_for("message", timeout=15, check=check)
+        if answer.content.lower() in config["answers"][True]:
+            reply = random.choice(strings["user_reply_yes"])
+            await ctx.send(reply)
+            return True
+        reply = random.choice(strings["user_reply_no"])
+        await ctx.send(reply)
+        return False
+    except asyncio.TimeoutError:
+        reply = random.choice(strings["user_reply_timeout"])
+        await ctx.send(reply)
+        return None
     
 @asyncio.coroutine
 async def change_status():
@@ -393,27 +431,30 @@ async def on_message(message):
     global block_noobs
     if message.author == bot.user:
         return
-    if message.channel.name == "welcome_noob":
-        answer = re.sub("[^0-9a-zA-Z]+", "", message.clean_content).lower()
-        if answer == "dontbeadick":
-            reply = "Yup. Thanks! I'll grant you access. Just a sec..."
-            await message.channel.send(reply)
-            await asyncio.sleep(1)
-            block_noobs = True
-            await ctx.author.remove_roles(get_role("noobs"))
-            await asyncio.sleep(1)
-            await channel.delete()
-            await asyncio.sleep(1)
-            block_noobs = False
-            general_chat = get_channel("general_chat")
-            reply = f"Hey everyone, {message.author.mention} just joined. {message.author.mention}, please introduce yourself. Thanks!"
-            await general_chat.send(reply)
-        else:
-            reply = "Not quite. Try again."
-            await message.channel.send(reply)
+    if isinstance(message.channel, discord.TextChannel):
+        if message.channel.name == "welcome_noob":
+            answer = re.sub("[^0-9a-zA-Z]+", "", message.clean_content).lower()
+            if answer == "dontbeadick":
+                reply = "Yup. Thanks! I'll grant you access. Just a sec..."
+                await message.channel.send(reply)
+                await asyncio.sleep(1)
+                block_noobs = True
+                await ctx.author.remove_roles(get_role("noobs"))
+                await asyncio.sleep(1)
+                await channel.delete()
+                await asyncio.sleep(1)
+                block_noobs = False
+                general_chat = get_channel("general_chat")
+                reply = f"Hey everyone, {message.author.mention} just joined. {message.author.mention}, please introduce yourself. Thanks!"
+                await general_chat.send(reply)
+            else:
+                reply = "Not quite. Try again."
+                await message.channel.send(reply)
+    
     elif "thank" in message.content.lower() and bot.user in message.mentions:
         reply = random.choice(strings["no_problem"])
         await message.channel.send(reply)
+    
     await bot.process_commands(message)
     return
     
@@ -427,6 +468,33 @@ async def wtf(ctx):
     reply = reply + "\nIf I'm not working correctly, go fuck yourself, you aren't my boss."
     await ctx.send(reply)
                       
+@bot.command(aliases=["games"])
+async def roles(ctx):
+    """Show a list of mentionable roles/games you can join."""
+    guild = get_guild()
+    length = 0
+    roles = []
+    for role in guild.roles:
+        if ctx.invoked_with == "roles" and role.color == discord.Color.green():
+            roles.append(role)
+            if len(role.name) > length:
+                length = len(role.name)
+        elif ctx.invoked_with == "games" and role.color == discord.Color.red():
+            roles.append(role)
+            if len(role.name) > length:
+                length = len(role.name)
+    reply = f"The following {ctx.invoked_with} are joinable:\n\n"
+    role_name = f"{ctx.invoked_with[:-1]}:".ljust(length).upper()
+    members = "MEMBERS:".rjust(8)
+    reply = reply + f"{role_name}  {members}\n"
+    for role in roles:
+        role_name = role.name.ljust(length)
+        members = str(len(role.members)).rjust(8)
+        reply = reply + f"{role_name}  {members}\n"
+    reply = "```" + reply + "```"
+    await ctx.send(reply)
+    return
+                    
 @bot.command()
 @commands.check(is_silly_channel)
 async def quoth(ctx, target: typing.Union[discord.Member, discord.Message]):
@@ -448,31 +516,16 @@ async def quoth(ctx, target: typing.Union[discord.Member, discord.Message]):
         reply = f"{ctx.author.mention}, that quote is too short."
         await ctx.send(reply)
         return
-    if not quote_is_new(target):
+    if quote_exists(target.id):
         reply = f"Can't do that, {ctx.author.mention}. That would be a duplicate quote."
         await ctx.send(reply)
         return
     if ctx.channel.name in config["channels"]["sensitive"]:
         reply = f"Hey uh, {ctx.author.mention}, this is a sensitive_channel™.\nAre you sure you want to do this?"
-        await ctx.send(reply)
-        def check(answer):
-            return answer.author == ctx.author and answer.channel == ctx.channel
-        try:
-            answer = await client.wait_for("target", timeout=15, check=check)
-            if answer.content.lower() in config["answers"][True]:
-                reply = random.choice(strings["user_reply_yes"])
-                await ctx.send(reply)
-            else:
-                reply = random.choice(strings["user_reply_no"])
-                await ctx.send(reply)
-                return
-        except asyncio.TimeoutError:
-            reply = random.choice(strings["user_reply_timeout"])
+        if await yes_no_timeout(ctx, reply):
+            clean_content = store_quote(target, ctx)
+            reply = f"{ctx.author.mention} successfully stored the following message:\n\n{target.author}: \"{clean_content}\""
             await ctx.send(reply)
-            return
-    clean_content = store_quote(target, ctx)
-    reply = f"{ctx.author.mention} successfully stored the following message:\n\n{target.author}: \"{clean_content}\""
-    await ctx.send(reply)
     return
  
 @bot.command()
@@ -528,6 +581,40 @@ async def shake(ctx, *, text: typing.Optional[str]):
         os.remove(image_path)
     return
     
+@bot.command(hidden=True, aliases=['addgame'])
+@commands.has_role("super_waifus")
+@commands.check(is_super_channel)
+async def addrole(ctx, role: str):
+    """Add a mentionable role. Required format: `WAIFUS_4_LIFU`."""
+    guild = get_guild()
+    super_waifu_chat = get_channel("super_waifu_chat")
+    if ctx.invoked_with == "addrole":
+        if role != role.lower():
+            reply = "Roles must be lowercase."
+            await ctx.send(reply)
+            return
+        convention = "`waifus_4_lifu`"
+        color = discord.Color.green()
+    else:
+        if role != role.upper():
+            reply = "Games must be uppercase."
+            await ctx.send(reply)
+            return
+        convention = "`WAIFUS_4_LIFU`"
+        color = discord.Color.red()
+    if get_role(role) != None:
+        reply = "That role already exists, dummy."
+        await ctx.send(reply)
+        return
+    if "_" not in role:
+        reply = f"I don't see any underscores. Are you sure you're following the {convention} convention?"
+        if not await yes_no_timeout(ctx, reply):
+            return
+    role = await guild.create_role(name=role, mentionable=True, color=color)
+    reply = f"{ctx.author.mention} has created the {role.mention} role.\nBerate them if they didn't follow the {convention} convention"
+    await super_waifu_chat.send(reply)
+    return
+    
 @bot.command(hidden=True)
 @commands.has_role("super_waifus")
 @commands.check(is_super_channel)
@@ -552,6 +639,25 @@ async def invite(ctx, *, reason):
     store_invite_details(invite, ctx.author, reason)
     reply = f"{ctx.author.mention} created an invite with reason: '{reason}'.\n<{invite.url}>"
     await super_waifu_chat.send(reply)
+    return
+    
+@bot.command(hidden=True)
+@commands.has_role("super_waifus")
+@commands.check(is_super_channel)
+async def deletequote(ctx, id: int):
+    """Delete a quote by ID (second half of `!inspire` file name)"""
+    guild = get_guild()
+    if not quote_exists(id):
+        reply = "I can't find that quote in the database."
+        await ctx.send(reply)
+        return
+    quote = delete_quote(id)
+    author = guild.get_member(int(quote[3]))
+    stored_by = guild.get_member(int(quote[5]))
+    text = quote[7]
+    if not quote_exists(id):
+        reply = f"That quote is history. For the record, it was from {author}, stored by {stored_by}, and said:\n\n\"{text}\""
+        await ctx.send(reply)
     return
 
 @bot.command(hidden=True)
