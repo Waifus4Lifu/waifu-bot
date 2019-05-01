@@ -58,6 +58,7 @@ def inspiration(id, text, name):
     name = '- ' + name
     path = os.path.join(sys.path[0], 'images', 'inspire')
     files = os.listdir(path)
+    files.remove(".gitkeep")
     file = random.choice(files)
     img = Image.open(os.path.join(path, file))
     draw = ImageDraw.Draw(img)

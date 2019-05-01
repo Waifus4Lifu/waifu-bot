@@ -13,7 +13,7 @@ import logging as log
 from discord.ext import commands
 from datetime import datetime
 
-bot = commands.Bot(command_prefix="!", description="this is a test", help_command=None)
+bot = commands.Bot(command_prefix="!", help_command=None)
 
 def load_yaml(yaml_file_name):
     with open(os.path.join(sys.path[0], yaml_file_name), "r", encoding="utf8") as yaml_file:
@@ -412,13 +412,16 @@ async def on_command_error(ctx, error):
                 error_text = error_text + "."
         error_text = ". ".join(i.capitalize() for i in error_text.split(". "))
         error_text = error_text + "\n" + get_command_help(ctx.command)
-        reply = f"Damn, {ctx.author.mention}, You sure are creative when it comes to syntax.\n{error_text}"
+        reply = f"{ctx.author.mention}, you sure are creative when it comes to syntax.\n{error_text}"
         await ctx.send(reply)
     elif isinstance(error, commands.MissingRole):
-        reply = f"Fucking what? {ctx.author.mention}, just who the fuck do you think you are?"
+        reply = f"Fucking what? {ctx.author.mention}, just who do you think you are?"
         await ctx.send(reply)
     elif isinstance(error, commands.NoPrivateMessage):
         reply = f"Say, uh {ctx.author.mention}, let's find a better channel for this."
+        await ctx.send(reply)
+    elif isinstance(error, commands.errors.CommandNotFound):
+        reply = f"{ctx.author.mention}, that's not a valid command. Maybe try `!wtf`."
         await ctx.send(reply)
     elif isinstance(error, commands.errors.CommandInvokeError):
         raise error.original
@@ -467,7 +470,28 @@ async def wtf(ctx):
             reply = reply + get_command_help(command) + "\n"
     reply = reply + "\nIf I'm not working correctly, go fuck yourself, you aren't my boss."
     await ctx.send(reply)
-                      
+
+@bot.command(aliases=["players"])
+async def members(ctx, role: discord.Role):
+    """Show a list of members who have signed up for a role/game."""
+    if role.name in config['roles']['forbidden']:
+        reply = f"{ctx.author.mention}, this is a Forbidden Role:tm:. If you can't figure this out a different way, you don't deserve to know."
+        await ctx.send(reply)
+        return
+    if len(role.members) == 0:
+        reply = f"No members are signed up for '{role.name}'. It's probably a Stupid Role:tm:."
+        await ctx.send(reply)
+        return
+    length = 0
+    for member in role.members:
+        if len(member.display_name) > length:
+            length = len(member.display_name)
+    reply = f"The following members have signed up for '{role.name}':\n\n"
+    for member in role.members:
+        reply = reply + f"`{member.display_name.ljust(length)}{member.status.name.rjust(10)}`\n"
+    await ctx.send(reply)
+    return
+    
 @bot.command(aliases=["games"])
 async def roles(ctx):
     """Show a list of mentionable roles/games you can join."""
@@ -475,26 +499,92 @@ async def roles(ctx):
     length = 0
     roles = []
     for role in guild.roles:
-        if ctx.invoked_with == "roles" and role.color == discord.Color.green():
-            roles.append(role)
-            if len(role.name) > length:
-                length = len(role.name)
-        elif ctx.invoked_with == "games" and role.color == discord.Color.red():
-            roles.append(role)
-            if len(role.name) > length:
-                length = len(role.name)
+        if role.name not in config["roles"]["forbidden"]:
+            if ctx.invoked_with == "roles" and role.name == role.name.lower():
+                roles.append(role)
+                if len(role.name) > length:
+                    length = len(role.name)
+            elif ctx.invoked_with == "games" and role.name == role.name.upper():
+                roles.append(role)
+                if len(role.name) > length:
+                    length = len(role.name)
     reply = f"The following {ctx.invoked_with} are joinable:\n\n"
-    role_name = f"{ctx.invoked_with[:-1]}:".ljust(length).upper()
-    members = "MEMBERS:".rjust(8)
-    reply = reply + f"{role_name}  {members}\n"
     for role in roles:
         role_name = role.name.ljust(length)
-        members = str(len(role.members)).rjust(8)
-        reply = reply + f"{role_name}  {members}\n"
-    reply = "```" + reply + "```"
+        count = str(len(role.members)).rjust(6)
+        reply = reply + f"`{role_name}{count}`\n"
     await ctx.send(reply)
     return
-                    
+
+@bot.command()
+async def test(ctx):
+    """Test something."""
+    reply = f"This was a test. And {ctx.author.mention} failed."
+    await ctx.send(reply)
+    return
+    
+@bot.command()
+async def join(ctx, role: discord.Role):
+    """Join a mentionable role/game."""
+    if role.name in config['roles']['forbidden']:
+        reply = f"{ctx.author.mention}, you can't join a Forbidden Role:tm:."
+        await ctx.send(reply)
+        return
+    if role in ctx.author.roles:
+        reply = f"{ctx.author.mention}, you already have that role."
+        await ctx.send(reply)
+        return
+    await ctx.author.add_roles(role)
+    reply = f"{ctx.author.mention}, you now have the '{role.name}' role"
+    await ctx.send(reply)
+    return
+    
+@bot.command()
+async def leave(ctx, role: discord.Role):
+    """Leave a mentionable role/game."""
+    if role.name in config['roles']['forbidden']:
+        reply = f"{ctx.author.mention}, you can't leave a Forbidden Role:tm:."
+        await ctx.send(reply)
+        return
+    if role not in ctx.author.roles:
+        reply = f"{ctx.author.mention}, you don't have that role."
+        await ctx.send(reply)
+        return
+    await ctx.author.remove_roles(role)
+    reply = f"{ctx.author.mention}, you no longer have the '{role.name}' role"
+    await ctx.send(reply)
+    return
+
+@bot.command()
+@commands.check(is_silly_channel)
+async def magic8ball(ctx, question: str):
+    """Ask the magic 8 ball a question."""
+    answer = random.choice(strings['eight_ball'])
+    reply = f"{ctx.author.mention}, the magic 8 ball has spoken: \"{answer}\"."
+    await ctx.send(reply)
+    return
+    
+@bot.command(name="random")
+async def _random(ctx):
+    """Request a random number, chosen by fair dice roll."""
+    await ctx.send(f"{ctx.author.mention}: 4")
+    def check(answer):
+        if answer.channel == ctx.channel:
+            is_not = ["n't", "not", "no", "crypto"]
+            for word in is_not:
+                if (word in answer.content.lower() and "random" in answer.content.lower()) or answer.content.lower().startswith("!random"):
+                    return True
+        return False
+    try:
+        answer = await bot.wait_for("message", timeout=300, check=check)
+        if answer.content.lower().startswith("!random"):
+            return
+        reply = f"{answer.author.mention}, I disagree:\nhttps://xkcd.com/221/"
+        await ctx.send(reply)
+        return
+    except asyncio.TimeoutError:
+        return
+    
 @bot.command()
 @commands.check(is_silly_channel)
 async def quoth(ctx, target: typing.Union[discord.Member, discord.Message]):
@@ -565,7 +655,7 @@ async def shake(ctx, *, text: typing.Optional[str]):
         await attachment.save(file_path)
         image_path = draw.shaky_image(file_path)
         if image_path == None:
-            reply = f"{ctx.author.mention}, what kind of shit are you trying to pull? Attachment {target} isn't in a valid format. How would you like it if I force-fed you garbage?"
+            reply = f"{ctx.author.mention}, attachment {target} isn't in a valid format. How would you like it if I force-fed you garbage?"
             await ctx.send(reply)
             continue
         actual_size = os.path.getsize(image_path)
@@ -581,27 +671,25 @@ async def shake(ctx, *, text: typing.Optional[str]):
         os.remove(image_path)
     return
     
-@bot.command(hidden=True, aliases=['addgame'])
+@bot.command(hidden=True, aliases=['creategame'])
 @commands.has_role("super_waifus")
 @commands.check(is_super_channel)
-async def addrole(ctx, role: str):
+async def createrole(ctx, role: str):
     """Add a mentionable role. Required format: `WAIFUS_4_LIFU`."""
     guild = get_guild()
     super_waifu_chat = get_channel("super_waifu_chat")
-    if ctx.invoked_with == "addrole":
+    if ctx.invoked_with == "createrole":
         if role != role.lower():
             reply = "Roles must be lowercase."
             await ctx.send(reply)
             return
         convention = "`waifus_4_lifu`"
-        color = discord.Color.green()
     else:
         if role != role.upper():
             reply = "Games must be uppercase."
             await ctx.send(reply)
             return
         convention = "`WAIFUS_4_LIFU`"
-        color = discord.Color.red()
     if get_role(role) != None:
         reply = "That role already exists, dummy."
         await ctx.send(reply)
@@ -610,8 +698,32 @@ async def addrole(ctx, role: str):
         reply = f"I don't see any underscores. Are you sure you're following the {convention} convention?"
         if not await yes_no_timeout(ctx, reply):
             return
-    role = await guild.create_role(name=role, mentionable=True, color=color)
+    role = await guild.create_role(name=role, mentionable=True)
     reply = f"{ctx.author.mention} has created the {role.mention} role.\nBerate them if they didn't follow the {convention} convention"
+    await super_waifu_chat.send(reply)
+    return
+    
+@bot.command(hidden=True, aliases=['deletegame'])
+@commands.has_role("super_waifus")
+@commands.check(is_super_channel)
+async def deleterole(ctx, role: discord.Role):
+    """Delete a mentionable role."""
+    if role.name in config['roles']['forbidden']:
+        reply = f"{ctx.author.mention}, that is a Forbidden Role:tm:."
+        await ctx.send(reply)
+        return
+    if ctx.invoked_with == "deleterole" and role.name == role.name.upper():
+        reply = f"{ctx.author.mention} that is a game."
+        await ctx.send(reply)
+        return
+    if ctx.invoked_with == "deletegame" and role.name == role.name.lower():
+        reply = f"{ctx.author.mention} that is not a game."
+        await ctx.send(reply)
+        return
+    guild = get_guild()
+    super_waifu_chat = get_channel("super_waifu_chat")
+    reply = f"{ctx.author.mention} has deleted the '{role.name}' role."
+    await role.delete()
     await super_waifu_chat.send(reply)
     return
     
@@ -620,7 +732,7 @@ async def addrole(ctx, role: str):
 @commands.check(is_super_channel)
 async def superwtf(ctx):
     """Display this help message."""
-    reply = "Oh shit it's a mod, everyone pretend like you aren't fucking shit up!\n\n"
+    reply = "Oh shit it's a Super_Waifu, everyone pretend like you aren't fucking shit up!\n\n"
     for command in sorted(bot.commands, key=lambda x: x.name):
         if command.hidden:
             reply = reply + get_command_help(command) + "\n"
