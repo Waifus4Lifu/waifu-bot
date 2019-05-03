@@ -2,68 +2,17 @@ import os
 import re
 import sys
 import draw
-import yaml
 import random
 import typing
 import asyncio
+import aiohttp
 import discord
-import sqlite3
-import requests
 import logging as log
+from functions import *
 from discord.ext import commands
 from datetime import datetime
 
 bot = commands.Bot(command_prefix="!", help_command=None)
-
-def load_yaml(yaml_file_name):
-    with open(os.path.join(sys.path[0], yaml_file_name), "r", encoding="utf8") as yaml_file:
-        return yaml.safe_load(yaml_file)
-
-def create_database():
-    file_name = config['discord']['database']
-    file_path = os.path.join(sys.path[0], "sqlite", file_name)
-    if os.path.isfile(file_path):
-        log.info(f"Database {file_name} found.")
-        return
-    log.error(f"Database {file_name} not found. Creating now...")
-    with open_database() as database:
-        cursor = database.cursor()
-        sql = """
-            CREATE TABLE IF NOT EXISTS "invites" (
-                "id"	TEXT,
-                "date_time_created"	TEXT,
-                "date_time_used"	TEXT,
-                "inviter_id"	INTEGER,
-                "inviter_name"	TEXT,
-                "invitee_id"	INTEGER,
-                "Invitee_name"	TEXT,
-                "reason"	TEXT,
-                PRIMARY KEY("id")
-                )
-            """
-        cursor.execute(sql)
-        database.commit()
-        sql = """
-            CREATE TABLE IF NOT EXISTS "quotes" (
-                "id"	INTEGER,
-                "channel_name"	TEXT,
-                "date_time"	TEXT,
-                "author_id"	INTEGER,
-                "author_name"	TEXT,
-                "stored_by_id"	INTEGER,
-                "stored_by_name"	TEXT,
-                "quote_text"	TEXT,
-                PRIMARY KEY("id")
-                )
-            """
-        cursor.execute(sql)
-        database.commit()
-        return
-
-def open_database():
-    file_name = config['discord']['database']
-    file_path = os.path.join(sys.path[0], "sqlite", file_name)
-    return sqlite3.connect(file_path)
 
 def get_command_help(command):
     help = f"`{bot.command_prefix}{command.name} "
@@ -73,136 +22,6 @@ def get_command_help(command):
         help = help + f"{command.signature} "
     help = help + f"` - {command.help}"
     return help
-
-def store_invite_details(invite, inviter, reason):
-    with open_database() as database:
-        cursor = database.cursor()
-        id = invite.id
-        date_time_created = invite.created_at
-        date_time_used = None
-        inviter_id = inviter.id
-        inviter_name = str(inviter)
-        invitee_id = None
-        invitee_name = None
-        sql = """
-            INSERT
-            INTO invites 
-            VALUES (?,?,?,?,?,?,?,?)
-            """
-        cursor.execute(sql, (id, date_time_created, date_time_used, inviter_id, inviter_name, invitee_id, invitee_name, reason))
-        database.commit()
-        return
-    
-def get_invite_details(invite):
-    with open_database() as database:
-        cursor = database.cursor()
-        id = invite.id
-        sql = """
-            SELECT *
-            FROM invites
-            WHERE id = ?
-            """
-        cursor.execute(sql, (id,))
-        return cursor.fetchone()
-    
-def update_invite_details(invite, invitee):
-    with open_database() as database:
-        cursor = database.cursor()
-        id = invite.id
-        date_time_used = datetime.utcnow()
-        invitee_id = invitee.id
-        invitee_name = str(invitee)
-        sql = """
-            UPDATE invites
-            SET date_time_used = ?, invitee_id = ?, invitee_name = ?
-            WHERE id = ?
-            """
-        cursor.execute(sql, (date_time_used, invitee_id, invitee_name, id))
-        database.commit()
-        return
-    
-def seconds_since(then):
-    return abs((datetime.utcnow() - then).total_seconds())
-    
-def quote_exists(id):
-    with open_database() as database:
-        cursor = database.cursor()
-        sql = """
-            SELECT *
-            FROM quotes
-            WHERE id = ?
-            """
-        cursor.execute(sql, (id,))
-        if cursor.fetchone() == None:
-            return False
-        return True
-    
-def store_quote(message, ctx):
-    with open_database() as database:
-        cursor = database.cursor()
-        id = message.id
-        channel_name = message.channel.name
-        date_time = datetime.now().isoformat()
-        author_id = message.author.id
-        author_name = str(message.author)
-        stored_by_id = ctx.author.id
-        stored_by_name = str(ctx.author)
-        quote_text = message.clean_content.replace("\"", "\"")
-        if quote_text[:1] == "\"" and quote_text[-1:] == "\"":
-            quote_text = quote_text[1:-1]
-        sql = """
-            INSERT
-            INTO quotes
-            VALUES (?,?,?,?,?,?,?,?)
-            """
-        cursor.execute(sql, (id, channel_name, date_time, author_id, author_name, stored_by_id, stored_by_name, quote_text))
-        database.commit()
-        return quote_text
-    
-def get_quote(channel, phrase):
-    with open_database() as database:
-        channel_name = channel.name
-        cursor = database.cursor()
-        if phrase == None:
-            sql = """
-                SELECT *
-                FROM quotes
-                WHERE channel_name = ?
-                ORDER BY RANDOM()
-                LIMIT 1
-                """
-            cursor.execute(sql, (channel_name,))
-        else:
-            pattern = "%" + phrase + "%"
-            sql = """
-                SELECT *
-                FROM quotes
-                WHERE channel_name = ?
-                AND quote_text LIKE ?
-                ORDER BY RANDOM()
-                LIMIT 1
-                """
-            cursor.execute(sql, (channel_name, pattern))
-        return cursor.fetchone()
-        
-def delete_quote(id):
-    with open_database() as database:
-        cursor = database.cursor()
-        sql = """
-            SELECT *
-            FROM quotes
-            WHERE id = ?
-            """
-        cursor.execute(sql, (id,))
-        quote = cursor.fetchone()
-        sql = """
-            DELETE
-            FROM quotes
-            WHERE id=?
-            """
-        cursor.execute(sql, (id,))
-        database.commit()
-        return quote
 
 def is_super_channel(ctx):
     if ctx.channel.name not in config["channels"]["super_waifu"]:
@@ -284,7 +103,7 @@ async def monitor_noobs():
         for member in get_members_by_role("noobs"):
             if get_channel_by_topic(str(member.id)) == None:
                 if block_noobs:
-                    await asyncio.sleep(5)
+                    await asyncio.sleep(3)
                 else:
                     await member.remove_roles(noobs_role)
                     reply = f"No welcome_noob channel found for {member.mention}. Removing noobs role."
@@ -295,7 +114,7 @@ async def monitor_noobs():
                 noobs = get_members_by_role("noobs")
                 if member == None or member not in noobs:
                     if block_noobs:
-                        await asyncio.sleep(5)
+                        await asyncio.sleep(3)
                     else:
                         await channel.delete()
                         reply = f"{member.mention} no longer has the noobs role. Removing welcome_noob channel."
@@ -327,6 +146,8 @@ async def monitor_deletions():
                 else: 
                     if seconds_since(waifu_audit_log[entry.id].created_at) > 86400:
                         del waifu_audit_log[entry.id]
+        if author == bot.user:
+            continue
         timestamp = message.created_at.strftime("%m/%d/%Y %H:%M")
         description = "Author: {}\nDeleted by: {}*\nChannel: {}\nUTC: {}"
         description = description.format(author.mention, deleted_by.mention, message.channel.mention, timestamp)
@@ -410,7 +231,7 @@ async def on_command_error(ctx, error):
         if error_text != "":
             if error_text[-1] != ".":
                 error_text = error_text + "."
-        error_text = ". ".join(i.capitalize() for i in error_text.split(". "))
+        error_text = sentence_case(error_text)
         error_text = error_text + "\n" + get_command_help(ctx.command)
         reply = f"{ctx.author.mention}, you sure are creative when it comes to syntax.\n{error_text}"
         await ctx.send(reply)
@@ -454,9 +275,21 @@ async def on_message(message):
                 reply = "Not quite. Try again."
                 await message.channel.send(reply)
     
-    elif "thank" in message.content.lower() and bot.user in message.mentions:
+    if "thank" in message.content.lower() and bot.user in message.mentions:
         reply = random.choice(strings["no_problem"])
         await message.channel.send(reply)
+        
+    if "hungry" in message.content.lower().replace(" ", "") and "!" not in message.content:
+        if chance(config['chance']['hungry']):
+            reply = "No, <@221162619497611274> is hungry."
+            file = discord.File(os.path.join(sys.path[0], 'images', 'dennis.gif'))
+            await message.channel.send(reply, file=file)
+            file.close()
+            
+    if isinstance(message.channel, discord.TextChannel):
+        for attachment in message.attachments:
+            attachment_bytes = await attachment.read()
+            attachment_hash = hash(attachment_bytes)
     
     await bot.process_commands(message)
     return
@@ -563,6 +396,17 @@ async def magic8ball(ctx, question: str):
     reply = f"{ctx.author.mention}, the magic 8 ball has spoken: \"{answer}\"."
     await ctx.send(reply)
     return
+
+@bot.command(name="color")
+async def _color(ctx):
+    """Get the hex and RGB values for Waifu Pink:tm:."""
+    if get_role("colorblind_fucks") in ctx.author.roles:
+        reply = f"{ctx.author.mention}, you're not authorized to see in color."
+        await ctx.send(reply)
+        return
+    reply = f"{ctx.author.mention}, Waifu Pink:tm: is hex: `#ff3fb4`, RGB: `(255, 63, 180)`."
+    await ctx.send(reply)
+    return
     
 @bot.command(name="random")
 async def _random(ctx):
@@ -584,20 +428,86 @@ async def _random(ctx):
         return
     except asyncio.TimeoutError:
         return
-    
+
+# TODO: Fix plural replacements to use proper regex
 @bot.command()
 @commands.check(is_silly_channel)
-async def quoth(ctx, target: typing.Union[discord.Member, discord.Message]):
-    """Save message to inspirational quotes database."""
+async def catfact(ctx):
+    """Kinda self-explanatory."""
+    async with aiohttp.ClientSession() as session:
+        async with session.get('https://catfact.ninja/fact') as resp:
+            if resp.status != 200:
+                reply = f"Error {resp.status}: I cannot read the sacred texts."
+                await ctx.send(reply)
+                return
+            fact = (await resp.json())['fact']
+            if chance(config['chance']['catfact']):
+                guild = get_guild()
+                name = random.choice(guild.members).display_name
+                fact = replace_ignore_case(fact, " cat ", " " + name + " ")
+                fact = replace_ignore_case(fact, " cats ", " " + name + "s ")
+                fact = replace_ignore_case(fact, " cat's ", " " + name + "'s ")
+                namess = name.lower() + "s"
+                if namess[-2:] == "ss":
+                    fact = replace_ignore_case(fact, namess, name)
+                fact = fact.replace("s's", "s'")
+            await ctx.send(fact)
+    return
+        
+@bot.command()
+@commands.check(is_silly_channel)
+async def sponge(ctx, target: typing.Optional[typing.Union[discord.Member, discord.Message, str]]):
+    """Mock a fellow member even though you're not clever."""
+    messages = []
+    async for message in ctx.channel.history(limit=20):
+        messages.append(message)
+    messages.pop(0)
+    if target == None:
+        for message in messages:
+            if len(message.content) != 0:
+                target = message
+                break
+    elif isinstance(target, discord.Member):
+        for message in messages:
+            if (message.author == target) and len(message.content) != 0:
+                target = message
+                break
     if not isinstance(target, discord.Message):
-        async for previous_message in ctx.channel.history(limit=50):
-                if (previous_message.author == target):
-                    target = previous_message
-                    break
-        if not isinstance(target, discord.Message):
-            reply = f"{ctx.author.mention}, I don't see any matching messages in this channel."
-            await ctx.send(reply)
-            return
+        reply = f"{ctx.author.mention}, I don't see any matching messages in this channel."
+        await ctx.send(reply)
+        return
+    pending = await ctx.send("Drawing some dumb shit...")
+    image_path = draw.spongebob(ctx, target)
+    await pending.edit(content="Drawing is done. Sending now...")
+    file = discord.File(image_path)
+    await ctx.send(file=file)
+    file.close()
+    os.remove(image_path)
+    await pending.delete()
+    return
+        
+@bot.command()
+@commands.check(is_silly_channel)
+async def quoth(ctx, target: typing.Optional[typing.Union[discord.Member, discord.Message]]):
+    """Save message to inspirational quotes database."""
+    messages = []
+    async for message in ctx.channel.history(limit=20):
+        messages.append(message)
+    messages.pop(0)
+    if target == None:
+        for message in messages:
+            if len(message.content) != 0:
+                target = message
+                break
+    elif isinstance(target, discord.Member):
+        for message in messages:
+            if (message.author == target) and len(message.content) != 0:
+                target = message
+                break
+    if not isinstance(target, discord.Message):
+        reply = f"{ctx.author.mention}, I don't see any matching messages in this channel."
+        await ctx.send(reply)
+        return
     if target.author == ctx.author:
         reply = f"Nice try {ctx.author.mention}, you cannot quote yourself. Just how conceited are you?"
         await ctx.send(reply)
@@ -612,10 +522,12 @@ async def quoth(ctx, target: typing.Union[discord.Member, discord.Message]):
         return
     if ctx.channel.name in config["channels"]["sensitive"]:
         reply = f"Hey uh, {ctx.author.mention}, this is a sensitive_channel™.\nAre you sure you want to do this?"
-        if await yes_no_timeout(ctx, reply):
-            clean_content = store_quote(target, ctx)
-            reply = f"{ctx.author.mention} successfully stored the following message:\n\n{target.author}: \"{clean_content}\""
-            await ctx.send(reply)
+        answer = await yes_no_timeout(ctx, reply)
+        if answer == False or answer == None:
+            return
+    clean_content = store_quote(target, ctx)
+    reply = f"{ctx.author.mention} successfully stored the following message:\n\n{target.author}: \"{clean_content}\""
+    await ctx.send(reply)
     return
  
 @bot.command()
@@ -630,45 +542,78 @@ async def inspire(ctx, *, phrase: typing.Optional[str]):
     id = quote[0]
     name = quote[4]
     text = quote[7]
+    pending = await ctx.send("Drawing some dumb shit...")
     image_path = draw.inspiration(id, text, name)
+    await pending.edit(content="Drawing is done. Sending now...")
     file = discord.File(image_path)
     await ctx.send(file=file)
     file.close()
     os.remove(image_path)
+    await pending.delete()
     return
     
 @bot.command()
 @commands.check(is_silly_channel)
-async def shake(ctx, *, text: typing.Optional[str]):
+async def shake(ctx, *, target: typing.Optional[typing.Union[discord.Member, discord.Message, str]]):
     """Create a shaky GIF or GIF of text or image attachments."""
-    if text == None and len(ctx.message.attachments) == 0:
-        raise commands.UserInputError
-    if text != None:
+    text = ""
+    attachments = []
+    messages = []
+    async for message in ctx.channel.history(limit=20):
+        messages.append(message)
+    messages.pop(0)
+    if target == None and len(ctx.message.attachments) == 0:   
+        text = messages[0].clean_content
+        attachments = messages[0].attachments
+    elif isinstance(target, discord.Member):
+        for message in messages:
+            if (message.author == target):
+                text = message.clean_content
+                attachments = message.attachments
+                break
+    elif isinstance(target, discord.Message):
+        text = target.clean_content
+        attachments = target.attachments
+    else:
+        text = target
+        attachments = ctx.message.attachments
+    pending = await ctx.send("Drawing some dumb shit...")
+    if text != 0 and text != None:
         image_path = draw.shaky_text(text)
-        await ctx.send(file=discord.File(image_path))
+        file = discord.File(image_path)
+        await ctx.send(file = file)
+        file.close()
         os.remove(image_path)
-    for index, attachment in enumerate(ctx.message.attachments):
-        target = index + 1
+    for attachment in attachments:
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         file_name = "{}_{}".format(timestamp, attachment.filename)
         file_path = os.path.join(sys.path[0], "tmp", file_name)
         await attachment.save(file_path)
         image_path = draw.shaky_image(file_path)
-        if image_path == None:
-            reply = f"{ctx.author.mention}, attachment {target} isn't in a valid format. How would you like it if I force-fed you garbage?"
+        if image_path == "format":
+            reply = f"{ctx.author.mention}, attachment '{attachment.filename}' isn't in a valid format. How would you like it if I force-fed you garbage?"
+            await ctx.send(reply)
+            continue
+        if image_path == "memory":
+            reply = f"{ctx.author.mention}, attachment '{attachment.filename}' is way too big. I ran out of memory!"
             await ctx.send(reply)
             continue
         actual_size = os.path.getsize(image_path)
         if actual_size > 8000000:
-            reply = f"{ctx.author.mention}, attachment {target} is too big."
+            reply = f"{ctx.author.mention}, attachment '{attachment.filename}' is too big."
             await ctx.send(reply)
+            os.remove(image_path)
         else:
+            file = discord.File(image_path)
             try:
-                await ctx.send(file=discord.File(image_path))
+                await ctx.send(file=file)
             except discord.errors.HTTPException:
-                reply = f"{ctx.author.mention}, attachment {target} is too big."
+                reply = f"{ctx.author.mention}, attachment '{attachment.file_name}' failed and it's your fault."
                 await ctx.send(reply)
-        os.remove(image_path)
+            finally:
+                file.close()
+                os.remove(image_path)
+    await pending.delete()
     return
     
 @bot.command(hidden=True, aliases=['creategame'])
@@ -695,11 +640,11 @@ async def createrole(ctx, role: str):
         await ctx.send(reply)
         return
     if "_" not in role:
-        reply = f"I don't see any underscores. Are you sure you're following the {convention} convention?"
+        reply = f"I don't see any underscores. Are you sure you're following the '{convention}' convention?"
         if not await yes_no_timeout(ctx, reply):
             return
     role = await guild.create_role(name=role, mentionable=True)
-    reply = f"{ctx.author.mention} has created the {role.mention} role.\nBerate them if they didn't follow the {convention} convention"
+    reply = f"{ctx.author.mention} has created the {role.mention} role.\nBerate them if they didn't follow the '{convention}' convention"
     await super_waifu_chat.send(reply)
     return
     
@@ -814,6 +759,6 @@ block_noobs = False
 log.basicConfig(format="[%(asctime)s] [%(levelname)s] %(message)s", level=log.INFO, stream=sys.stdout)                
 config = load_yaml("config.yaml")
 strings = load_yaml("strings.yaml")
-create_database()
+create_database(config, log)
 token = config["discord"]["token"]
 bot.run(token)

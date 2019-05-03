@@ -1,7 +1,26 @@
 discord:
-    token: BOT_TOKEN
-    guild_id: GUILD_ID_INTEGER
+    token:
+    guild_id:
     database: waifubot.db
+chance:
+    catfact: 25
+roles:
+    forbidden:
+        - bots
+        - admins
+        - "@admin"
+        - "@everyone"
+        - mods
+        - thot_police
+        - super_waifus
+        - timeout
+        - waifu_4_lifu
+        - Honorary_waifu
+        - [a2m]
+        - bot_testers
+        - noobs
+        - naughty_list
+        - raid_sherpa
 channels:
     female_only:
         - deleted_thots
@@ -25,42 +44,42 @@ channels:
         - super_waifu_chat
 answers:
     True:
-        - absolutely
-        - affirmative
-        - all right
-        - amen
-        - aye
-        - beyond a doubt
-        - by all means
-        - certainly
-        - definitely
-        - exactly
-        - fine
-        - gladly
-        - good
-        - granted
-        - indubitably
-        - just so
-        - most assuredly
-        - naturally
-        - of course
-        - okay
-        - positively
-        - precisely
-        - sure thing
-        - surely
-        - true
-        - undoubtedly
-        - unquestionably
-        - without fail
-        - y
-        - yarp
-        - yea
-        - yeah
-        - yep
-        - yes
-        - yuh
-        - yup
+        - "absolutely"
+        - "affirmative"
+        - "all right"
+        - "amen"
+        - "aye"
+        - "beyond a doubt"
+        - "by all means"
+        - "certainly"
+        - "definitely"
+        - "exactly"
+        - "fine"
+        - "gladly"
+        - "good"
+        - "granted"
+        - "indubitably"
+        - "just so"
+        - "most assuredly"
+        - "naturally"
+        - "of course"
+        - "okay"
+        - "positively"
+        - "precisely"
+        - "sure thing"
+        - "surely"
+        - "true"
+        - "undoubtedly"
+        - "unquestionably"
+        - "without fail"
+        - "y"
+        - "yarp"
+        - "yea"
+        - "yeah"
+        - "yep"
+        - "yes"
+        - "yuh"
+        - "yup"
 statuses:
     - 0hooky
     - 0it safe
