@@ -1,3 +1,4 @@
+import io
 import os
 import re
 import sys
@@ -59,24 +60,63 @@ def get_members_by_role(name):
     return get_role(name).members
 
 async def detect_reposts(message):
-    for attachment in message.attachments:
-        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        original_file_name = attachment.url.split("/")[-1]
-        file_name = f"{timestamp}_{original_file_name}"
-        file_path = os.path.join(sys.path[0], "tmp", file_name)
-        await attachment.save(file_path)
-        attachment_hash = sha_256(file_path)
-        previous_hashes = get_hashes(attachment_hash)
+    if message.channel.name in config['channels']['ignore_reposts']:
+        return
+    guild = get_guild()
+    title = "**REPOST ALERT**"
+    author = message.author
+    description = f"Filthy reposter: {author.mention}"
+    embed = discord.Embed(title=title, description=description, color=waifu_pink)
+    if len(message.content.split(" ")) > 3:
+        value = ""
+        file = io.BytesIO(message.content.encode("utf-8"))
+        bytes_hash = sha_256(file)
+        channel_category = message.channel.category.name
+        previous_hashes = get_hashes(bytes_hash, channel_category)
         count = len(previous_hashes)
         if count > 0:
-            date_time = previous_hashes[0][2]
-            delta = time_since(date_time)
+            date_time = date_time_from_str(previous_hashes[0][2])
+            delta = format_delta(time_since(date_time))
             channel = get_channel(previous_hashes[0][5])
-            author = previous_hashes[0][4]
-            reply = f"**REPOST ALERT!**\nAttachment '{attachment.filename}' has previously been posted {count} time(s). Most recently {delta} ago in {channel.mention} by {author}."
-            await message.channel.send(reply)
-        store_hash(attachment_hash, message)
-        os.remove(file_path)
+            author = guild.get_member(previous_hashes[0][3])
+            name = "Message"
+            value = value + f"\"{message.content}\"\n"
+            if count == 1:
+                value = value + f"Previously posted: {count} time\n"
+            else:
+                value = value + f"Previously posted: {count} times\n"
+            value = value + f"Last posted: {delta} ago\n"
+            value = value + f"In: {channel.mention}\n"
+            value = value + f"By: {author.mention}\n"
+            embed.add_field(name=name, value=value, inline=False)
+        store_hash(bytes_hash, message)
+    for attachment in message.attachments:
+        value = ""
+        file = io.BytesIO()
+        await attachment.save(file)
+        bytes_hash = sha_256(file)
+        channel_category = message.channel.category.name
+        previous_hashes = get_hashes(bytes_hash, channel_category)
+        count = len(previous_hashes)
+        if count > 0:
+            date_time = date_time_from_str(previous_hashes[0][2])
+            delta = format_delta(time_since(date_time))
+            channel = get_channel(previous_hashes[0][5])
+            author = guild.get_member(previous_hashes[0][3])
+            name = "Attachment"
+            value = value + f"Filename: {attachment.filename}\n"
+            if count == 1:
+                value = value + f"Previously posted: {count} time\n"
+            else:
+                value = value + f"Previously posted: {count} times\n"
+            value = value + f"Last posted: {delta} ago\n"
+            value = value + f"In: {channel.mention}\n"
+            value = value + f"By: {author.mention}\n"
+            embed.add_field(name=name, value=value, inline=False)
+        store_hash(bytes_hash, message)
+    if len(embed.fields) > 0:
+        await message.channel.send(embed=embed)
+    return
     
 async def yes_no_timeout(ctx, message):
     await ctx.send(message)
@@ -95,6 +135,27 @@ async def yes_no_timeout(ctx, message):
         reply = random.choice(strings["user_reply_timeout"])
         await ctx.send(reply)
         return None
+        
+async def reply_noobs(message):
+    global block_noobs
+    answer = re.sub("[^0-9a-zA-Z]+", "", message.clean_content).lower()
+    if answer == "dontbeadick":
+        reply = "Yup. Thanks! I'll grant you access. Just a sec..."
+        await message.channel.send(reply)
+        await asyncio.sleep(1)
+        block_noobs = True
+        await ctx.author.remove_roles(get_role("noobs"))
+        await asyncio.sleep(1)
+        await channel.delete()
+        await asyncio.sleep(1)
+        block_noobs = False
+        general_chat = get_channel("general_chat")
+        reply = f"Hey everyone, {message.author.mention} just joined. {message.author.mention}, please introduce yourself. Thanks!"
+        await general_chat.send(reply)
+    else:
+        reply = "Not quite. Try again."
+        await message.channel.send(reply)
+    return
     
 @asyncio.coroutine
 async def change_status():
@@ -123,7 +184,7 @@ async def monitor_noobs():
         for member in get_members_by_role("noobs"):
             if get_channel_by_topic(str(member.id)) == None:
                 if block_noobs:
-                    await asyncio.sleep(3)
+                    await asyncio.sleep(5)
                 else:
                     await member.remove_roles(noobs_role)
                     reply = f"No welcome_noob channel found for {member.mention}. Removing noobs role."
@@ -134,7 +195,7 @@ async def monitor_noobs():
                 noobs = get_members_by_role("noobs")
                 if member == None or member not in noobs:
                     if block_noobs:
-                        await asyncio.sleep(3)
+                        await asyncio.sleep(5)
                     else:
                         await channel.delete()
                         reply = f"{member.mention} no longer has the noobs role. Removing welcome_noob channel."
@@ -166,28 +227,40 @@ async def monitor_deletions():
                 else: 
                     if seconds_since(waifu_audit_log[entry.id].created_at) > 86400:
                         del waifu_audit_log[entry.id]
-        if author == bot.user:
+        if author == bot.user and deleted_by == bot.user:
+            continue
+        if "deleted" in message.channel.name:
+            super_waifu_chat = get_channel("super_waifu_chat")
+            reply = f"Hey {deleted_by.mention}, it's best if you don't delete messages from {message.channel.mention}. Unless of course they're really bad."
+            await super_waifu_chat.send(reply)
             continue
         timestamp = message.created_at.strftime("%m/%d/%Y %H:%M")
-        description = "Author: {}\nDeleted by: {}*\nChannel: {}\nUTC: {}"
-        description = description.format(author.mention, deleted_by.mention, message.channel.mention, timestamp)
-        embed = discord.Embed(description=description, color=0xff0000)
+        title = f"ID: {message.id}"
+        description = f"Author: {author.mention}\nDeleted by: {deleted_by.mention}*\nChannel: {message.channel.mention}\nUTC: {timestamp}"
+        embed = discord.Embed(title=title, description=description, color=discord.Color.red())
+        deleted_embeds = message.embeds
         if len(message.content) > 0:
-            embed.add_field(name="Message", value=message.content, inline=True)
+            value = f"\"{message.content}\""
+            embed.add_field(name="Message", value=value, inline=False)
         if len(message.attachments) > 0:
             name = "Attachments"
             value = ""
             for attachment in message.attachments:
                 value = value + "<{}>\n".format(attachment.proxy_url)
-            embed.add_field(name=name, value=value, inline=True)
+            embed.add_field(name=name, value=value, inline=False)
+        if len(message.embeds) > 0:
+            name = "Embeds"
+            value = f"{len(message.embeds)} found. See below:"
+            embed.add_field(name=name, value=value, inline=False)
         if message.channel.name in config["channels"]["female_only"]:
             channel = get_channel("deleted_thots")
         else:
             channel = get_channel("deleted_text")
-        topic = "*The deleted_by value is susceptible to an extremely unlikely race condition."
-        if channel.topic != topic:
-            await channel.edit(topic=topic)
         await channel.send(embed=embed)
+        for index, embed in enumerate(deleted_embeds):
+            embed.color = waifu_pink
+            reply = f"**Embed {index + 1} of {len(deleted_embeds)}**"
+            await channel.send(reply, embed=embed)
 
 @bot.event
 async def on_ready():
@@ -272,32 +345,20 @@ async def on_command_error(ctx, error):
     
 @bot.event
 async def on_message(message):
-    global block_noobs
     if message.author == bot.user:
         return
     if not message.content.startswith("!"):
+        lower = message.clean_content.lower()
         if isinstance(message.channel, discord.TextChannel):
             if message.channel.name == "welcome_noob":
-                answer = re.sub("[^0-9a-zA-Z]+", "", message.clean_content).lower()
-                if answer == "dontbeadick":
-                    reply = "Yup. Thanks! I'll grant you access. Just a sec..."
-                    await message.channel.send(reply)
-                    await asyncio.sleep(1)
-                    block_noobs = True
-                    await ctx.author.remove_roles(get_role("noobs"))
-                    await asyncio.sleep(1)
-                    await channel.delete()
-                    await asyncio.sleep(1)
-                    block_noobs = False
-                    general_chat = get_channel("general_chat")
-                    reply = f"Hey everyone, {message.author.mention} just joined. {message.author.mention}, please introduce yourself. Thanks!"
-                    await general_chat.send(reply)
-                else:
-                    reply = "Not quite. Try again."
-                    await message.channel.send(reply)
+                reply_to_noob(message)
         
-        if "thank" in message.content.lower() and bot.user in message.mentions:
+        if "thank" in lower and "waifubot" in lower:
             reply = random.choice(strings["no_problem"])
+            await message.channel.send(reply)
+            
+        if "fuck" in lower and "waifubot" in lower:
+            reply = "Fuck me yourself, coward."
             await message.channel.send(reply)
             
         if "hungry" in message.content.lower().replace(" ", ""):
@@ -778,8 +839,6 @@ async def die(ctx):
 global block_noobs
 block_noobs = False
 log.basicConfig(format="[%(asctime)s] [%(levelname)s] %(message)s", level=log.INFO, stream=sys.stdout)                
-config = load_yaml("config.yaml")
-strings = load_yaml("strings.yaml")
 create_database(config, log)
 token = config["discord"]["token"]
 bot.run(token)

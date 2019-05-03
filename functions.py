@@ -4,6 +4,7 @@ import sys
 import yaml
 import random
 import sqlite3
+import discord
 import hashlib as hash
 from datetime import datetime
 
@@ -11,14 +12,14 @@ def load_yaml(yaml_file_name):
     with open(os.path.join(sys.path[0], yaml_file_name), "r", encoding="utf8") as yaml_file:
         return yaml.safe_load(yaml_file)
 
-def sha_256(file_path):
+def sha_256(file):
     BLOCKSIZE = 65536
     sha = hash.sha256()
-    with open(file_path, 'rb') as file:
+    file_buffer = file.read(BLOCKSIZE)
+    while len(file_buffer) > 0:
+        sha.update(file_buffer)
         file_buffer = file.read(BLOCKSIZE)
-        while len(file_buffer) > 0:
-            sha.update(file_buffer)
-            file_buffer = file.read(BLOCKSIZE)
+    file.close()
     return sha.hexdigest()
         
 def spongify(text):
@@ -40,9 +41,58 @@ def replace_ignore_case(text, find, replace):
     pattern = re.compile(find, re.IGNORECASE)
     return pattern.sub(replace, text)
     
-def time_since(timestamp):
-    then = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S.%f")
+def format_delta_long(delta):
+    years = int(delta.days / 365)
+    days = int(delta.days % 365)
+    hours = int(delta.seconds / 3600)
+    minutes = int((delta.seconds % 3600) / 60)
+    seconds = int(delta.seconds % 60)
+    formatted_delta = ""
+    if years == 1:
+        formatted_delta = formatted_delta + f"{years} Year, "
+    elif years > 1:
+        formatted_delta = formatted_delta + f"{years} Years, "
+    if days == 1:
+        formatted_delta = formatted_delta + f"{days} Day, "
+    elif days > 1:
+        formatted_delta = formatted_delta + f"{days} Days, "
+    if hours == 1:
+        formatted_delta = formatted_delta + f"{hours} Hour, "
+    elif hours > 1:
+        formatted_delta = formatted_delta + f"{hours} Hours, "
+    if minutes == 1:
+        formatted_delta = formatted_delta + f"{minutes} Minute, "
+    elif minutes > 1:
+        formatted_delta = formatted_delta + f"{minutes} Minutes, "
+    if seconds == 1:
+        formatted_delta = formatted_delta + f"{seconds} Second"
+    else:
+        formatted_delta = formatted_delta + f"{seconds} Seconds"
+    return formatted_delta
+    
+def format_delta(delta):
+    years = int(delta.days / 365)
+    days = int(delta.days % 365)
+    hours = int(delta.seconds / 3600)
+    minutes = int((delta.seconds % 3600) / 60)
+    seconds = int(delta.seconds % 60)
+    formatted_delta = ""
+    if years != 0:
+        formatted_delta = formatted_delta + f"{years}y "
+    if days != 0:
+        formatted_delta = formatted_delta + f"{days}d "
+    if hours != 0:
+        formatted_delta = formatted_delta + f"{hours}h "
+    if minutes != 0:
+        formatted_delta = formatted_delta + f"{minutes}m "
+    formatted_delta = formatted_delta + f"{seconds}s"
+    return formatted_delta
+    
+def time_since(then):
     return (datetime.utcnow() - then)
+
+def date_time_from_str(timestamp):
+    return datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S.%f")
     
 def seconds_since(then):
     return abs((datetime.utcnow() - then).total_seconds())
@@ -52,32 +102,35 @@ def open_database():
     file_path = os.path.join(sys.path[0], "sqlite", file_name)
     return sqlite3.connect(file_path)
 
-def store_hash(attachment_hash, message):
+def store_hash(bytes_hash, message):
     with open_database() as database:
         cursor = database.cursor()
         date_time = message.created_at
         author_id = message.author.id
         author_name = message.author.display_name
-        channel = message.channel.name
+        channel_name = message.channel.name
+        channel_category = message.channel.category.name
+        
         sql = """
             INSERT
             INTO hashes 
-            VALUES (?,?,?,?,?,?)
+            VALUES (?,?,?,?,?,?,?)
             """
-        cursor.execute(sql, (None, attachment_hash, date_time, author_id, author_name, channel))
+        cursor.execute(sql, (None, bytes_hash, date_time, author_id, author_name, channel_name, channel_category))
         database.commit()
         return
         
-def get_hashes(attachment_hash):
+def get_hashes(bytes_hash, channel_category):
     with open_database() as database:
         cursor = database.cursor()
         sql = """
             SELECT *
             FROM hashes
             WHERE hash = ?
+            AND channel_category = ?
             ORDER BY date_time DESC
             """
-        cursor.execute(sql, (attachment_hash,))
+        cursor.execute(sql, (bytes_hash, channel_category))
         return cursor.fetchall()
     
 def store_invite_details(invite, inviter, reason):
@@ -253,7 +306,8 @@ def create_database(config, log):
                 "date_time"	TEXT,
                 "author_id"	INTEGER,
                 "author_name"	TEXT,
-                "channel_name"	TEXT
+                "channel_name"	TEXT,
+                "channel_category"	TEXT
                 )
             """
         cursor.execute(sql)
@@ -262,3 +316,4 @@ def create_database(config, log):
         
 config = load_yaml("config.yaml")
 strings = load_yaml("strings.yaml")
+waifu_pink = discord.Color.from_rgb(255, 63, 180)
