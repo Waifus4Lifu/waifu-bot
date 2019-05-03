@@ -57,6 +57,26 @@ def get_role(name):
     
 def get_members_by_role(name):
     return get_role(name).members
+
+async def detect_reposts(message):
+    for attachment in message.attachments:
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        original_file_name = attachment.url.split("/")[-1]
+        file_name = f"{timestamp}_{original_file_name}"
+        file_path = os.path.join(sys.path[0], "tmp", file_name)
+        await attachment.save(file_path)
+        attachment_hash = sha_256(file_path)
+        previous_hashes = get_hashes(attachment_hash)
+        count = len(previous_hashes)
+        if count > 0:
+            date_time = previous_hashes[0][2]
+            delta = time_since(date_time)
+            channel = get_channel(previous_hashes[0][5])
+            author = previous_hashes[0][4]
+            reply = f"**REPOST ALERT!**\nAttachment '{attachment.filename}' has previously been posted {count} time(s). Most recently {delta} ago in {channel.mention} by {author}."
+            await message.channel.send(reply)
+        store_hash(attachment_hash, message)
+        os.remove(file_path)
     
 async def yes_no_timeout(ctx, message):
     await ctx.send(message)
@@ -255,42 +275,41 @@ async def on_message(message):
     global block_noobs
     if message.author == bot.user:
         return
-    if isinstance(message.channel, discord.TextChannel):
-        if message.channel.name == "welcome_noob":
-            answer = re.sub("[^0-9a-zA-Z]+", "", message.clean_content).lower()
-            if answer == "dontbeadick":
-                reply = "Yup. Thanks! I'll grant you access. Just a sec..."
-                await message.channel.send(reply)
-                await asyncio.sleep(1)
-                block_noobs = True
-                await ctx.author.remove_roles(get_role("noobs"))
-                await asyncio.sleep(1)
-                await channel.delete()
-                await asyncio.sleep(1)
-                block_noobs = False
-                general_chat = get_channel("general_chat")
-                reply = f"Hey everyone, {message.author.mention} just joined. {message.author.mention}, please introduce yourself. Thanks!"
-                await general_chat.send(reply)
-            else:
-                reply = "Not quite. Try again."
-                await message.channel.send(reply)
-    
-    if "thank" in message.content.lower() and bot.user in message.mentions:
-        reply = random.choice(strings["no_problem"])
-        await message.channel.send(reply)
+    if not message.content.startswith("!"):
+        if isinstance(message.channel, discord.TextChannel):
+            if message.channel.name == "welcome_noob":
+                answer = re.sub("[^0-9a-zA-Z]+", "", message.clean_content).lower()
+                if answer == "dontbeadick":
+                    reply = "Yup. Thanks! I'll grant you access. Just a sec..."
+                    await message.channel.send(reply)
+                    await asyncio.sleep(1)
+                    block_noobs = True
+                    await ctx.author.remove_roles(get_role("noobs"))
+                    await asyncio.sleep(1)
+                    await channel.delete()
+                    await asyncio.sleep(1)
+                    block_noobs = False
+                    general_chat = get_channel("general_chat")
+                    reply = f"Hey everyone, {message.author.mention} just joined. {message.author.mention}, please introduce yourself. Thanks!"
+                    await general_chat.send(reply)
+                else:
+                    reply = "Not quite. Try again."
+                    await message.channel.send(reply)
         
-    if "hungry" in message.content.lower().replace(" ", "") and "!" not in message.content:
-        if chance(config['chance']['hungry']):
-            reply = "No, <@221162619497611274> is hungry."
-            file = discord.File(os.path.join(sys.path[0], 'images', 'dennis.gif'))
-            await message.channel.send(reply, file=file)
-            file.close()
+        if "thank" in message.content.lower() and bot.user in message.mentions:
+            reply = random.choice(strings["no_problem"])
+            await message.channel.send(reply)
             
-    if isinstance(message.channel, discord.TextChannel):
-        for attachment in message.attachments:
-            attachment_bytes = await attachment.read()
-            attachment_hash = hash(attachment_bytes)
-    
+        if "hungry" in message.content.lower().replace(" ", ""):
+            if chance(config['chance']['hungry']):
+                reply = "No, <@221162619497611274> is hungry."
+                file = discord.File(os.path.join(sys.path[0], 'images', 'dennis.gif'))
+                await message.channel.send(reply, file=file)
+                file.close()
+                
+        if isinstance(message.channel, discord.TextChannel):
+            await detect_reposts(message)
+            
     await bot.process_commands(message)
     return
     
@@ -352,8 +371,7 @@ async def roles(ctx):
 @bot.command()
 async def test(ctx):
     """Test something."""
-    reply = f"This was a test. And {ctx.author.mention} failed."
-    await ctx.send(reply)
+    
     return
     
 @bot.command()

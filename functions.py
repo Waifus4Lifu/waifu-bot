@@ -4,12 +4,23 @@ import sys
 import yaml
 import random
 import sqlite3
+import hashlib as hash
 from datetime import datetime
 
 def load_yaml(yaml_file_name):
     with open(os.path.join(sys.path[0], yaml_file_name), "r", encoding="utf8") as yaml_file:
         return yaml.safe_load(yaml_file)
 
+def sha_256(file_path):
+    BLOCKSIZE = 65536
+    sha = hash.sha256()
+    with open(file_path, 'rb') as file:
+        file_buffer = file.read(BLOCKSIZE)
+        while len(file_buffer) > 0:
+            sha.update(file_buffer)
+            file_buffer = file.read(BLOCKSIZE)
+    return sha.hexdigest()
+        
 def spongify(text):
     sponged_text = ""
     for character in text:
@@ -29,6 +40,10 @@ def replace_ignore_case(text, find, replace):
     pattern = re.compile(find, re.IGNORECASE)
     return pattern.sub(replace, text)
     
+def time_since(timestamp):
+    then = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S.%f")
+    return (datetime.utcnow() - then)
+    
 def seconds_since(then):
     return abs((datetime.utcnow() - then).total_seconds())
     
@@ -36,6 +51,34 @@ def open_database():
     file_name = config['discord']['database']
     file_path = os.path.join(sys.path[0], "sqlite", file_name)
     return sqlite3.connect(file_path)
+
+def store_hash(attachment_hash, message):
+    with open_database() as database:
+        cursor = database.cursor()
+        date_time = message.created_at
+        author_id = message.author.id
+        author_name = message.author.display_name
+        channel = message.channel.name
+        sql = """
+            INSERT
+            INTO hashes 
+            VALUES (?,?,?,?,?,?)
+            """
+        cursor.execute(sql, (None, attachment_hash, date_time, author_id, author_name, channel))
+        database.commit()
+        return
+        
+def get_hashes(attachment_hash):
+    with open_database() as database:
+        cursor = database.cursor()
+        sql = """
+            SELECT *
+            FROM hashes
+            WHERE hash = ?
+            ORDER BY date_time DESC
+            """
+        cursor.execute(sql, (attachment_hash,))
+        return cursor.fetchall()
     
 def store_invite_details(invite, inviter, reason):
     with open_database() as database:
@@ -205,11 +248,12 @@ def create_database(config, log):
         database.commit()
         sql = """
             CREATE TABLE "hashes" (
+                "id"	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
                 "hash"	INTEGER,
                 "date_time"	TEXT,
                 "author_id"	INTEGER,
                 "author_name"	TEXT,
-                PRIMARY KEY("hash")
+                "channel_name"	TEXT
             );
             """
         cursor.execute(sql)
