@@ -1,3 +1,4 @@
+import io
 import os
 import sys
 import math
@@ -20,25 +21,24 @@ def shaky_text(text):
         offset = (random.randint(0, 5), random.randint(3, 7))
         draw.text(offset, text, font=font, fill=(255, 255, 255, 255))
         frames.append(frame)
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    out_file = f"{timestamp}.gif"
-    out_path = os.path.join(sys.path[0], 'tmp', out_file)
-    frames[0].save(out_path, format='GIF', optimize=True, append_images=frames[1:], duration=50, save_all=True, loop=0)
+    output = io.BytesIO()
+    output.name = f"{datetime.now().strftime('%Y%m%d%H%M%S')}.gif"
+    frames[0].save(output, optimize=True, append_images=frames[1:], duration=50, save_all=True, loop=0)
     for frame in frames:
         frame.close()
-    return out_path
+    output.seek(0)
+    return output
     
-def shaky_image(file_path):
+def shaky_image(file):
     frames = []
     try:
-        img = Image.open(file_path)
+        img = Image.open(file)
     except OSError:
         img.close()
-        os.remove(file_path)
         return "format"
     img = img.convert('RGBA')
     high_on_potnuse = math.sqrt((img.width**2) + (img.height**2))
-    border = round(high_on_potnuse/10)
+    border = round(high_on_potnuse/20)
     size = (img.width + border, img.height + border)
     shake_min = round((border/2) - (border/4))
     shake_max = round((border/2) + (border/4))
@@ -48,18 +48,17 @@ def shaky_image(file_path):
             offset = (random.randint(shake_min, shake_max), random.randint(shake_min, shake_max))
             frame.paste(img, offset, mask=img)
             frames.append(frame)
-        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        out_file = f"{timestamp}.gif"
-        out_path = os.path.join(sys.path[0], 'tmp', out_file)
-        frames[0].save(out_path, format='GIF', optimize=True, append_images=frames[1:], duration=50, save_all=True, loop=0)
+        output = io.BytesIO()
+        output.name = f"{datetime.now().strftime('%Y%m%d%H%M%S')}.gif"
+        frames[0].save(output, optimize=True, append_images=frames[1:], duration=50, save_all=True, loop=0)
+        output.seek(0)
     except:
-        out_path = "memory"
+        output = "memory"
     finally:
         img.close()
         for frame in frames:
             frame.close()
-        os.remove(file_path)
-        return out_path
+        return output
 
 def inspiration(id, text, name):
     text = f"\"{text}\""
@@ -92,11 +91,12 @@ def inspiration(id, text, name):
     draw_text(img, name, xy, name_font, "right", "white", "black", border_width)
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
     extension = file.split('.')[-1]
-    out_file = f"{timestamp}_{id}.{extension}"
-    out_path = os.path.join(sys.path[0], 'tmp', out_file)
-    img.save(out_path)
+    output = io.BytesIO()
+    output.name = f"{timestamp}_{id}.{extension}"
+    img.save(output)
     img.close()
-    return out_path
+    output.seek(0)
+    return output
     
 def draw_text(img, text, xy, font, align, text_color, border_color, border_width):
     draw = ImageDraw.Draw(img)
@@ -131,11 +131,12 @@ def spongebob(ctx, message):
     offset = (border, border)
     draw.text(offset, text, font=font, fill="black")
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    out_file = f"{timestamp}.jpg"
-    out_path = os.path.join(sys.path[0], 'tmp', out_file)
-    img.save(out_path)
+    output = io.BytesIO()
+    output.name = f"{timestamp}.jpg"
+    img.save(output)
     img.close()
-    return out_path
+    output.seek(0)
+    return output
 
 def maximize_width(img, font, text, margin):
     draw = ImageDraw.Draw(img)

@@ -556,12 +556,12 @@ async def sponge(ctx, target: typing.Optional[typing.Union[discord.Member, disco
         await ctx.send(reply)
         return
     pending = await ctx.send("Drawing some dumb shit...")
-    image_path = draw.spongebob(ctx, target)
+    image = draw.spongebob(ctx, target)
     await pending.edit(content="Drawing is done. Sending now...")
-    file = discord.File(image_path)
+    file = discord.File(image)
     await ctx.send(file=file)
+    image.close()
     file.close()
-    os.remove(image_path)
     await pending.delete()
     return
         
@@ -622,12 +622,12 @@ async def inspire(ctx, *, phrase: typing.Optional[str]):
     name = quote[4]
     text = quote[7]
     pending = await ctx.send("Drawing some dumb shit...")
-    image_path = draw.inspiration(id, text, name)
+    image = draw.inspiration(id, text, name)
     await pending.edit(content="Drawing is done. Sending now...")
-    file = discord.File(image_path)
+    file = discord.File(image)
     await ctx.send(file=file)
+    image.close()
     file.close()
-    os.remove(image_path)
     await pending.delete()
     return
     
@@ -658,40 +658,39 @@ async def shake(ctx, *, target: typing.Optional[typing.Union[discord.Member, dis
         attachments = ctx.message.attachments
     pending = await ctx.send("Drawing some dumb shit...")
     if text != 0 and text != None:
-        image_path = draw.shaky_text(text)
-        file = discord.File(image_path)
-        await ctx.send(file = file)
+        image = draw.shaky_text(text)
+        file = discord.File(image)
+        await ctx.send(file=file)
+        image.close()
         file.close()
-        os.remove(image_path)
     for attachment in attachments:
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        file_name = "{}_{}".format(timestamp, attachment.filename)
-        file_path = os.path.join(sys.path[0], "tmp", file_name)
-        await attachment.save(file_path)
-        image_path = draw.shaky_image(file_path)
-        if image_path == "format":
+        file = io.BytesIO()
+        await attachment.save(file)
+        image = draw.shaky_image(file)
+        if image == "format":
             reply = f"{ctx.author.mention}, attachment '{attachment.filename}' isn't in a valid format. How would you like it if I force-fed you garbage?"
             await ctx.send(reply)
             continue
-        if image_path == "memory":
+        if image == "memory":
             reply = f"{ctx.author.mention}, attachment '{attachment.filename}' is way too big. I ran out of memory!"
             await ctx.send(reply)
             continue
-        actual_size = os.path.getsize(image_path)
+        actual_size = image.getbuffer().nbytes
         if actual_size > 8000000:
             reply = f"{ctx.author.mention}, attachment '{attachment.filename}' is too big."
             await ctx.send(reply)
-            os.remove(image_path)
+            image.close()
+            file.close()
         else:
-            file = discord.File(image_path)
+            file = discord.File(image)
             try:
                 await ctx.send(file=file)
             except discord.errors.HTTPException:
-                reply = f"{ctx.author.mention}, attachment '{attachment.file_name}' failed and it's your fault."
+                reply = f"{ctx.author.mention}, attachment '{attachment.filename}' failed and it's your fault."
                 await ctx.send(reply)
             finally:
+                image.close()
                 file.close()
-                os.remove(image_path)
     await pending.delete()
     return
     
