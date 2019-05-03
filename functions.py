@@ -254,7 +254,7 @@ def create_database(config, log):
                 "author_id"	INTEGER,
                 "author_name"	TEXT,
                 "channel_name"	TEXT
-            );
+                )
             """
         cursor.execute(sql)
         database.commit()

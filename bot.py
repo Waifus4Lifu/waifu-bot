@@ -728,7 +728,10 @@ async def deletequote(ctx, id: int):
         return
     quote = delete_quote(id)
     author = guild.get_member(int(quote[3]))
-    stored_by = guild.get_member(int(quote[5]))
+    try:
+        stored_by = guild.get_member(int(quote[5]))
+    except:
+        stored_by = None
     text = quote[7]
     if not quote_exists(id):
         reply = f"That quote is history. For the record, it was from {author}, stored by {stored_by}, and said:\n\n\"{text}\""

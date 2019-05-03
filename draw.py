@@ -139,7 +139,7 @@ def spongebob(ctx, message):
 
 def maximize_width(img, font, text, margin):
     draw = ImageDraw.Draw(img)
-    for i in range(1, len(text)):
+    for i in range(1, len(text) + 1):
         new_text = textwrap.fill(text, width=i)
         if draw.textsize(text=new_text, font=font)[0] > img.width - (margin * 2):
             return i - 1
