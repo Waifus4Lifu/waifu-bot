@@ -8,7 +8,6 @@ import typing
 import asyncio
 import aiohttp
 import discord
-import logging as log
 from functions import *
 from discord.ext import commands
 from datetime import datetime
@@ -63,9 +62,9 @@ async def detect_reposts(message):
     if message.channel.name in config['channels']['ignore_reposts']:
         return
     guild = get_guild()
-    title = "**REPOST ALERT**"
+    title = "**REPOST DETECTED :recycle:**"
     author = message.author
-    description = f"Filthy reposter: {author.mention}"
+    description = f"Reposter: {author.mention}"
     embed = discord.Embed(title=title, description=description, color=waifu_pink)
     if len(message.content.split(" ")) > 3:
         value = ""
@@ -118,6 +117,30 @@ async def detect_reposts(message):
         await message.channel.send(embed=embed)
     return
     
+async def rate_limiter(message):
+    if message.channel.name not in config['channels']['rate_limited']:
+        return
+    if len(message.attachments) == 0:
+        return
+    attachments = []
+    for attachment in message.attachments:
+        attachments.append(attachment)
+    history = await message.channel.history(limit=25).flatten()
+    for previous_message in history:
+        if previous_message.author == message.author:
+            if len(previous_message.attachments) != 0:
+                if seconds_since(previous_message.created_at) < 60:
+                    for attachment in previous_message.attachments:
+                        attachments.append(attachment)
+    if len(attachments) > 5:
+        title = "**DUMP DETECTED :poo:**"
+        author = message.author
+        description = f"Dumper: {author.mention}\n\n"
+        description = description + "You're not breaking the rules, but you are being a scumbag."
+        embed = discord.Embed(title=title, description=description, color=waifu_pink)
+        await message.channel.send(embed=embed)
+    return
+            
 async def yes_no_timeout(ctx, message):
     await ctx.send(message)
     def check(answer):
@@ -347,31 +370,28 @@ async def on_command_error(ctx, error):
 async def on_message(message):
     if message.author == bot.user:
         return
-    if not message.content.startswith("!"):
-        lower = message.clean_content.lower()
-        if isinstance(message.channel, discord.TextChannel):
-            if message.channel.name == "welcome_noob":
-                reply_to_noob(message)
-        
-        if "thank" in lower and "waifubot" in lower:
-            reply = random.choice(strings["no_problem"])
-            await message.channel.send(reply)
-            
-        if "fuck" in lower and "waifubot" in lower:
-            reply = "Fuck me yourself, coward."
-            await message.channel.send(reply)
-            
-        if "hungry" in message.content.lower().replace(" ", ""):
-            if chance(config['chance']['hungry']):
-                reply = "No, <@221162619497611274> is hungry."
-                file = discord.File(os.path.join(sys.path[0], 'images', 'dennis.gif'))
-                await message.channel.send(reply, file=file)
-                file.close()
-                
-        if isinstance(message.channel, discord.TextChannel):
-            await detect_reposts(message)
-            
-    await bot.process_commands(message)
+    if message.content.startswith("!"):
+        await bot.process_commands(message)
+        return
+    lower = message.clean_content.lower()
+    if isinstance(message.channel, discord.TextChannel):
+        if message.channel.name == "welcome_noob":
+            reply_to_noob(message)
+    if "thank" in lower and "waifubot" in lower:
+        reply = random.choice(strings["no_problem"])
+        await message.channel.send(reply)
+    if "fuck" in lower and "waifubot" in lower:
+        reply = "Fuck me yourself, coward."
+        await message.channel.send(reply)
+    if "hungry" in message.content.lower().replace(" ", ""):
+        if chance(config['chance']['hungry']):
+            reply = "No, <@221162619497611274> is hungry."
+            file = discord.File(os.path.join(sys.path[0], 'images', 'dennis.gif'))
+            await message.channel.send(reply, file=file)
+            file.close()
+    if isinstance(message.channel, discord.TextChannel):
+        await detect_reposts(message)
+        await rate_limiter(message)
     return
     
 @bot.command(aliases=["help"])
@@ -836,8 +856,7 @@ async def die(ctx):
     return
 
 global block_noobs
-block_noobs = False
-log.basicConfig(format="[%(asctime)s] [%(levelname)s] %(message)s", level=log.INFO, stream=sys.stdout)                
-create_database(config, log)
+block_noobs = False               
+create_database()
 token = config["discord"]["token"]
 bot.run(token)

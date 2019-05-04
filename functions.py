@@ -5,6 +5,7 @@ import yaml
 import random
 import sqlite3
 import discord
+import logging as log
 import hashlib as hash
 from datetime import datetime
 
@@ -92,15 +93,13 @@ def time_since(then):
     return (datetime.utcnow() - then)
 
 def date_time_from_str(timestamp):
-    return datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S.%f")
+    return datetime.strptime(timestamp[:19], "%Y-%m-%d %H:%M:%S")
     
 def seconds_since(then):
     return abs((datetime.utcnow() - then).total_seconds())
     
 def open_database():
-    file_name = config['discord']['database']
-    file_path = os.path.join(sys.path[0], "sqlite", file_name)
-    return sqlite3.connect(file_path)
+    return sqlite3.connect(database_file_path)
 
 def store_hash(bytes_hash, message):
     with open_database() as database:
@@ -260,13 +259,11 @@ def delete_quote(id):
         database.commit()
         return quote
 
-def create_database(config, log):
-    file_name = config['discord']['database']
-    file_path = os.path.join(sys.path[0], "sqlite", file_name)
-    if os.path.isfile(file_path):
-        log.info(f"Database {file_name} found.")
+def create_database():
+    if os.path.isfile(database_file_path):
+        log.info(f"Database {database_file_name} found.")
         return
-    log.error(f"Database {file_name} not found. Creating now...")
+    log.error(f"Database {database_file_name} not found. Creating now...")
     with open_database() as database:
         cursor = database.cursor()
         sql = """
@@ -313,7 +310,10 @@ def create_database(config, log):
         cursor.execute(sql)
         database.commit()
         return
-        
+
+log.basicConfig(format="[%(asctime)s] [%(levelname)s] %(message)s", level=log.INFO, stream=sys.stdout)
 config = load_yaml("config.yaml")
 strings = load_yaml("strings.yaml")
 waifu_pink = discord.Color.from_rgb(255, 63, 180)
+database_file_name = config['discord']['database']
+database_file_path = os.path.join(sys.path[0], "sqlite", database_file_name)
