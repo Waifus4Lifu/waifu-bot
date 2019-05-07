@@ -8,6 +8,7 @@ import typing
 import asyncio
 import aiohttp
 import discord
+import textwrap
 from functions import *
 from discord.ext import commands
 from datetime import datetime
@@ -129,7 +130,7 @@ async def rate_limiter(message):
     for previous_message in history:
         if previous_message.author == message.author:
             if len(previous_message.attachments) != 0:
-                if seconds_since(previous_message.created_at) < 60:
+                if seconds_since(previous_message.created_at) < 120:
                     for attachment in previous_message.attachments:
                         attachments.append(attachment)
     if len(attachments) > 5:
@@ -167,9 +168,9 @@ async def reply_noobs(message):
         await message.channel.send(reply)
         await asyncio.sleep(1)
         block_noobs = True
-        await ctx.author.remove_roles(get_role("noobs"))
+        await message.author.remove_roles(get_role("noobs"))
         await asyncio.sleep(1)
-        await channel.delete()
+        await message.channel.delete()
         await asyncio.sleep(1)
         block_noobs = False
         general_chat = get_channel("general_chat")
@@ -214,14 +215,15 @@ async def monitor_noobs():
                     await super_waifu_chat.send(reply)
         for channel in guild.text_channels:
             if channel.name == "welcome_noob":
-                member = guild.get_member(int(channel.topic))
+                id = int(channel.topic)
+                member = guild.get_member(id)
                 noobs = get_members_by_role("noobs")
                 if member == None or member not in noobs:
                     if block_noobs:
                         await asyncio.sleep(5)
                     else:
                         await channel.delete()
-                        reply = f"{member.mention} no longer has the noobs role. Removing welcome_noob channel."
+                        reply = f"<@{id}> no longer has the noobs role. Removing welcome_noob channel."
                         await super_waifu_chat.send(reply)
         await asyncio.sleep(1)
         
@@ -321,19 +323,17 @@ async def on_member_join(member):
     await member.add_roles(get_role("noobs"))
     channel = await guild.create_text_channel("welcome_noob", topic=str(member.id), overwrites=overwrites)
     block_noobs = False
-    reply = "Hey {member.mention}, welcome to Waifus_4_Lifu! I'm WaifuBot, I manage various things here. Here is a basic outline of our rules:"
+    reply = f"Hey {member.mention}, welcome to Waifus_4_Lifu! I'm WaifuBot, I manage various things here. Here is a basic outline of our rules:"
     await channel.send(reply)
     await asyncio.sleep(3)
-    reply = """
-        1. Don"t be a dick. We all like to have fun and mess around but let"s try and keep it playful! Nobody likes a salty Sammy. On that note, please try and keep negativity to a minimum. All it does is bring everyone else down and we don"t want that! This is intended to be a fun environment.\n
-        2. Introduce yourself before you start posting! Everybody is welcome, we just want to know who you are and what you are into! Tell us your name, what you play, or even who invited you!\n
-        3. If you want to post something NSFW (or just shitposting memes) then we have a channel for that! Just remember if its illegal we don"t want to see it and you will be immediately banned without question. The shitposting channel has it"s own special rules, please read them if you decide to join it. To gain access to the channel just type !join shitposting in general and WaifuBot will grant you access!\n
-        4. Speaking of, we have a bot! If you want a list of commands just type !wtf or !help and WaifuBot will explain!\n
-        5. If you have a problem of some sort, let a Super Waifu know. They are here to help!\n
-        6. We have voice channels for specific games and for general conversation! Please try and use the appropriate channel based on what you are playing or doing. If you need some sort of assistance with voice channels or maybe someone is AFK in a non-AFK channel then ping any Super Waifu and they will assist!\n
-        7. We don"t have rules for all types of behaviors and actions. That being said, if a Super Waifu or Admin contacts you regarding something you have said or done, please be willing to comply. We try our hardest to make sure everybody here is having a good time. On that same note, if you have some sort of issue or concern with something that has been said or done then please bring it to a Super Waifu or Admins attention. Your concern will be reviewed and addressed appropriately.\n
-        8. Have fun! That is why we made this server! **Before we continue, what"s rule #1?**
-        """
+    reply = "1. Don't be a dick. We all like to have fun and mess around but let's try and keep it playful! On that note, please try and keep negativity to a minimum. All it does is bring everyone else down and we don't want that! This is intended to be a fun environment.\n\n"
+    reply = reply + "2. Introduce yourself before you start posting! Everybody is welcome, we just want to know who you are and what you are into!\n\n"
+    reply = reply + "3. If you want to post something NSFW (or just shitpost memes) then we have a channel for that! Just remember if its illegal we don't want to see it and you will be immediately banned without question. The shitposting channel has it's own special rules, please read them if you decide to join it. To gain access to the channel just type `!join shitty_people` in general and WaifuBot will grant you access!\n\n"
+    reply = reply + "4. Speaking of, we have a bot! If you want a list of commands just type `!wtf` or `!help` and WaifuBot will explain!\n\n"
+    reply = reply + "5. If you have a problem of some sort, tag a Super Waifu. They are here to help!\n\n"
+    reply = reply + "6. We have voice channels for specific games and for general conversation! Please try and use the appropriate channel based on what you are playing or doing.\n\n"
+    reply = reply + "7. We don't have rules for all types of behaviors and actions. That being said, if a Super Waifu or Admin contacts you regarding something you have said or done, please be willing to comply. We try our hardest to make sure everybody here is having a good time. On that same note, if you have some sort of issue or concern with something that has been said or done then please bring it to a Super Waifu or Admin's attention. Your concern will be reviewed and addressed appropriately.\n\n"
+    reply = reply + "8. Have fun! That is why we made this server!\n\n**Before we continue, what's rule #1?**"
     await channel.send(reply)
     if not official_invite:
         reply = f"{member.mention} joined using an unofficial invite. See audit log."
@@ -376,7 +376,8 @@ async def on_message(message):
     lower = message.clean_content.lower()
     if isinstance(message.channel, discord.TextChannel):
         if message.channel.name == "welcome_noob":
-            reply_to_noob(message)
+            await reply_noobs(message)
+            return
     if "thank" in lower and "waifubot" in lower:
         reply = random.choice(strings["no_problem"])
         await message.channel.send(reply)
@@ -447,12 +448,6 @@ async def roles(ctx):
         count = str(len(role.members)).rjust(6)
         reply = reply + f"`{role_name}{count}`\n"
     await ctx.send(reply)
-    return
-
-@bot.command()
-async def test(ctx):
-    """Test something."""
-    
     return
     
 @bot.command()
