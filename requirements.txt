@@ -1,4 +1,8 @@
-discord.py
-aiofiles
-aiohttp
-pillow
+aiohttp>=3.3.0,<3.6.0
+websockets>=6.0,<7.0
+PyYAML
+requests
+Pillow
+
+#See readme for installation instructions
+discord.py>=1.1.0a 
