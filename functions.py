@@ -222,22 +222,21 @@ def get_quote(channel, phrase):
             sql = """
                 SELECT *
                 FROM quotes
-                WHERE channel_name = ?
                 ORDER BY RANDOM()
                 LIMIT 1
                 """
-            cursor.execute(sql, (channel_name,))
+            cursor.execute(sql)
         else:
             pattern = "%" + phrase + "%"
             sql = """
                 SELECT *
                 FROM quotes
-                WHERE channel_name = ?
-                AND quote_text LIKE ?
+                WHERE quote_text LIKE ?
+                OR author_name LIKE ?
                 ORDER BY RANDOM()
                 LIMIT 1
                 """
-            cursor.execute(sql, (channel_name, pattern))
+            cursor.execute(sql, (pattern, pattern))
         return cursor.fetchone()
         
 def delete_quote(id):

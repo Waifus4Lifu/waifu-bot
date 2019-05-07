@@ -30,9 +30,10 @@ def is_super_channel(ctx):
     return True
     
 def is_silly_channel(ctx):
-    if ctx.channel.name in config["channels"]["serious"]:
-        raise commands.NoPrivateMessage
-    return True
+    if isinstance(ctx.channel, discord.TextChannel):
+        if ctx.channel.name not in config["channels"]["serious"]:
+            return True
+    raise commands.NoPrivateMessage
     
 def get_guild():
     guild_id = config["discord"]["guild_id"]
@@ -179,6 +180,19 @@ async def reply_noobs(message):
     else:
         reply = "Not quite. Try again."
         await message.channel.send(reply)
+    return
+    
+async def always_sunny(message):
+    text = message.clean_content.replace("*", "")
+    text = "\"The Gang " + text + "\""
+    pending = await message.channel.send("Drawing some dumb shit...")
+    image = draw.sunny(text)
+    await pending.edit(content="Drawing is done. Sending now...")
+    file = discord.File(image)
+    await message.channel.send(file=file)
+    image.close()
+    file.close()
+    await pending.delete()
     return
     
 @asyncio.coroutine
@@ -390,6 +404,8 @@ async def on_message(message):
             file = discord.File(os.path.join(sys.path[0], 'images', 'dennis.gif'))
             await message.channel.send(reply, file=file)
             file.close()
+    if lower.startswith("*gets") and lower.endswith("*"):
+        await always_sunny(message)
     if isinstance(message.channel, discord.TextChannel):
         await detect_reposts(message)
         await rate_limiter(message)
@@ -620,8 +636,12 @@ async def quoth(ctx, target: typing.Optional[typing.Union[discord.Member, discor
         if answer == False or answer == None:
             return
     clean_content = store_quote(target, ctx)
-    reply = f"{ctx.author.mention} successfully stored the following message:\n\n{target.author}: \"{clean_content}\""
-    await ctx.send(reply)
+    title = "**QUOTE STORED :floppy_disk:**"
+    description = f"Author: {target.author.mention}\nStored by: {ctx.author.mention}\n"
+    embed = discord.Embed(title=title, description=description, color=waifu_pink)
+    value = f"\"{clean_content}\""
+    embed.add_field(name="Quote", value=value, inline=False)
+    await ctx.send(embed=embed)
     return
  
 @bot.command()
@@ -794,23 +814,43 @@ async def invite(ctx, *, reason):
 @bot.command(hidden=True)
 @commands.has_role("super_waifus")
 @commands.check(is_super_channel)
-async def deletequote(ctx, id: int):
-    """Delete a quote by ID (second half of `!inspire` file name)"""
+async def deletequote(ctx, id: typing.Optional[typing.Union[int, str]]):
+    """Delete a quote by ID or URL"""
     guild = get_guild()
+    if id == None:
+        history = await ctx.channel.history(limit=25).flatten()
+        for message in history:
+            if len(message.attachments) == 1:
+                id = message.attachments[0].url
+                break
+    if isinstance(id, str):
+        try:
+            id = id.split("_")[-1]
+            id = id.split(".")[0]
+            id = int(id)
+        except:
+            raise commands.UserInputError
     if not quote_exists(id):
         reply = "I can't find that quote in the database."
         await ctx.send(reply)
         return
     quote = delete_quote(id)
-    author = guild.get_member(int(quote[3]))
     try:
-        stored_by = guild.get_member(int(quote[5]))
+        author_mention = guild.get_member(int(quote[3])).mention
     except:
-        stored_by = None
+        author_mention = quote[4]
+    try:
+        stored_by_mention = guild.get_member(int(quote[5])).mention
+    except:
+        stored_by_mention = quote[6]
     text = quote[7]
     if not quote_exists(id):
-        reply = f"That quote is history. For the record, it was from {author}, stored by {stored_by}, and said:\n\n\"{text}\""
-        await ctx.send(reply)
+        title = "**QUOTE DELETED :fire:**"
+        description = f"Author: {author_mention}\nStored by: {stored_by_mention}\nDeleted by: {ctx.author.mention}\n"
+        embed = discord.Embed(title=title, description=description, color=waifu_pink)
+        value = f"\"{text}\""
+        embed.add_field(name="Quote", value=value, inline=False)
+        await ctx.send(embed=embed)
     return
 
 @bot.command(hidden=True)

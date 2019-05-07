@@ -98,6 +98,25 @@ def inspiration(id, text, name):
     output.seek(0)
     return output
     
+def sunny(text):
+    img = Image.new('RGB', (3840, 2160))
+    draw = ImageDraw.Draw(img)
+    font_path = os.path.join(sys.path[0], "textile regular.ttf")
+    font = ImageFont.truetype(font_path, 100)
+    width = maximize_width(img, font, text, 750)
+    width = equalize_width(img, font, text, width)
+    text = textwrap.fill(text, width=width)
+    text_size = draw.textsize(text=text, font=font)
+    x = (img.size[0]/2) - (text_size[0]/2)
+    y = (img.size[1]/2) - (text_size[1]/2)
+    xy = (x, y)
+    draw.text(xy=xy, text=text, font=font, align="center", fill="white")
+    output = io.BytesIO()
+    output.name = f"{datetime.now().strftime('%Y%m%d%H%M%S')}.png"
+    img.save(output)
+    output.seek(0)
+    return output
+    
 def draw_text(img, text, xy, font, align, text_color, border_color, border_width):
     draw = ImageDraw.Draw(img)
     for angle in range(0, 360, 30):
