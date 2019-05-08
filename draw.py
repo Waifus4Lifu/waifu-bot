@@ -132,7 +132,7 @@ def spongebob(ctx, message):
     border = 20
     bob = Image.open(os.path.join(sys.path[0], 'images', 'sponge.jpg'))
     draw = ImageDraw.Draw(bob)
-    font = ImageFont.truetype("calibri.ttf", 30)
+    font = ImageFont.truetype("arial.ttf", 30)
     author = f"{message.author.display_name}: {message.clean_content}"
     mocker = f"{ctx.author.display_name}: {spongify(message.clean_content)}"
     margin = 0
