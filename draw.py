@@ -101,7 +101,7 @@ def inspiration(id, text, name):
 def sunny(text):
     img = Image.new('RGB', (3840, 2160))
     draw = ImageDraw.Draw(img)
-    font_path = os.path.join(sys.path[0], "textile regular.ttf")
+    font_path = os.path.join(sys.path[0], "textile_regular.ttf")
     font = ImageFont.truetype(font_path, 100)
     width = maximize_width(img, font, text, 750)
     width = equalize_width(img, font, text, width)
