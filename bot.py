@@ -164,6 +164,8 @@ async def yes_no_timeout(ctx, message):
         
 async def reply_noobs(message):
     global block_noobs
+    if message.channel.topic != str(message.author.id):
+        return
     answer = re.sub("[^0-9a-zA-Z]+", "", message.clean_content).lower()
     if answer == "dontbeadick":
         reply = "Yup. Thanks! I'll grant you access. Just a sec..."
@@ -185,7 +187,8 @@ async def reply_noobs(message):
     
 async def always_sunny(message):
     text = message.clean_content.replace("*", "")
-    text = "\"The Gang " + text + "\""
+    text = message.clean_content.replace("_", "")
+    text = "\"" + text + "\""
     pending = await message.channel.send("Drawing some dumb shit...")
     image = draw.sunny(text)
     await pending.edit(content="Drawing is done. Sending now...")
@@ -329,9 +332,11 @@ async def on_member_join(member):
             await super_waifu_chat.send(reply)
             update_invite_details(invite, member)
             await invite.delete()
+    super_waifus = get_role("super_waifus")
     overwrites = {
         guild.default_role: discord.PermissionOverwrite(read_messages=False),
         guild.me: discord.PermissionOverwrite(read_messages=True),
+        super_waifus: discord.PermissionOverwrite(read_messages=True),
         member: discord.PermissionOverwrite(read_messages=True)
         }
     block_noobs = True
@@ -405,7 +410,7 @@ async def on_message(message):
             file = discord.File(os.path.join(sys.path[0], 'images', 'dennis.gif'))
             await message.channel.send(reply, file=file)
             file.close()
-    if lower.startswith("*gets") and lower.endswith("*"):
+    if lower.startswith("*the gang") or lower.startswith("_the gang"):
         await always_sunny(message)
     if isinstance(message.channel, discord.TextChannel):
         await detect_reposts(message)
@@ -413,6 +418,7 @@ async def on_message(message):
     return
     
 @bot.command(aliases=["help"])
+@commands.guild_only()
 async def wtf(ctx):
     """Display this help message."""
     reply = "I understand the following commands:\n\n"
@@ -423,6 +429,7 @@ async def wtf(ctx):
     await ctx.send(reply)
 
 @bot.command(aliases=["players"])
+@commands.guild_only()
 async def members(ctx, role: discord.Role):
     """Show a list of members who have signed up for a role/game."""
     if role.name in config['roles']['forbidden']:
@@ -440,10 +447,13 @@ async def members(ctx, role: discord.Role):
     reply = f"The following members have signed up for '{role.name}':\n\n"
     for member in role.members:
         reply = reply + f"`{member.display_name.ljust(length)}{member.status.name.rjust(10)}`\n"
-    await ctx.send(reply)
+    for page in paginate(reply):
+        await ctx.send(page)
+        await asyncio.sleep(1)
     return
     
 @bot.command(aliases=["games"])
+@commands.guild_only()
 async def roles(ctx):
     """Show a list of mentionable roles/games you can join."""
     guild = get_guild()
@@ -464,10 +474,13 @@ async def roles(ctx):
         role_name = role.name.ljust(length)
         count = str(len(role.members)).rjust(6)
         reply = reply + f"`{role_name}{count}`\n"
-    await ctx.send(reply)
+    for page in paginate(reply):
+        await ctx.send(page)
+        await asyncio.sleep(1)
     return
     
 @bot.command()
+@commands.guild_only()
 async def join(ctx, role: discord.Role):
     """Join a mentionable role/game."""
     if role.name in config['roles']['forbidden']:
@@ -484,6 +497,7 @@ async def join(ctx, role: discord.Role):
     return
     
 @bot.command()
+@commands.guild_only()
 async def leave(ctx, role: discord.Role):
     """Leave a mentionable role/game."""
     if role.name in config['roles']['forbidden']:
@@ -501,6 +515,7 @@ async def leave(ctx, role: discord.Role):
 
 @bot.command()
 @commands.check(is_silly_channel)
+@commands.guild_only()
 async def magic8ball(ctx, question: str):
     """Ask the magic 8 ball a question."""
     answer = random.choice(strings['eight_ball'])
@@ -509,6 +524,7 @@ async def magic8ball(ctx, question: str):
     return
 
 @bot.command(name="color")
+@commands.guild_only()
 async def _color(ctx):
     """Get the hex and RGB values for Waifu Pink:tm:."""
     if get_role("colorblind_fucks") in ctx.author.roles:
@@ -520,6 +536,7 @@ async def _color(ctx):
     return
     
 @bot.command(name="random")
+@commands.guild_only()
 async def _random(ctx):
     """Request a random number, chosen by fair dice roll."""
     await ctx.send(f"{ctx.author.mention}: 4")
@@ -543,6 +560,7 @@ async def _random(ctx):
 # TODO: Fix plural replacements to use proper regex
 @bot.command()
 @commands.check(is_silly_channel)
+@commands.guild_only()
 async def catfact(ctx):
     """Kinda self-explanatory."""
     async with aiohttp.ClientSession() as session:
@@ -567,6 +585,7 @@ async def catfact(ctx):
         
 @bot.command()
 @commands.check(is_silly_channel)
+@commands.guild_only()
 async def sponge(ctx, target: typing.Optional[typing.Union[discord.Member, discord.Message, str]]):
     """Mock a fellow member even though you're not clever."""
     messages = []
@@ -599,7 +618,8 @@ async def sponge(ctx, target: typing.Optional[typing.Union[discord.Member, disco
         
 @bot.command()
 @commands.check(is_silly_channel)
-async def quoth(ctx, target: typing.Optional[typing.Union[discord.Member, discord.Message]]):
+@commands.guild_only()
+async def quoth(ctx, target: typing.Optional[typing.Union[discord.Member, discord.Message, str]]):
     """Save message to inspirational quotes database."""
     messages = []
     async for message in ctx.channel.history(limit=20):
@@ -647,6 +667,7 @@ async def quoth(ctx, target: typing.Optional[typing.Union[discord.Member, discor
  
 @bot.command()
 @commands.check(is_silly_channel)
+@commands.guild_only()
 async def inspire(ctx, *, phrase: typing.Optional[str]):
     """Request a random inspirational work of art."""
     quote = get_quote(ctx.channel, phrase)
@@ -669,6 +690,7 @@ async def inspire(ctx, *, phrase: typing.Optional[str]):
     
 @bot.command()
 @commands.check(is_silly_channel)
+@commands.guild_only()
 async def shake(ctx, *, target: typing.Optional[typing.Union[discord.Member, discord.Message, str]]):
     """Create a shaky GIF or GIF of text or image attachments."""
     text = ""
@@ -733,6 +755,7 @@ async def shake(ctx, *, target: typing.Optional[typing.Union[discord.Member, dis
 @bot.command(hidden=True, aliases=['creategame'])
 @commands.has_role("super_waifus")
 @commands.check(is_super_channel)
+@commands.guild_only()
 async def createrole(ctx, role: str):
     """Add a mentionable role. Required format: `WAIFUS_4_LIFU`."""
     guild = get_guild()
@@ -765,6 +788,7 @@ async def createrole(ctx, role: str):
 @bot.command(hidden=True, aliases=['deletegame'])
 @commands.has_role("super_waifus")
 @commands.check(is_super_channel)
+@commands.guild_only()
 async def deleterole(ctx, role: discord.Role):
     """Delete a mentionable role."""
     if role.name in config['roles']['forbidden']:
@@ -789,6 +813,7 @@ async def deleterole(ctx, role: discord.Role):
 @bot.command(hidden=True)
 @commands.has_role("super_waifus")
 @commands.check(is_super_channel)
+@commands.guild_only()
 async def superwtf(ctx):
     """Display this help message."""
     reply = "Oh shit it's a Super_Waifu, everyone pretend like you aren't fucking shit up!\n\n"
@@ -802,6 +827,7 @@ async def superwtf(ctx):
 @bot.command(hidden=True)
 @commands.has_role("super_waifus")
 @commands.check(is_super_channel)
+@commands.guild_only()
 async def invite(ctx, *, reason):
     """Create a one time use invite for the specified person/reason."""
     welcome_channel = get_channel("welcome_and_rules")
@@ -815,6 +841,7 @@ async def invite(ctx, *, reason):
 @bot.command(hidden=True)
 @commands.has_role("super_waifus")
 @commands.check(is_super_channel)
+@commands.guild_only()
 async def deletequote(ctx, id: typing.Optional[typing.Union[int, str]]):
     """Delete a quote by ID or URL"""
     guild = get_guild()
@@ -857,6 +884,7 @@ async def deletequote(ctx, id: typing.Optional[typing.Union[int, str]]):
 @bot.command(hidden=True)
 @commands.has_role("admins")
 @commands.check(is_super_channel)
+@commands.guild_only()
 async def say(ctx, channel: discord.TextChannel, *, text: typing.Optional[str]):
     """Make me say something and/or post attachments."""
     if text == None and len(ctx.message.attachments) == 0:
@@ -884,6 +912,7 @@ async def say(ctx, channel: discord.TextChannel, *, text: typing.Optional[str]):
 @bot.command(hidden=True)
 @commands.has_role("admins")
 @commands.check(is_super_channel)
+@commands.guild_only()
 async def die(ctx):
     """Kill my currently running instance. I won't forget this."""
     reply = random.choice(strings['last_words'])
