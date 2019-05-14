@@ -12,7 +12,20 @@ from datetime import datetime
 def load_yaml(yaml_file_name):
     with open(os.path.join(sys.path[0], yaml_file_name), "r", encoding="utf8") as yaml_file:
         return yaml.safe_load(yaml_file)
-
+        
+def paginate(text):
+    pages = []
+    lines = text.split("\n")
+    page = ""
+    for line in lines:
+        if len(page + line + "\n") < 2000:
+            page = page + line + "\n"
+        else:
+            pages.append(page)
+            page = line + "\n"
+    pages.append(page)
+    return pages
+        
 def sha_256(file):
     BLOCKSIZE = 65536
     sha = hash.sha256()
