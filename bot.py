@@ -30,6 +30,12 @@ def is_super_channel(ctx):
         raise commands.NoPrivateMessage
     return True
     
+def has_role(member, role_name):
+    for role in member.roles:
+        if role.name.lower() == role_name.lower():
+            return True
+    return False
+    
 def is_silly_channel(ctx):
     if isinstance(ctx.channel, discord.TextChannel):
         if ctx.channel.name not in config["channels"]["serious"]:
@@ -188,7 +194,7 @@ async def reply_noobs(message):
 async def always_sunny(message):
     text = message.clean_content.replace("*", "")
     text = message.clean_content.replace("_", "")
-    text = "\"" + text + "\""
+    text = ascii_only("\"" + text + "\"")
     pending = await message.channel.send("Drawing some dumb shit...")
     image = draw.sunny(text)
     await pending.edit(content="Drawing is done. Sending now...")
@@ -672,14 +678,19 @@ async def inspire(ctx, *, phrase: typing.Optional[str]):
     """Request a random inspirational work of art."""
     quote = get_quote(ctx.channel, phrase)
     if quote == None:
-        reply = "I can't find any matching inspiration."
+        quote = get_quote(ctx.channel, None)
+        reply = "I can't find any matching inspiration. How about this instead..."
         await ctx.send(reply)
-        return
     id = quote[0]
     name = quote[4]
     text = quote[7]
+    query = None
+    if phrase != None:
+        phrase = phrase.split(" ")
+        query = random.choice(phrase)
     pending = await ctx.send("Drawing some dumb shit...")
-    image = draw.inspiration(id, text, name)
+    comical = has_role(ctx.author, "comical")
+    image = draw.inspiration(id, text, name, query, comical)
     await pending.edit(content="Drawing is done. Sending now...")
     file = discord.File(image)
     await ctx.send(file=file)
