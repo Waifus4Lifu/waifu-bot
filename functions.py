@@ -55,6 +55,10 @@ def replace_ignore_case(text, find, replace):
     pattern = re.compile(find, re.IGNORECASE)
     return pattern.sub(replace, text)
     
+def ascii_only(text):
+    stripped = (c for c in text if 0 < ord(c) < 127)
+    return ''.join(stripped)
+    
 def format_delta_long(delta):
     years = int(delta.days / 365)
     days = int(delta.days % 365)

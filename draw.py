@@ -3,6 +3,7 @@ import os
 import sys
 import math
 import random
+import requests
 import textwrap
 from functions import *
 from datetime import datetime
@@ -60,40 +61,80 @@ def shaky_image(file):
             frame.close()
         return output
 
-def inspiration(id, text, name):
-    text = f"\"{text}\""
-    name = f"- {name}"
-    path = os.path.join(sys.path[0], 'images', 'inspire')
-    files = os.listdir(path)
-    files.remove(".gitkeep")
-    file = random.choice(files)
-    img = Image.open(os.path.join(path, file))
+def inspiration(id, text, name, query, comical):
+    config = load_yaml("config.yaml")
+    client_id = config["api"]["unsplash"]
+    text = ascii_only(f"\"{text}\"")
+    name = ascii_only(f"- {name}")
+    try:
+        url = "https://api.unsplash.com/photos/random"
+        params = {
+            "client_id" : client_id,
+            "query" : query
+        }
+        r = requests.get(url, params=params)
+        if r.status_code != 200:
+            params = {
+                "client_id" : client_id
+            }
+            r = requests.get(url, params=params)
+        url = r.json()["links"]["download"]
+        file = url
+        creator = r.json()["user"]["name"]
+        response = requests.get(url)
+        img = Image.open(io.BytesIO(response.content))
+    except:
+        creator = None
+        path = os.path.join(sys.path[0], 'images', 'inspire')
+        files = os.listdir(path)
+        files.remove(".gitkeep")
+        file = random.choice(files)
+        img = Image.open(os.path.join(path, file))
     draw = ImageDraw.Draw(img)
     high_on_potnuse = math.sqrt((img.width**2) + (img.height**2))
-    font_size = round(high_on_potnuse / 30)
-    font = ImageFont.truetype("impact.ttf", font_size)
-    name_font = ImageFont.truetype("impact.ttf", round(font_size * .75))
+    font_size = round(high_on_potnuse / 25)
+    if comical and chance(config["chance"]["comical"]):
+        font = ImageFont.truetype("comic.ttf", font_size)
+        name_font = ImageFont.truetype("comic.ttf", round(font_size * .75))
+    else:
+        font = ImageFont.truetype("impact.ttf", font_size)
+        name_font = ImageFont.truetype("impact.ttf", round(font_size * .75))
     margin = round(high_on_potnuse/10)
     width = maximize_width(img, font, text, margin)
     width = equalize_width(img, font, text, width)
     text = textwrap.fill(text, width=width)
-    border_width = round(high_on_potnuse / 1000)
+    border_width = round(high_on_potnuse / 750)
     name_border_width = round(border_width * .75)
+    attribution_border_width = round(border_width * .25)
     text_size = draw.textsize(text=text, font=font)
     name_size = draw.textsize(text=name, font=name_font)
-    x = (img.size[0]/2) - (text_size[0]/2)
-    y = (img.size[1]/2) - (text_size[1]/2) - name_size[1]
+    x = (img.width/2) - (text_size[0]/2)
+    y = (img.height/2) - (text_size[1]/2) - name_size[1]
     xy = (x, y)
     draw_text(img, text, xy, font, "center", "white", "black", border_width)
     x += text_size[0] - name_size[0]
     y += text_size[1] + name_size[1]
     xy = (x, y)
-    draw_text(img, name, xy, name_font, "right", "white", "black", border_width)
+    draw_text(img, name, xy, name_font, "right", "white", "black", name_border_width)
+    if creator != None:
+        attribution = ascii_only(f"Photo by {creator} on Unsplash")
+        attribution_font = ImageFont.truetype("arial.ttf", round(font_size * .25))
+        attribution_size = draw.textsize(text=attribution, font=attribution_font)
+        x = img.width - attribution_size[0] - attribution_size[1]
+        y = img.height - attribution_size[1] - attribution_size[1]
+        xy = (x, y)
+        draw.text(xy=xy, text=attribution, font=attribution_font, align="right", fill="gray")
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    extension = file.split('.')[-1]
     output = io.BytesIO()
-    output.name = f"{timestamp}_{id}.{extension}"
+    output.name = f"{timestamp}_{id}.jpg"
     img.save(output)
+    while output.getbuffer().nbytes > 8000000:
+        ratio = 0.9
+        output = io.BytesIO()
+        output.name = f"{timestamp}_{id}.png"
+        new_size = (int(img.width*ratio), int(img.height*ratio))
+        img.thumbnail(new_size, resample=Image.ANTIALIAS)
+        img.save(output)
     img.close()
     output.seek(0)
     return output
@@ -133,8 +174,8 @@ def spongebob(ctx, message):
     bob = Image.open(os.path.join(sys.path[0], 'images', 'sponge.jpg'))
     draw = ImageDraw.Draw(bob)
     font = ImageFont.truetype("arial.ttf", 30)
-    author = f"{message.author.display_name}: {message.clean_content}"
-    mocker = f"{ctx.author.display_name}: {spongify(message.clean_content)}"
+    author = ascii_only(f"{message.author.display_name}: {message.clean_content}")
+    mocker = ascii_only(f"{ctx.author.display_name}: {spongify(message.clean_content)}")
     margin = 0
     author_width = maximize_width(bob, font, author, margin)
     mocker_width = maximize_width(bob, font, mocker, margin)

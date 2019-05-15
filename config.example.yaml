@@ -2,9 +2,12 @@ discord:
     token:
     guild_id:
     database: waifubot.db
+api:
+    unsplash:
 chance:
     catfact: 25
     hungry: 25
+    comical: 50
 roles:
     forbidden:
         - bots
