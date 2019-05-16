@@ -2,6 +2,7 @@ import io
 import os
 import sys
 import math
+import time
 import random
 import requests
 import textwrap
@@ -60,13 +61,11 @@ def shaky_image(file):
         for frame in frames:
             frame.close()
         return output
-
-def inspiration(id, text, name, query, comical):
-    config = load_yaml("config.yaml")
-    client_id = config["api"]["unsplash"]
-    text = ascii_only(f"\"{text}\"")
-    name = ascii_only(f"- {name}")
+        
+def get_unsplash(query):
     try:
+        config = load_yaml("config.yaml")
+        client_id = config["api"]["unsplash"]
         url = "https://api.unsplash.com/photos/random"
         params = {
             "client_id" : client_id,
@@ -75,21 +74,76 @@ def inspiration(id, text, name, query, comical):
         r = requests.get(url, params=params)
         if r.status_code != 200:
             params = {
-                "client_id" : client_id
+                "client_id" : client_id,
             }
             r = requests.get(url, params=params)
         url = r.json()["links"]["download"]
-        file = url
-        creator = r.json()["user"]["name"]
-        response = requests.get(url)
-        img = Image.open(io.BytesIO(response.content))
+        author = str(r.json()["user"]["name"])
+        author = f"{author} on Unsplash"
+        r = requests.get(url)
+        img = Image.open(io.BytesIO(r.content))
+        return img, author
     except:
-        creator = None
+        return None, None
+        
+def get_chromecast(query):
+    try:
+        url = "https://raw.githubusercontent.com/dconnolly/chromecast-backgrounds/master/backgrounds.json"
+        r = requests.get(url)
+        matches = []
+        all_images = []
+        for image in r.json():
+            image_url = image["url"]
+            image_author = None
+            if "author" in image:
+                image_author = image["author"]
+            potential_match = [image_url, image_author]
+            if query != None:
+                if query in image_url.lower():
+                    matches.append(potential_match)
+            all_images.append(potential_match)
+        if len(matches) > 0:
+            choice = random.choice(matches)
+        else:
+            choice = random.choice(all_images)
+        url = choice[0]
+        author = choice[1]
+        r = requests.get(url)
+        img = Image.open(io.BytesIO(r.content))
+        return img, author
+    except:
+        return None, None
+        
+def get_local():
+    try:
         path = os.path.join(sys.path[0], 'images', 'inspire')
         files = os.listdir(path)
         files.remove(".gitkeep")
         file = random.choice(files)
         img = Image.open(os.path.join(path, file))
+        return img, None
+    except:
+        return None, None
+    
+def inspiration(id, text, name, query, comical):
+    text = ascii_only(f"\"{text}\"")
+    name = ascii_only(f"- {name}")
+    if chance(50):
+        img, author = get_unsplash(query)
+        if img == None:
+            img, author = get_chromecast(query)
+            if img == None:
+                img, author = get_local()
+                if img == None:
+                    return None
+    else:
+        img, author = get_chromecast(query)
+        if img == None:
+            img, author = get_unsplash(query)
+            if img == None:
+                img, author = get_local()
+                if img == None:
+                    return None
     draw = ImageDraw.Draw(img)
     high_on_potnuse = math.sqrt((img.width**2) + (img.height**2))
     font_size = round(high_on_potnuse / 25)
@@ -116,8 +170,8 @@ def inspiration(id, text, name, query, comical):
     y += text_size[1] + name_size[1]
     xy = (x, y)
     draw_text(img, name, xy, name_font, "right", "white", "black", name_border_width)
-    if creator != None:
-        attribution = ascii_only(f"Photo by {creator} on Unsplash")
+    if author != None:
+        attribution = ascii_only(f"Photo by {author}")
         attribution_font = ImageFont.truetype("arial.ttf", round(font_size * .25))
         attribution_size = draw.textsize(text=attribution, font=attribution_font)
         x = img.width - attribution_size[0] - attribution_size[1]

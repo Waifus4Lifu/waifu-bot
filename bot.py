@@ -679,19 +679,22 @@ async def inspire(ctx, *, phrase: typing.Optional[str]):
     quote = get_quote(ctx.channel, phrase)
     if quote == None:
         quote = get_quote(ctx.channel, None)
-        reply = "I can't find any matching inspiration. How about this instead..."
-        await ctx.send(reply)
     id = quote[0]
     name = quote[4]
     text = quote[7]
     query = None
     if phrase != None:
         phrase = phrase.split(" ")
-        query = random.choice(phrase)
+        query = random.choice(phrase).lower()
     pending = await ctx.send("Drawing some dumb shit...")
     comical = has_role(ctx.author, "comical")
     image = draw.inspiration(id, text, name, query, comical)
     await pending.edit(content="Drawing is done. Sending now...")
+    if image == None:
+        reply = "I seem to be unable to draw today."
+        await ctx.send(reply)
+        await pending.delete()
+        return
     file = discord.File(image)
     await ctx.send(file=file)
     image.close()
