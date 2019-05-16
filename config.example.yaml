@@ -10,22 +10,22 @@ chance:
     comical: 50
 roles:
     forbidden:
-        - bots
-        - admins
+        - bot
+        - admin
         - "@admin"
         - "@everyone"
-        - mods
+        - mod
         - thot_police
-        - super_waifus
+        - thot
+        - super_waifu
         - timeout
         - waifu_4_lifu
-        - Honorary_waifu
+        - honorary_waifu
         - [a2m]
-        - bot_testers
-        - noobs
-        - naughty_list
+        - bot_tester
+        - noob
         - raid_sherpa
-        - colorblind_fucks
+        - colorblind_fuck
 channels:
     female_only:
         - deleted_thots

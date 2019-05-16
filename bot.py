@@ -168,7 +168,7 @@ async def yes_no_timeout(ctx, message):
         await ctx.send(reply)
         return None
         
-async def reply_noobs(message):
+async def reply_noob(message):
     global block_noobs
     if message.channel.topic != str(message.author.id):
         return
@@ -178,7 +178,7 @@ async def reply_noobs(message):
         await message.channel.send(reply)
         await asyncio.sleep(1)
         block_noobs = True
-        await message.author.remove_roles(get_role("noobs"))
+        await message.author.remove_roles(get_role("noob"))
         await asyncio.sleep(1)
         await message.channel.delete()
         await asyncio.sleep(1)
@@ -226,28 +226,28 @@ async def change_status():
 async def monitor_noobs():
     global block_noobs
     guild = get_guild()
-    noobs_role = get_role("noobs")
+    noob_role = get_role("noob")
     super_waifu_chat = get_channel("super_waifu_chat")
     while True:
-        for member in get_members_by_role("noobs"):
+        for member in get_members_by_role("noob"):
             if get_channel_by_topic(str(member.id)) == None:
                 if block_noobs:
                     await asyncio.sleep(5)
                 else:
-                    await member.remove_roles(noobs_role)
-                    reply = f"No welcome_noob channel found for {member.mention}. Removing noobs role."
+                    await member.remove_roles(noob_role)
+                    reply = f"No welcome_noob channel found for {member.mention}. Removing noob role."
                     await super_waifu_chat.send(reply)
         for channel in guild.text_channels:
             if channel.name == "welcome_noob":
                 id = int(channel.topic)
                 member = guild.get_member(id)
-                noobs = get_members_by_role("noobs")
+                noobs = get_members_by_role("noob")
                 if member == None or member not in noobs:
                     if block_noobs:
                         await asyncio.sleep(5)
                     else:
                         await channel.delete()
-                        reply = f"<@{id}> no longer has the noobs role. Removing welcome_noob channel."
+                        reply = f"<@{id}> no longer has the noob role. Removing welcome_noob channel."
                         await super_waifu_chat.send(reply)
         await asyncio.sleep(1)
         
@@ -338,15 +338,15 @@ async def on_member_join(member):
             await super_waifu_chat.send(reply)
             update_invite_details(invite, member)
             await invite.delete()
-    super_waifus = get_role("super_waifus")
+    super_waifu = get_role("super_waifu")
     overwrites = {
         guild.default_role: discord.PermissionOverwrite(read_messages=False),
         guild.me: discord.PermissionOverwrite(read_messages=True),
-        super_waifus: discord.PermissionOverwrite(read_messages=True),
+        super_waifu: discord.PermissionOverwrite(read_messages=True),
         member: discord.PermissionOverwrite(read_messages=True)
         }
     block_noobs = True
-    await member.add_roles(get_role("noobs"))
+    await member.add_roles(get_role("noob"))
     channel = await guild.create_text_channel("welcome_noob", topic=str(member.id), overwrites=overwrites)
     block_noobs = False
     reply = f"Hey {member.mention}, welcome to Waifus_4_Lifu! I'm WaifuBot, I manage various things here. Here is a basic outline of our rules:"
@@ -402,7 +402,7 @@ async def on_message(message):
     lower = message.clean_content.lower()
     if isinstance(message.channel, discord.TextChannel):
         if message.channel.name == "welcome_noob":
-            await reply_noobs(message)
+            await reply_noob(message)
             return
     if "thank" in lower and "waifubot" in lower:
         reply = random.choice(strings["no_problem"])
@@ -764,7 +764,7 @@ async def shake(ctx, *, target: typing.Optional[typing.Union[discord.Member, dis
     return
     
 @bot.command(hidden=True, aliases=['creategame'])
-@commands.has_role("super_waifus")
+@commands.has_role("super_waifu")
 @commands.check(is_super_channel)
 @commands.guild_only()
 async def createrole(ctx, role: str):
@@ -797,7 +797,7 @@ async def createrole(ctx, role: str):
     return
     
 @bot.command(hidden=True, aliases=['deletegame'])
-@commands.has_role("super_waifus")
+@commands.has_role("super_waifu")
 @commands.check(is_super_channel)
 @commands.guild_only()
 async def deleterole(ctx, role: discord.Role):
@@ -822,7 +822,7 @@ async def deleterole(ctx, role: discord.Role):
     return
     
 @bot.command(hidden=True)
-@commands.has_role("super_waifus")
+@commands.has_role("super_waifu")
 @commands.check(is_super_channel)
 @commands.guild_only()
 async def superwtf(ctx):
@@ -836,7 +836,7 @@ async def superwtf(ctx):
     return
     
 @bot.command(hidden=True)
-@commands.has_role("super_waifus")
+@commands.has_role("super_waifu")
 @commands.check(is_super_channel)
 @commands.guild_only()
 async def invite(ctx, *, reason):
@@ -850,7 +850,7 @@ async def invite(ctx, *, reason):
     return
     
 @bot.command(hidden=True)
-@commands.has_role("super_waifus")
+@commands.has_role("super_waifu")
 @commands.check(is_super_channel)
 @commands.guild_only()
 async def deletequote(ctx, id: typing.Optional[typing.Union[int, str]]):
@@ -893,7 +893,7 @@ async def deletequote(ctx, id: typing.Optional[typing.Union[int, str]]):
     return
 
 @bot.command(hidden=True)
-@commands.has_role("admins")
+@commands.has_role("admin")
 @commands.check(is_super_channel)
 @commands.guild_only()
 async def say(ctx, channel: discord.TextChannel, *, text: typing.Optional[str]):
@@ -921,7 +921,7 @@ async def say(ctx, channel: discord.TextChannel, *, text: typing.Optional[str]):
     return
     
 @bot.command(hidden=True)
-@commands.has_role("admins")
+@commands.has_role("admin")
 @commands.check(is_super_channel)
 @commands.guild_only()
 async def die(ctx):
