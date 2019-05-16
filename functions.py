@@ -12,7 +12,7 @@ from datetime import datetime
 def load_yaml(yaml_file_name):
     with open(os.path.join(sys.path[0], yaml_file_name), "r", encoding="utf8") as yaml_file:
         return yaml.safe_load(yaml_file)
-        
+
 def paginate(text):
     pages = []
     lines = text.split("\n")
@@ -25,7 +25,7 @@ def paginate(text):
             page = line + "\n"
     pages.append(page)
     return pages
-        
+
 def sha_256(file):
     BLOCKSIZE = 65536
     sha = hash.sha256()
@@ -35,7 +35,7 @@ def sha_256(file):
         file_buffer = file.read(BLOCKSIZE)
     file.close()
     return sha.hexdigest()
-        
+
 def spongify(text):
     sponged_text = ""
     for character in text:
@@ -44,21 +44,21 @@ def spongify(text):
         else:
             sponged_text = sponged_text + character.lower()
     return sponged_text
-    
+
 def sentence_case(text):
     return ". ".join(i.capitalize() for i in text.split(". "))
 
 def chance(percent):
     return random.randint(0, 99) < percent
-    
+
 def replace_ignore_case(text, find, replace):
     pattern = re.compile(find, re.IGNORECASE)
     return pattern.sub(replace, text)
-    
+
 def ascii_only(text):
     stripped = (c for c in text if 0 < ord(c) < 127)
     return ''.join(stripped)
-    
+
 def format_delta_long(delta):
     years = int(delta.days / 365)
     days = int(delta.days % 365)
@@ -87,7 +87,7 @@ def format_delta_long(delta):
     else:
         formatted_delta = formatted_delta + f"{seconds} Seconds"
     return formatted_delta
-    
+
 def format_delta(delta):
     years = int(delta.days / 365)
     days = int(delta.days % 365)
@@ -105,16 +105,16 @@ def format_delta(delta):
         formatted_delta = formatted_delta + f"{minutes}m "
     formatted_delta = formatted_delta + f"{seconds}s"
     return formatted_delta
-    
+
 def time_since(then):
     return (datetime.utcnow() - then)
 
 def date_time_from_str(timestamp):
     return datetime.strptime(timestamp[:19], "%Y-%m-%d %H:%M:%S")
-    
+
 def seconds_since(then):
     return abs((datetime.utcnow() - then).total_seconds())
-    
+
 def open_database():
     return sqlite3.connect(database_file_path)
 
@@ -126,16 +126,16 @@ def store_hash(bytes_hash, message):
         author_name = message.author.display_name
         channel_name = message.channel.name
         channel_category = message.channel.category.name
-        
+
         sql = """
             INSERT
-            INTO hashes 
+            INTO hashes
             VALUES (?,?,?,?,?,?,?)
             """
         cursor.execute(sql, (None, bytes_hash, date_time, author_id, author_name, channel_name, channel_category))
         database.commit()
         return
-        
+
 def get_hashes(bytes_hash, channel_category):
     with open_database() as database:
         cursor = database.cursor()
@@ -148,7 +148,7 @@ def get_hashes(bytes_hash, channel_category):
             """
         cursor.execute(sql, (bytes_hash, channel_category))
         return cursor.fetchall()
-    
+
 def store_invite_details(invite, inviter, reason):
     with open_database() as database:
         cursor = database.cursor()
@@ -161,13 +161,13 @@ def store_invite_details(invite, inviter, reason):
         invitee_name = None
         sql = """
             INSERT
-            INTO invites 
+            INTO invites
             VALUES (?,?,?,?,?,?,?,?)
             """
         cursor.execute(sql, (id, date_time_created, date_time_used, inviter_id, inviter_name, invitee_id, invitee_name, reason))
         database.commit()
         return
-    
+
 def get_invite_details(invite):
     with open_database() as database:
         cursor = database.cursor()
@@ -179,7 +179,7 @@ def get_invite_details(invite):
             """
         cursor.execute(sql, (id,))
         return cursor.fetchone()
-    
+
 def update_invite_details(invite, invitee):
     with open_database() as database:
         cursor = database.cursor()
@@ -195,7 +195,7 @@ def update_invite_details(invite, invitee):
         cursor.execute(sql, (date_time_used, invitee_id, invitee_name, id))
         database.commit()
         return
-        
+
 def quote_exists(id):
     with open_database() as database:
         cursor = database.cursor()
@@ -208,7 +208,7 @@ def quote_exists(id):
         if cursor.fetchone() == None:
             return False
         return True
-    
+
 def store_quote(message, ctx):
     with open_database() as database:
         cursor = database.cursor()
@@ -230,7 +230,7 @@ def store_quote(message, ctx):
         cursor.execute(sql, (id, channel_name, date_time, author_id, author_name, stored_by_id, stored_by_name, quote_text))
         database.commit()
         return quote_text
-    
+
 def get_quote(channel, phrase):
     with open_database() as database:
         channel_name = channel.name
@@ -255,7 +255,7 @@ def get_quote(channel, phrase):
                 """
             cursor.execute(sql, (pattern, pattern))
         return cursor.fetchone()
-        
+
 def delete_quote(id):
     with open_database() as database:
         cursor = database.cursor()

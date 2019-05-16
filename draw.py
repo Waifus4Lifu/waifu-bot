@@ -30,7 +30,7 @@ def shaky_text(text):
         frame.close()
     output.seek(0)
     return output
-    
+
 def shaky_image(file):
     frames = []
     try:
@@ -61,7 +61,7 @@ def shaky_image(file):
         for frame in frames:
             frame.close()
         return output
-        
+
 def get_unsplash(query):
     try:
         config = load_yaml("config.yaml")
@@ -85,7 +85,7 @@ def get_unsplash(query):
         return img, author
     except:
         return None, None
-        
+
 def get_chromecast(query):
     try:
         url = "https://raw.githubusercontent.com/dconnolly/chromecast-backgrounds/master/backgrounds.json"
@@ -113,7 +113,7 @@ def get_chromecast(query):
         return img, author
     except:
         return None, None
-        
+
 def get_local():
     try:
         path = os.path.join(sys.path[0], 'images', 'inspire')
@@ -124,7 +124,7 @@ def get_local():
         return img, None
     except:
         return None, None
-    
+
 def inspiration(id, text, name, query, comical):
     text = ascii_only(f"\"{text}\"")
     name = ascii_only(f"- {name}")
@@ -192,7 +192,7 @@ def inspiration(id, text, name, query, comical):
     img.close()
     output.seek(0)
     return output
-    
+
 def sunny(text):
     img = Image.new('RGB', (3840, 2160))
     draw = ImageDraw.Draw(img)
@@ -211,7 +211,7 @@ def sunny(text):
     img.save(output)
     output.seek(0)
     return output
-    
+
 def draw_text(img, text, xy, font, align, text_color, border_color, border_width):
     draw = ImageDraw.Draw(img)
     for angle in range(0, 360, 30):
@@ -222,7 +222,7 @@ def draw_text(img, text, xy, font, align, text_color, border_color, border_width
         draw.text(xy=xy_border, text=text, font=font, align=align, fill=border_color)
     draw.text(xy=xy, text=text, font=font, align=align, fill=text_color)
     return
-    
+
 def spongebob(ctx, message):
     border = 20
     bob = Image.open(os.path.join(sys.path[0], 'images', 'sponge.jpg'))
@@ -259,7 +259,7 @@ def maximize_width(img, font, text, margin):
         if draw.textsize(text=new_text, font=font)[0] > img.width - (margin * 2):
             return i - 1
     return i
-    
+
 def equalize_width(img, font, text, start_width):
     draw = ImageDraw.Draw(img)
     distances = []
@@ -279,6 +279,3 @@ def equalize_width(img, font, text, start_width):
         distances.append([i, distance])
     distances = sorted(distances, key=lambda x: x[1])
     return distances[0][0]
-        
-        
-    

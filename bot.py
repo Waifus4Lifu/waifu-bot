@@ -29,41 +29,41 @@ def is_super_channel(ctx):
     if ctx.channel.name not in config["channels"]["super_waifu"]:
         raise commands.NoPrivateMessage
     return True
-    
+
 def has_role(member, role_name):
     for role in member.roles:
         if role.name.lower() == role_name.lower():
             return True
     return False
-    
+
 def is_silly_channel(ctx):
     if isinstance(ctx.channel, discord.TextChannel):
         if ctx.channel.name not in config["channels"]["serious"]:
             return True
     raise commands.NoPrivateMessage
-    
+
 def get_guild():
     guild_id = config["discord"]["guild_id"]
     return bot.get_guild(guild_id)
-    
+
 def get_channel(name):
     for channel in get_guild().channels:
         if channel.name == name:
             return channel
     return None
-    
+
 def get_channel_by_topic(topic):
     for channel in get_guild().text_channels:
         if channel.topic == topic:
             return channel
     return None
-    
+
 def get_role(name):
     for role in get_guild().roles:
         if role.name.lower() == name.lower():
             return role
     return None
-    
+
 def get_members_by_role(name):
     return get_role(name).members
 
@@ -125,7 +125,7 @@ async def detect_reposts(message):
     if len(embed.fields) > 0:
         await message.channel.send(embed=embed)
     return
-    
+
 async def rate_limiter(message):
     if message.channel.name not in config['channels']['rate_limited']:
         return
@@ -149,7 +149,7 @@ async def rate_limiter(message):
         embed = discord.Embed(title=title, description=description, color=waifu_pink)
         await message.channel.send(embed=embed)
     return
-            
+
 async def yes_no_timeout(ctx, message):
     await ctx.send(message)
     def check(answer):
@@ -167,7 +167,7 @@ async def yes_no_timeout(ctx, message):
         reply = random.choice(strings["user_reply_timeout"])
         await ctx.send(reply)
         return None
-        
+
 async def reply_noob(message):
     global block_noobs
     if message.channel.topic != str(message.author.id):
@@ -190,7 +190,7 @@ async def reply_noob(message):
         reply = "Not quite. Try again."
         await message.channel.send(reply)
     return
-    
+
 async def always_sunny(message):
     text = message.clean_content.replace("*", "")
     text = message.clean_content.replace("_", "")
@@ -204,7 +204,7 @@ async def always_sunny(message):
     file.close()
     await pending.delete()
     return
-    
+
 @asyncio.coroutine
 async def change_status():
     statuses = config["statuses"]
@@ -221,7 +221,7 @@ async def change_status():
         game = discord.Game(status_name)
         await bot.change_presence(status=status_code, activity=game)
         await asyncio.sleep(random.randint(300, 600))
-        
+
 @asyncio.coroutine
 async def monitor_noobs():
     global block_noobs
@@ -250,7 +250,7 @@ async def monitor_noobs():
                         reply = f"<@{id}> no longer has the noob role. Removing welcome_noob channel."
                         await super_waifu_chat.send(reply)
         await asyncio.sleep(1)
-        
+
 @asyncio.coroutine
 async def monitor_deletions():
     guild = get_guild()
@@ -273,7 +273,7 @@ async def monitor_deletions():
                 elif waifu_audit_log[entry.id].extra.count != entry.extra.count:
                     waifu_audit_log[entry.id] = entry
                     deleted_by = entry.user
-                else: 
+                else:
                     if seconds_since(waifu_audit_log[entry.id].created_at) > 86400:
                         del waifu_audit_log[entry.id]
         if author == bot.user and deleted_by == bot.user:
@@ -318,7 +318,7 @@ async def on_ready():
     change_status_task = loop.create_task(change_status())
     monitor_noobs_task = loop.create_task(monitor_noobs())
     monitor_deletions_task = loop.create_task(monitor_deletions())
-    
+
 @bot.event
 async def on_member_join(member):
     global block_noobs
@@ -365,7 +365,7 @@ async def on_member_join(member):
         reply = f"{member.mention} joined using an unofficial invite. See audit log."
         await super_waifu_chat.send(reply)
     return
-    
+
 @bot.event
 async def on_command_error(ctx, error):
     error_text = str(error)
@@ -391,7 +391,7 @@ async def on_command_error(ctx, error):
     log_msg = f"[{ctx.author}] - [{ctx.channel}]\n[{error.__class__}]\n{ctx.message.content}"
     log.error(log_msg)
     return
-    
+
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
@@ -422,7 +422,7 @@ async def on_message(message):
         await detect_reposts(message)
         await rate_limiter(message)
     return
-    
+
 @bot.command(aliases=["help"])
 @commands.guild_only()
 async def wtf(ctx):
@@ -457,7 +457,7 @@ async def members(ctx, role: discord.Role):
         await ctx.send(page)
         await asyncio.sleep(1)
     return
-    
+
 @bot.command(aliases=["games"])
 @commands.guild_only()
 async def roles(ctx):
@@ -484,7 +484,7 @@ async def roles(ctx):
         await ctx.send(page)
         await asyncio.sleep(1)
     return
-    
+
 @bot.command()
 @commands.guild_only()
 async def join(ctx, role: discord.Role):
@@ -501,7 +501,7 @@ async def join(ctx, role: discord.Role):
     reply = f"{ctx.author.mention}, you now have the '{role.name}' role"
     await ctx.send(reply)
     return
-    
+
 @bot.command()
 @commands.guild_only()
 async def leave(ctx, role: discord.Role):
@@ -540,7 +540,7 @@ async def _color(ctx):
     reply = f"{ctx.author.mention}, Waifu Pink:tm: is hex: `#ff3fb4`, RGB: `(255, 63, 180)`."
     await ctx.send(reply)
     return
-    
+
 @bot.command(name="random")
 @commands.guild_only()
 async def _random(ctx):
@@ -588,7 +588,7 @@ async def catfact(ctx):
                 fact = fact.replace("s's", "s'")
             await ctx.send(fact)
     return
-        
+
 @bot.command()
 @commands.check(is_silly_channel)
 @commands.guild_only()
@@ -621,7 +621,7 @@ async def sponge(ctx, target: typing.Optional[typing.Union[discord.Member, disco
     file.close()
     await pending.delete()
     return
-        
+
 @bot.command()
 @commands.check(is_silly_channel)
 @commands.guild_only()
@@ -670,12 +670,14 @@ async def quoth(ctx, target: typing.Optional[typing.Union[discord.Member, discor
     embed.add_field(name="Quote", value=value, inline=False)
     await ctx.send(embed=embed)
     return
- 
+
 @bot.command()
 @commands.check(is_silly_channel)
 @commands.guild_only()
 async def inspire(ctx, *, phrase: typing.Optional[str]):
     """Request a random inspirational work of art."""
+    if ctx.author.id == 247943708371189761:
+        phrase = None
     quote = get_quote(ctx.channel, phrase)
     if quote == None:
         quote = get_quote(ctx.channel, None)
@@ -701,7 +703,7 @@ async def inspire(ctx, *, phrase: typing.Optional[str]):
     file.close()
     await pending.delete()
     return
-    
+
 @bot.command()
 @commands.check(is_silly_channel)
 @commands.guild_only()
@@ -713,7 +715,7 @@ async def shake(ctx, *, target: typing.Optional[typing.Union[discord.Member, dis
     async for message in ctx.channel.history(limit=20):
         messages.append(message)
     messages.pop(0)
-    if target == None and len(ctx.message.attachments) == 0:   
+    if target == None and len(ctx.message.attachments) == 0:
         text = messages[0].clean_content
         attachments = messages[0].attachments
     elif isinstance(target, discord.Member):
@@ -765,7 +767,7 @@ async def shake(ctx, *, target: typing.Optional[typing.Union[discord.Member, dis
                 file.close()
     await pending.delete()
     return
-    
+
 @bot.command(hidden=True, aliases=['creategame'])
 @commands.has_role("super_waifu")
 @commands.check(is_super_channel)
@@ -798,7 +800,7 @@ async def createrole(ctx, role: str):
     reply = f"{ctx.author.mention} has created the {role.mention} role.\nBerate them if they didn't follow the '{convention}' convention"
     await super_waifu_chat.send(reply)
     return
-    
+
 @bot.command(hidden=True, aliases=['deletegame'])
 @commands.has_role("super_waifu")
 @commands.check(is_super_channel)
@@ -823,7 +825,7 @@ async def deleterole(ctx, role: discord.Role):
     await role.delete()
     await super_waifu_chat.send(reply)
     return
-    
+
 @bot.command(hidden=True)
 @commands.has_role("super_waifu")
 @commands.check(is_super_channel)
@@ -837,7 +839,7 @@ async def superwtf(ctx):
     reply = reply + "\nIf I'm not working correctly, go fuck yourself, you aren't my boss."
     await ctx.send(reply)
     return
-    
+
 @bot.command(hidden=True)
 @commands.has_role("super_waifu")
 @commands.check(is_super_channel)
@@ -851,7 +853,7 @@ async def invite(ctx, *, reason):
     reply = f"{ctx.author.mention} created an invite with reason: '{reason}'.\n<{invite.url}>"
     await super_waifu_chat.send(reply)
     return
-    
+
 @bot.command(hidden=True)
 @commands.has_role("super_waifu")
 @commands.check(is_super_channel)
@@ -922,7 +924,7 @@ async def say(ctx, channel: discord.TextChannel, *, text: typing.Optional[str]):
     reply = f"{ctx.author.mention} made me say something in {channel.mention}."
     await super_waifu_chat.send(reply)
     return
-    
+
 @bot.command(hidden=True)
 @commands.has_role("admin")
 @commands.check(is_super_channel)
@@ -931,11 +933,11 @@ async def die(ctx):
     """Kill my currently running instance. I won't forget this."""
     reply = random.choice(strings['last_words'])
     await ctx.send(reply)
-    exit(0)                
+    exit(0)
     return
 
 global block_noobs
-block_noobs = False               
+block_noobs = False
 create_database()
 token = config["discord"]["token"]
 bot.run(token)
