@@ -311,6 +311,75 @@ async def monitor_deletions():
             reply = f"**Embed {index + 1} of {len(deleted_embeds)}**"
             await channel.send(reply, embed=embed)
 
+@asyncio.coroutine
+async def monitor_joins():
+    global block_noobs
+    guild = get_guild()
+    super_waifu_chat = get_channel("super_waifu_chat")
+    title = f"**NOOB DETECTED :joyfuljigo:**"
+    previous_invites = await guild.invites()
+    while True:
+        try:
+            member = await bot.wait_for("member_join", timeout=3)
+        except asyncio.TimeoutError:
+            previous_invites = await guild.invites()
+            continue
+        description = f"Noob: {member.mention}\n"
+        embed = discord.Embed(title=title, description=description, color=waifu_pink)
+        invite_found = None
+        invites = await guild.invites()
+        for invite in invites:
+            for previous_invite in previous_invites:
+                if invite.id == previous_invite.id:
+                    if invite.uses != previous_invite.uses:
+                        invite_found = invite
+        previous_invites = invites
+        if invite_found is not None:
+            invite_details = get_invite_details(invite_found)
+            channel = invite_found.channel
+            url = invite_found.url
+            if invite_found.max_uses == 2 and invite_found.uses == 1 and invite_details is not None:
+                invite_type = "USER"
+                invited_by = guild.get_member(int(invite_details[3])).mention
+                reason = invite_details[7]
+                await invite_found.delete()
+            elif invite_found.max_uses == 100 and invite_details is not None:
+                invite_type = "EVENT"
+                invited_by = guild.get_member(int(invite_details[3])).mention
+                reason = invite_details[7]
+            else:
+                invite_type = "UNOFFICIAL"
+                invited_by = invite_found.inviter.mention
+                reason = f"Fuck if I know. Ask {invited_by}."
+                await invite_found.delete()
+            value = f"Type: {invite_type}\nCreated by: {invited_by}\nChannel: {channel.mention}\nReason: {reason}\nURL: {url}\n"
+        else:
+            value = "ERROR: NO MATCHING INVITE FOUND"
+        embed.add_field(name="Invite", value=value, inline=False)
+        await super_waifu_chat.send(embed=embed)
+        super_waifu = get_role("super_waifu")
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(read_messages=False),
+            guild.me: discord.PermissionOverwrite(read_messages=True),
+            super_waifu: discord.PermissionOverwrite(read_messages=True),
+            member: discord.PermissionOverwrite(read_messages=True)
+        }
+        block_noobs = True
+        await member.add_roles(get_role("noob"))
+        channel = await guild.create_text_channel("welcome_noob", topic=str(member.id), overwrites=overwrites)
+        block_noobs = False
+        reply = f"Hey {member.mention}, welcome to Waifus_4_Lifu! I'm WaifuBot, I manage various things here. Here is a basic outline of our rules:"
+        await channel.send(reply)
+        reply = "1. Don't be a dick. We all like to have fun and mess around but let's try and keep it playful! On that note, please try and keep negativity to a minimum. All it does is bring everyone else down and we don't want that! This is intended to be a fun environment.\n\n"
+        reply = reply + "2. Introduce yourself before you start posting! Everybody is welcome, we just want to know who you are and what you are into!\n\n"
+        reply = reply + "3. If you want to post something NSFW (or just shitpost memes) then we have a channel for that! Just remember if its illegal we don't want to see it and you will be immediately banned without question. The shitposting channel has it's own special rules, please read them if you decide to join it. To gain access to the channel just type `!join shitty_people` in general and WaifuBot will grant you access!\n\n"
+        reply = reply + "4. Speaking of, we have a bot! If you want a list of commands just type `!wtf` or `!help` and WaifuBot will explain!\n\n"
+        reply = reply + "5. If you have a problem of some sort, tag a Super Waifu. They are here to help!\n\n"
+        reply = reply + "6. We have voice channels for specific games and for general conversation! Please try and use the appropriate channel based on what you are playing or doing.\n\n"
+        reply = reply + "7. We don't have rules for all types of behaviors and actions. That being said, if a Super Waifu or Admin contacts you regarding something you have said or done, please be willing to comply. We try our hardest to make sure everybody here is having a good time. On that same note, if you have some sort of issue or concern with something that has been said or done then please bring it to a Super Waifu or Admin's attention. Your concern will be reviewed and addressed appropriately.\n\n"
+        reply = reply + "8. Have fun! That is why we made this server!\n\n**Before we continue, what's rule #1?**"
+        await channel.send(reply)
+
 @bot.event
 async def on_ready():
     log.info(f"Logged on as {bot.user}")
@@ -318,53 +387,7 @@ async def on_ready():
     change_status_task = loop.create_task(change_status())
     monitor_noobs_task = loop.create_task(monitor_noobs())
     monitor_deletions_task = loop.create_task(monitor_deletions())
-
-@bot.event
-async def on_member_join(member):
-    global block_noobs
-    official_invite = False
-    if member.bot:
-        return
-    guild = member.guild
-    super_waifu_chat = get_channel("super_waifu_chat")
-    invites = await get_channel("welcome_and_rules").invites()
-    for invite in invites:
-        invite_details = get_invite_details(invite)
-        if invite.uses == 1 and invite.max_uses == 2 and invite_details != None:
-            official_invite = True
-            invited_by = guild.get_member(int(invite_details[3]))
-            reason = invite_details[7]
-            reply = f"{member.mention} joined using an invite created by {invited_by.mention} with reason: '{reason}'"
-            await super_waifu_chat.send(reply)
-            update_invite_details(invite, member)
-            await invite.delete()
-    super_waifu = get_role("super_waifu")
-    overwrites = {
-        guild.default_role: discord.PermissionOverwrite(read_messages=False),
-        guild.me: discord.PermissionOverwrite(read_messages=True),
-        super_waifu: discord.PermissionOverwrite(read_messages=True),
-        member: discord.PermissionOverwrite(read_messages=True)
-        }
-    block_noobs = True
-    await member.add_roles(get_role("noob"))
-    channel = await guild.create_text_channel("welcome_noob", topic=str(member.id), overwrites=overwrites)
-    block_noobs = False
-    reply = f"Hey {member.mention}, welcome to Waifus_4_Lifu! I'm WaifuBot, I manage various things here. Here is a basic outline of our rules:"
-    await channel.send(reply)
-    await asyncio.sleep(3)
-    reply = "1. Don't be a dick. We all like to have fun and mess around but let's try and keep it playful! On that note, please try and keep negativity to a minimum. All it does is bring everyone else down and we don't want that! This is intended to be a fun environment.\n\n"
-    reply = reply + "2. Introduce yourself before you start posting! Everybody is welcome, we just want to know who you are and what you are into!\n\n"
-    reply = reply + "3. If you want to post something NSFW (or just shitpost memes) then we have a channel for that! Just remember if its illegal we don't want to see it and you will be immediately banned without question. The shitposting channel has it's own special rules, please read them if you decide to join it. To gain access to the channel just type `!join shitty_people` in general and WaifuBot will grant you access!\n\n"
-    reply = reply + "4. Speaking of, we have a bot! If you want a list of commands just type `!wtf` or `!help` and WaifuBot will explain!\n\n"
-    reply = reply + "5. If you have a problem of some sort, tag a Super Waifu. They are here to help!\n\n"
-    reply = reply + "6. We have voice channels for specific games and for general conversation! Please try and use the appropriate channel based on what you are playing or doing.\n\n"
-    reply = reply + "7. We don't have rules for all types of behaviors and actions. That being said, if a Super Waifu or Admin contacts you regarding something you have said or done, please be willing to comply. We try our hardest to make sure everybody here is having a good time. On that same note, if you have some sort of issue or concern with something that has been said or done then please bring it to a Super Waifu or Admin's attention. Your concern will be reviewed and addressed appropriately.\n\n"
-    reply = reply + "8. Have fun! That is why we made this server!\n\n**Before we continue, what's rule #1?**"
-    await channel.send(reply)
-    if not official_invite:
-        reply = f"{member.mention} joined using an unofficial invite. See audit log."
-        await super_waifu_chat.send(reply)
-    return
+    monitor_joins_task = loop.create_task(monitor_joins())
 
 @bot.event
 async def on_command_error(ctx, error):
@@ -844,14 +867,23 @@ async def superwtf(ctx):
 @commands.has_role("super_waifu")
 @commands.check(is_super_channel)
 @commands.guild_only()
-async def invite(ctx, *, reason):
-    """Create a one time use invite for the specified person/reason."""
-    welcome_channel = get_channel("welcome_and_rules")
+async def invite(ctx, channel: typing.Optional[discord.TextChannel], *, reason):
+    """Create an invite for the specified person/channel and reason."""
+    if channel == None:
+        channel = get_channel("welcome_and_rules")
+        type = "USER"
+        invite = await channel.create_invite(max_age=86400, max_uses=2, temporary=False, unique=True, reason=reason)
+    else:
+        type = "EVENT"
+        invite = await channel.create_invite(max_uses=100, temporary=False, unique=True, reason=reason)
     super_waifu_chat = get_channel("super_waifu_chat")
-    invite = await welcome_channel.create_invite(max_age=86400, max_uses=2, temporary=False, unique=True, reason=reason)
     store_invite_details(invite, ctx.author, reason)
-    reply = f"{ctx.author.mention} created an invite with reason: '{reason}'.\n<{invite.url}>"
-    await super_waifu_chat.send(reply)
+    title = f"**{type} INVITE CREATED :love_letter:**"
+    description = f"Created by: {ctx.author.mention}\nChannel: {channel.mention}\nReason: {reason}\n"
+    embed = discord.Embed(title=title, description=description, color=waifu_pink)
+    value = f"URL: {invite.url}"
+    embed.add_field(name="Invite", value=value, inline=False)
+    await super_waifu_chat.send(embed=embed)
     return
 
 @bot.command(hidden=True)
