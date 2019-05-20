@@ -52,6 +52,12 @@ def get_channel(name):
             return channel
     return None
 
+def get_category(name):
+    for category in get_guild().categories:
+        if category.name.lower() == name.lower():
+            return category
+    return None
+
 def get_channel_by_topic(topic):
     for channel in get_guild().text_channels:
         if channel.topic == topic:
@@ -347,11 +353,11 @@ async def monitor_joins():
                 invite_type = "EVENT"
                 invited_by = guild.get_member(int(invite_details[3])).mention
                 reason = invite_details[7]
+                await member.add_roles(get_role("quarantine"))
             else:
                 invite_type = "UNOFFICIAL"
                 invited_by = invite_found.inviter.mention
                 reason = f"Fuck if I know. Ask {invited_by}."
-                await invite_found.delete()
             value = f"Type: {invite_type}\nCreated by: {invited_by}\nChannel: {channel.mention}\nReason: {reason}\nURL: {url}\n"
         else:
             value = "ERROR: NO MATCHING INVITE FOUND"
@@ -927,6 +933,57 @@ async def deletequote(ctx, id: typing.Optional[typing.Union[int, str]]):
         value = f"\"{text}\""
         embed.add_field(name="Quote", value=value, inline=False)
         await ctx.send(embed=embed)
+    return
+
+@bot.command(hidden=True)
+@commands.has_role("admin")
+@commands.check(is_super_channel)
+@commands.guild_only()
+async def createevent(ctx, *, name):
+    """Create an event category with text and voice channels."""
+    name = ascii_only(name).replace(" ", "_").upper()
+    general = get_category("GENERAL")
+    category = await general.clone(name=name)
+    quarantine_role = get_role("quarantine")
+    noob_role = get_role("noob")
+    overwrites = {
+        noob_role: discord.PermissionOverwrite(read_messages=False, send_messages=False, connect=False, speak=False),
+        quarantine_role: discord.PermissionOverwrite(read_messages=None, send_messages=None, connect=None, speak=None)
+    }
+    primary_channel = await category.create_text_channel(name=f"{name.lower()}_chat")
+    await category.create_voice_channel(name=f"{name.lower()}_voice")
+    await category.create_text_channel(name="questions", slowmode_delay=300)
+    await category.create_text_channel(name="looking_for_room")
+    await category.create_text_channel(name="quarantine_chat", overwrites=overwrites, slowmode_delay=10)
+    await category.create_voice_channel(name="quarantine_voice", overwrites=overwrites)
+    super_waifu_chat = get_channel("super_waifu_chat")
+    title = "**EVENT CREATED :confetti_ball:**"
+    description = f"Event: {category.name}\nCreated by: {ctx.author.mention}\nPrimary channel: {primary_channel.mention}\n"
+    embed = discord.Embed(title=title, description=description, color=waifu_pink)
+    value = f"`!invite {primary_channel.name} <reason>` - Create 100 use event invite.\n`!deleteevent {category.name}` - Pretty self-explanatory.\n"
+    embed.add_field(name="Commands", value=value, inline=False)
+    await super_waifu_chat.send(embed=embed)
+    return
+
+@bot.command(hidden=True)
+@commands.has_role("admin")
+@commands.check(is_super_channel)
+@commands.guild_only()
+async def deleteevent(ctx, event: discord.CategoryChannel):
+    for channel in event.channels:
+        await channel.delete()
+    await event.delete()
+    super_waifu_chat = get_channel("super_waifu_chat")
+    title = "**EVENT DELETED :cry:**"
+    description = f"Event: {event.name}\nDeleted by: {ctx.author.mention}\n"
+    embed = discord.Embed(title=title, description=description, color=waifu_pink)
+    quarantined = get_members_by_role("quarantine")
+    if len(quarantined) > 0:
+        value = ""
+        for member in quarantined:
+            value = value + f"{member.mention}\n"
+        embed.add_field(name="Quarantined users", value=value, inline=False)
+    await super_waifu_chat.send(embed=embed)
     return
 
 @bot.command(hidden=True)
