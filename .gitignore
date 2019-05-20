@@ -3,6 +3,7 @@ images/inspire/*
 tmp/*
 sqlite/*
 config.yaml
+.idea/*
 
 !images/inspire/.gitkeep
 !tmp/.gitkeep
