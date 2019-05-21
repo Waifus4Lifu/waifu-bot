@@ -190,12 +190,21 @@ async def reply_noob(message):
         await asyncio.sleep(1)
         block_noobs = False
         general_chat = get_channel("general_chat")
+        if message.author not in general_chat.members:
+            for channel in get_guild().text_channels:
+                if "quarantine" in channel.name and message.author in channel.members:
+                    reply = f"Hey everyone, {message.author.mention} just joined. {message.author.mention}, please introduce yourself. Thanks!"
+                    await channel.send(reply)
+                    reply = f"Hey everyone, {message.author.mention} just joined in {channel.mention}!"
+                    await general_chat.send(reply)
+                    return
         reply = f"Hey everyone, {message.author.mention} just joined. {message.author.mention}, please introduce yourself. Thanks!"
         await general_chat.send(reply)
+        return
     else:
         reply = "Not quite. Try again."
         await message.channel.send(reply)
-    return
+        return
 
 async def always_sunny(message):
     text = message.clean_content.replace("*", "")
@@ -330,6 +339,18 @@ async def monitor_joins():
         except asyncio.TimeoutError:
             previous_invites = await guild.invites()
             continue
+        super_waifu_role = get_role("super_waifu")
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(read_messages=False),
+            guild.me: discord.PermissionOverwrite(read_messages=True),
+            super_waifu_role: discord.PermissionOverwrite(read_messages=True),
+            member: discord.PermissionOverwrite(read_messages=True)
+        }
+        block_noobs = True
+        noob_channel = await guild.create_text_channel("welcome_noob", topic=str(member.id), overwrites=overwrites)
+        await asyncio.sleep(1)
+        await member.add_roles(get_role("noob"))
+        block_noobs = False
         description = f"Noob: {member.mention}\n"
         embed = discord.Embed(title=title, description=description, color=waifu_pink)
         invite_found = None
@@ -342,42 +363,32 @@ async def monitor_joins():
         previous_invites = invites
         if invite_found is not None:
             invite_details = get_invite_details(invite_found)
-            channel = invite_found.channel
             url = invite_found.url
+            invite_channel = invite_found.channel
             if invite_found.max_uses == 2 and invite_found.uses == 1 and invite_details is not None:
-                invite_type = "USER"
+                event_name = None
                 invited_by = guild.get_member(int(invite_details[3])).mention
                 reason = invite_details[7]
                 await invite_found.delete()
+                update_invite_details(invite_found, member)
             elif invite_found.max_uses == 100 and invite_details is not None:
-                invite_type = "EVENT"
                 invited_by = guild.get_member(int(invite_details[3])).mention
                 reason = invite_details[7]
-                event_role = get_role(channel.name.replace("_chat", ""))
+                event_name = invite_details[8].replace("_chat", "")
+                event_role = get_role(event_name)
                 await member.add_roles(event_role)
                 await member.add_roles(get_role("quarantine"))
             else:
-                invite_type = "UNOFFICIAL"
+                event_name = "UNOFFICIAL"
                 invited_by = invite_found.inviter.mention
                 reason = f"Fuck if I know. Ask {invited_by}."
-            value = f"Type: {invite_type}\nCreated by: {invited_by}\nChannel: {channel.mention}\nReason: {reason}\nURL: {url}\n"
+            value = f"Event: {event_name}\nCreated by: {invited_by}\nChannel: {invite_channel.mention}\nReason: {reason}\nURL: {url}\n"
         else:
             value = "ERROR: NO MATCHING INVITE FOUND"
         embed.add_field(name="Invite", value=value, inline=False)
         await super_waifu_chat.send(embed=embed)
-        super_waifu = get_role("super_waifu")
-        overwrites = {
-            guild.default_role: discord.PermissionOverwrite(read_messages=False),
-            guild.me: discord.PermissionOverwrite(read_messages=True),
-            super_waifu: discord.PermissionOverwrite(read_messages=True),
-            member: discord.PermissionOverwrite(read_messages=True)
-        }
-        block_noobs = True
-        await member.add_roles(get_role("noob"))
-        channel = await guild.create_text_channel("welcome_noob", topic=str(member.id), overwrites=overwrites)
-        block_noobs = False
         reply = f"Hey {member.mention}, welcome to Waifus_4_Lifu! I'm WaifuBot, I manage various things here. Here is a basic outline of our rules:"
-        await channel.send(reply)
+        await noob_channel.send(reply)
         reply = "1. Don't be a dick. We all like to have fun and mess around but let's try and keep it playful! On that note, please try and keep negativity to a minimum. All it does is bring everyone else down and we don't want that! This is intended to be a fun environment.\n\n"
         reply = reply + "2. Introduce yourself before you start posting! Everybody is welcome, we just want to know who you are and what you are into!\n\n"
         reply = reply + "3. If you want to post something NSFW (or just shitpost memes) then we have a channel for that! Just remember if its illegal we don't want to see it and you will be immediately banned without question. The shitposting channel has it's own special rules, please read them if you decide to join it. To gain access to the channel just type `!join shitty_people` in general and WaifuBot will grant you access!\n\n"
@@ -386,7 +397,7 @@ async def monitor_joins():
         reply = reply + "6. We have voice channels for specific games and for general conversation! Please try and use the appropriate channel based on what you are playing or doing.\n\n"
         reply = reply + "7. We don't have rules for all types of behaviors and actions. That being said, if a Super Waifu or Admin contacts you regarding something you have said or done, please be willing to comply. We try our hardest to make sure everybody here is having a good time. On that same note, if you have some sort of issue or concern with something that has been said or done then please bring it to a Super Waifu or Admin's attention. Your concern will be reviewed and addressed appropriately.\n\n"
         reply = reply + "8. Have fun! That is why we made this server!\n\n**Before we continue, what's rule #1?**"
-        await channel.send(reply)
+        await noob_channel.send(reply)
 
 @asyncio.coroutine
 async def update_countdowns():
@@ -405,6 +416,9 @@ async def update_countdowns():
                         await channel.edit(name="countdown_error")
                         continue
                     delta = time_until(date_time)
+                    if delta.total_seconds() < 50:
+                        await channel.delete()
+                        continue
                     formatted_delta = format_countdown(delta)
                     if channel.name != formatted_delta:
                         try:
@@ -719,6 +733,12 @@ async def quoth(ctx, target: typing.Optional[typing.Union[discord.Member, discor
         answer = await yes_no_timeout(ctx, reply)
         if answer == False or answer == None:
             return
+    if ctx.channel != target.channel:
+        reply = f"Nice try {ctx.author.mention}. Though you are being a dick."
+        await ctx.send(reply)
+        reply = f"{ctx.author.mention} tried to cross-quoth. Pretty dickish if you ask me."
+        await get_channel("super_waifu_chat").send(reply)
+        return
     clean_content = store_quote(target, ctx)
     title = "**QUOTE STORED :floppy_disk:**"
     description = f"Author: {target.author.mention}\nStored by: {ctx.author.mention}\n"
@@ -901,23 +921,35 @@ async def superwtf(ctx):
 @commands.has_role("super_waifu")
 @commands.check(is_super_channel)
 @commands.guild_only()
-async def invite(ctx, channel: typing.Optional[discord.TextChannel], *, reason):
-    """Create an invite for the specified person/channel and reason."""
-    if channel == None:
-        channel = get_channel("welcome_and_rules")
+async def invite(ctx, *, reason: typing.Union[discord.CategoryChannel, str]):
+    """Create an invite for the specified reason."""
+    if isinstance(reason, str):
+        event_name = reason
+        event = get_category(event_name)
+    else:
+        event_name = reason.name
+        event = reason
+    event_role = get_role(event_name)
+    if event_name in config["roles"]["forbidden"]:
+        reply = f"{ctx.author.mention}, that is not a valid event/role."
+        await ctx.send(reply)
+        return
+    channel = get_channel("welcome_and_rules")
+    if event is None or event_role is None:
         type = "USER"
+        event_name = None
         invite = await channel.create_invite(max_age=86400, max_uses=2, temporary=False, unique=True, reason=reason)
     else:
         type = "EVENT"
+        reason = None
         invite = await channel.create_invite(max_uses=100, temporary=False, unique=True, reason=reason)
-    super_waifu_chat = get_channel("super_waifu_chat")
-    store_invite_details(invite, ctx.author, reason)
+    store_invite_details(invite, ctx.author, reason, event_name)
     title = f"**{type} INVITE CREATED :love_letter:**"
     description = f"Created by: {ctx.author.mention}\nChannel: {channel.mention}\nReason: {reason}\n"
     embed = discord.Embed(title=title, description=description, color=waifu_pink)
     value = f"URL: {invite.url}"
     embed.add_field(name="Invite", value=value, inline=False)
-    await super_waifu_chat.send(embed=embed)
+    await ctx.send(embed=embed)
     return
 
 @bot.command(hidden=True)
@@ -993,7 +1025,6 @@ async def createevent(ctx, event: typing.Union[discord.CategoryChannel, str], *,
     event_role = await guild.create_role(name=name.lower(), mentionable=True)
     countdown = {
         noob_role: discord.PermissionOverwrite(read_messages=False, send_messages=False, connect=False),
-        quarantine_role: discord.PermissionOverwrite(read_messages=False, send_messages=False, connect=False),
         guild.default_role: discord.PermissionOverwrite(send_messages=False, connect=False)
     }
     general = {
@@ -1017,13 +1048,12 @@ async def createevent(ctx, event: typing.Union[discord.CategoryChannel, str], *,
     await category.create_text_channel(name="looking_for_room", overwrites=general)
     await category.create_text_channel(name="quarantine_chat", overwrites=quarantine, slowmode_delay=10)
     await category.create_voice_channel(name="quarantine_voice", overwrites=quarantine)
-    super_waifu_chat = get_channel("super_waifu_chat")
     title = "**EVENT CREATED :confetti_ball:**"
     description = f"Event: {category.name}\nCreated by: {ctx.author.mention}\nPrimary channel: {primary_channel.mention}\nCountdown to: {YYYYMMDDHHMMSS}\n"
     embed = discord.Embed(title=title, description=description, color=waifu_pink)
-    value = f"`!invite` {primary_channel.mention} `<reason>` - Create 100 use event invite.\n`!deleteevent {category.name}` - Pretty self-explanatory.\n`!join {event_role.name}` - Get access to channels.\n"
+    value = f"!invite {category.name} - Create 100 use event invite.\n!deleteevent {category.name} - Pretty self-explanatory.\n!join {event_role.name} - Get access to channels.\n"
     embed.add_field(name="Commands", value=value, inline=False)
-    await super_waifu_chat.send(embed=embed)
+    await ctx.send(embed=embed)
     return
 
 @bot.command(hidden=True)
@@ -1045,17 +1075,17 @@ async def deleteevent(ctx, *, event: typing.Union[discord.CategoryChannel, str])
     for channel in event.channels:
         await channel.delete()
     await event.delete()
-    super_waifu_chat = get_channel("super_waifu_chat")
     title = "**EVENT DELETED :cry:**"
     description = f"Event: {event.name}\nDeleted by: {ctx.author.mention}\n"
     embed = discord.Embed(title=title, description=description, color=waifu_pink)
     quarantined = get_members_by_role("quarantine")
-    if len(quarantined) > 0:
-        value = ""
-        for member in quarantined:
+    value = ""
+    for member in quarantined:
+        if event_role in member.roles:
             value = value + f"{member.mention}\n"
+    if value != "":
         embed.add_field(name="Quarantined users", value=value, inline=False)
-    await super_waifu_chat.send(embed=embed)
+    await ctx.send(embed=embed)
     await event_role.delete()
     return
 

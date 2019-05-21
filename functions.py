@@ -167,7 +167,7 @@ def get_hashes(bytes_hash, channel_category):
         cursor.execute(sql, (bytes_hash, channel_category))
         return cursor.fetchall()
 
-def store_invite_details(invite, inviter, reason):
+def store_invite_details(invite, inviter, reason, event):
     with open_database() as database:
         cursor = database.cursor()
         id = invite.id
@@ -180,9 +180,9 @@ def store_invite_details(invite, inviter, reason):
         sql = """
             INSERT
             INTO invites
-            VALUES (?,?,?,?,?,?,?,?)
+            VALUES (?,?,?,?,?,?,?,?,?)
             """
-        cursor.execute(sql, (id, date_time_created, date_time_used, inviter_id, inviter_name, invitee_id, invitee_name, reason))
+        cursor.execute(sql, (id, date_time_created, date_time_used, inviter_id, inviter_name, invitee_id, invitee_name, reason, event))
         database.commit()
         return
 
@@ -296,8 +296,8 @@ def delete_quote(id):
 def create_database():
     if os.path.isfile(database_file_path):
         log.info(f"Database {database_file_name} found.")
-        return
-    log.error(f"Database {database_file_name} not found. Creating now...")
+    else:
+        log.error(f"Database {database_file_name} not found.")
     with open_database() as database:
         cursor = database.cursor()
         sql = """
@@ -310,11 +310,20 @@ def create_database():
                 "invitee_id"	INTEGER,
                 "Invitee_name"	TEXT,
                 "reason"	TEXT,
+                "event"     TEXT,
                 PRIMARY KEY("id")
                 )
             """
         cursor.execute(sql)
         database.commit()
+        sql = """
+            ALTER TABLE invites ADD COLUMN event TEXT;
+            """
+        try:
+            cursor.execute(sql)
+            database.commit()
+        except:
+            database.rollback()
         sql = """
             CREATE TABLE IF NOT EXISTS "quotes" (
                 "id"	INTEGER,
@@ -331,7 +340,7 @@ def create_database():
         cursor.execute(sql)
         database.commit()
         sql = """
-            CREATE TABLE "hashes" (
+            CREATE TABLE IF NOT EXISTS "hashes" (
                 "id"	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
                 "hash"	INTEGER,
                 "date_time"	TEXT,
