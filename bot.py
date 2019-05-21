@@ -353,6 +353,8 @@ async def monitor_joins():
                 invite_type = "EVENT"
                 invited_by = guild.get_member(int(invite_details[3])).mention
                 reason = invite_details[7]
+                event_role = get_role(channel.name.replace("_chat", ""))
+                await member.add_roles(event_role)
                 await member.add_roles(get_role("quarantine"))
             else:
                 invite_type = "UNOFFICIAL"
@@ -386,6 +388,31 @@ async def monitor_joins():
         reply = reply + "8. Have fun! That is why we made this server!\n\n**Before we continue, what's rule #1?**"
         await channel.send(reply)
 
+@asyncio.coroutine
+async def update_countdowns():
+    guild = get_guild()
+    while True:
+        for channel in guild.text_channels:
+            topic = channel.topic
+            if topic is not None:
+                if topic.startswith("countdown to "):
+                    timestamp = topic.replace("countdown to ", "")
+                    try:
+                        date_time = date_time_from_str(timestamp)
+                    except:
+                        topic = f"INVALID FORMAT: '{channel.topic}' try: 'countdown to YYYYMMDDHHMMSS'"
+                        await channel.edit(topic=topic)
+                        await channel.edit(name="countdown_error")
+                        continue
+                    delta = time_until(date_time)
+                    formatted_delta = format_countdown(delta)
+                    if channel.name != formatted_delta:
+                        try:
+                            await channel.edit(name=formatted_delta)
+                        except:
+                            pass
+        await asyncio.sleep(1)
+
 @bot.event
 async def on_ready():
     log.info(f"Logged on as {bot.user}")
@@ -394,6 +421,7 @@ async def on_ready():
     monitor_noobs_task = loop.create_task(monitor_noobs())
     monitor_deletions_task = loop.create_task(monitor_deletions())
     monitor_joins_task = loop.create_task(monitor_joins())
+    update_countdowns_task = loop.create_task(update_countdowns())
 
 @bot.event
 async def on_command_error(ctx, error):
@@ -939,28 +967,61 @@ async def deletequote(ctx, id: typing.Optional[typing.Union[int, str]]):
 @commands.has_role("admin")
 @commands.check(is_super_channel)
 @commands.guild_only()
-async def createevent(ctx, *, name):
-    """Create an event category with text and voice channels."""
-    name = ascii_only(name).replace(" ", "_").upper()
-    general = get_category("GENERAL")
-    category = await general.clone(name=name)
-    quarantine_role = get_role("quarantine")
+async def createevent(ctx, event: typing.Union[discord.CategoryChannel, str], *, YYYYMMDDHHMMSS: typing.Optional[str]):
+    """Create an event category with channels and optional countdown."""
+    if isinstance(event, str):
+        event_name = event
+        event = get_category(event_name)
+    else:
+        event_name = event.name
+    event_role = get_role(event_name)
+    if event is not None or event_role is not None:
+        reply = f"{ctx.author.mention}, that event/role already exists."
+        await ctx.send(reply)
+        return
+    if YYYYMMDDHHMMSS is not None:
+        try:
+            date_time_from_str(YYYYMMDDHHMMSS)
+        except:
+            reply = f"{ctx.author.mention}, '{YYYYMMDDHHMMSS}' is an invalid date format. Try: 'YYYYMMDDHHMMSS'"
+            await ctx.send(reply)
+            return
+    name = ascii_only(event_name).replace(" ", "_").upper()
+    guild = get_guild()
     noob_role = get_role("noob")
-    overwrites = {
-        noob_role: discord.PermissionOverwrite(read_messages=False, send_messages=False, connect=False, speak=False),
-        quarantine_role: discord.PermissionOverwrite(read_messages=None, send_messages=None, connect=None, speak=None)
+    quarantine_role = get_role("quarantine")
+    event_role = await guild.create_role(name=name.lower(), mentionable=True)
+    countdown = {
+        noob_role: discord.PermissionOverwrite(read_messages=False, send_messages=False, connect=False),
+        quarantine_role: discord.PermissionOverwrite(read_messages=False, send_messages=False, connect=False),
+        guild.default_role: discord.PermissionOverwrite(send_messages=False, connect=False)
     }
-    primary_channel = await category.create_text_channel(name=f"{name.lower()}_chat")
-    await category.create_voice_channel(name=f"{name.lower()}_voice")
-    await category.create_text_channel(name="questions", slowmode_delay=300)
-    await category.create_text_channel(name="looking_for_room")
-    await category.create_text_channel(name="quarantine_chat", overwrites=overwrites, slowmode_delay=10)
-    await category.create_voice_channel(name="quarantine_voice", overwrites=overwrites)
+    general = {
+        noob_role: discord.PermissionOverwrite(read_messages=False, send_messages=False, connect=False),
+        quarantine_role: discord.PermissionOverwrite(read_messages=False, send_messages=False, connect=False),
+        event_role: discord.PermissionOverwrite(send_messages=True, connect=True),
+        guild.default_role: discord.PermissionOverwrite(send_messages=False, connect=False)
+    }
+    quarantine = {
+        noob_role: discord.PermissionOverwrite(read_messages=False, send_messages=False, connect=False),
+        event_role: discord.PermissionOverwrite(send_messages=True, connect=True),
+        guild.default_role: discord.PermissionOverwrite(send_messages=False, connect=False)
+    }
+    category = await guild.create_category_channel(name=name, overwrites=general)
+    if YYYYMMDDHHMMSS is not None:
+        topic = f"countdown to {YYYYMMDDHHMMSS}"
+        await category.create_text_channel(name="countdown", overwrites=countdown, topic=topic)
+    primary_channel = await category.create_text_channel(name=f"{name.lower()}_chat", overwrites=general)
+    await category.create_voice_channel(name=f"{name.lower()}_voice", overwrites=general)
+    await category.create_text_channel(name="questions", overwrites=general, slowmode_delay=300)
+    await category.create_text_channel(name="looking_for_room", overwrites=general)
+    await category.create_text_channel(name="quarantine_chat", overwrites=quarantine, slowmode_delay=10)
+    await category.create_voice_channel(name="quarantine_voice", overwrites=quarantine)
     super_waifu_chat = get_channel("super_waifu_chat")
     title = "**EVENT CREATED :confetti_ball:**"
-    description = f"Event: {category.name}\nCreated by: {ctx.author.mention}\nPrimary channel: {primary_channel.mention}\n"
+    description = f"Event: {category.name}\nCreated by: {ctx.author.mention}\nPrimary channel: {primary_channel.mention}\nCountdown to: {YYYYMMDDHHMMSS}\n"
     embed = discord.Embed(title=title, description=description, color=waifu_pink)
-    value = f"`!invite {primary_channel.name} <reason>` - Create 100 use event invite.\n`!deleteevent {category.name}` - Pretty self-explanatory.\n"
+    value = f"`!invite` {primary_channel.mention} `<reason>` - Create 100 use event invite.\n`!deleteevent {category.name}` - Pretty self-explanatory.\n`!join {event_role.name}` - Get access to channels.\n"
     embed.add_field(name="Commands", value=value, inline=False)
     await super_waifu_chat.send(embed=embed)
     return
@@ -969,7 +1030,18 @@ async def createevent(ctx, *, name):
 @commands.has_role("admin")
 @commands.check(is_super_channel)
 @commands.guild_only()
-async def deleteevent(ctx, event: discord.CategoryChannel):
+async def deleteevent(ctx, *, event: typing.Union[discord.CategoryChannel, str]):
+    """Delete an event category and channels."""
+    if isinstance(event, str):
+        event_name = event.lower()
+        event = get_category(event_name)
+    else:
+        event_name = event.name.lower()
+    event_role = get_role(event_name)
+    if event is None or event_role is None or event_name in config["roles"]["forbidden"]:
+        reply = f"{ctx.author.mention}, that is not a valid event/role."
+        await ctx.send(reply)
+        return
     for channel in event.channels:
         await channel.delete()
     await event.delete()
@@ -984,6 +1056,7 @@ async def deleteevent(ctx, event: discord.CategoryChannel):
             value = value + f"{member.mention}\n"
         embed.add_field(name="Quarantined users", value=value, inline=False)
     await super_waifu_chat.send(embed=embed)
+    await event_role.delete()
     return
 
 @bot.command(hidden=True)

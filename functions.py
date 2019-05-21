@@ -106,11 +106,29 @@ def format_delta(delta):
     formatted_delta = formatted_delta + f"{seconds}s"
     return formatted_delta
 
-def time_since(then):
-    return (datetime.utcnow() - then)
+def format_countdown(delta):
+    years = int(delta.days / 365)
+    days = int(delta.days % 365)
+    hours = int(delta.seconds / 3600)
+    minutes = int((delta.seconds % 3600) / 60)
+    formatted_delta = ""
+    if years != 0:
+        formatted_delta = formatted_delta + f"{years}Y_"
+    if days != 0:
+        formatted_delta = formatted_delta + f"{days}D_"
+    formatted_delta = formatted_delta + f"{hours}H_"
+    formatted_delta = formatted_delta + f"{minutes}M"
+    return formatted_delta
+
+def time_since(date_time):
+    return (datetime.utcnow() - date_time)
+
+def time_until(date_time):
+    return (date_time - datetime.utcnow())
 
 def date_time_from_str(timestamp):
-    return datetime.strptime(timestamp[:19], "%Y-%m-%d %H:%M:%S")
+    timestamp = re.sub('[^0-9]','', timestamp)
+    return datetime.strptime(timestamp[:19], "%Y%m%d%H%M%S")
 
 def seconds_since(then):
     return abs((datetime.utcnow() - then).total_seconds())
