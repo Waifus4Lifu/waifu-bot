@@ -1,9 +1,5 @@
 import io
-import os
-import sys
 import math
-import time
-import random
 import requests
 import textwrap
 from functions import *
@@ -198,7 +194,7 @@ def sunny(text):
     draw = ImageDraw.Draw(img)
     font_path = os.path.join(sys.path[0], "textile_regular.ttf")
     font = ImageFont.truetype(font_path, 100)
-    width = maximize_width(img, font, text, 750)
+    width = maximize_width(img, font, text, 250)
     width = equalize_width(img, font, text, width)
     text = textwrap.fill(text, width=width)
     text_size = draw.textsize(text=text, font=font)
@@ -279,3 +275,4 @@ def equalize_width(img, font, text, start_width):
         distances.append([i, distance])
     distances = sorted(distances, key=lambda x: x[1])
     return distances[0][0]
+
