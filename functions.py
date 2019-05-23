@@ -18,7 +18,7 @@ def paginate(text):
     lines = text.split("\n")
     page = ""
     for line in lines:
-        if len(page + line + "\n") < 2000:
+        if len(page + line + "\n") < 1024:
             page = page + line + "\n"
         else:
             pages.append(page)
@@ -127,7 +127,7 @@ def time_until(date_time):
     return (date_time - datetime.utcnow())
 
 def date_time_from_str(timestamp):
-    timestamp = re.sub('[^0-9]','', timestamp)
+    timestamp = re.sub('[^0-9]','', timestamp)[:14]
     return datetime.strptime(timestamp[:19], "%Y%m%d%H%M%S")
 
 def seconds_since(then):
@@ -139,7 +139,7 @@ def open_database():
 def store_hash(bytes_hash, message):
     with open_database() as database:
         cursor = database.cursor()
-        date_time = message.created_at
+        date_time = message.created_at.strftime("%Y%m%d%H%M%S")
         author_id = message.author.id
         author_name = message.author.display_name
         channel_name = message.channel.name

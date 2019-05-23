@@ -1,20 +1,14 @@
 #!/usr/bin/python3.6
 import io
-import os
-import re
-import sys
 import draw
-import random
 import typing
 import asyncio
 import aiohttp
-import discord
-import textwrap
 from functions import *
 from discord.ext import commands
 from datetime import datetime
 
-bot = commands.Bot(command_prefix="!", help_command=None)
+bot = commands.Bot(command_prefix="!", case_insensitive=True, help_command=None)
 
 def get_command_help(command):
     help = f"`{bot.command_prefix}{command.name} "
@@ -208,7 +202,7 @@ async def reply_noob(message):
 
 async def always_sunny(message):
     text = message.clean_content.replace("*", "")
-    text = message.clean_content.replace("_", "")
+    text = text.replace("_", "")
     text = ascii_only("\"" + text + "\"")
     pending = await message.channel.send("Drawing some dumb shit...")
     image = draw.sunny(text)
@@ -331,7 +325,7 @@ async def monitor_joins():
     global block_noobs
     guild = get_guild()
     super_waifu_chat = get_channel("super_waifu_chat")
-    title = f"**NOOB DETECTED :joyfuljigo:**"
+    title = f"**NOOB DETECTED :airplane_arriving:**"
     previous_invites = await guild.invites()
     while True:
         try:
@@ -507,26 +501,36 @@ async def wtf(ctx):
 
 @bot.command(aliases=["players"])
 @commands.guild_only()
-async def members(ctx, role: discord.Role):
+async def members(ctx, *, role):
     """Show a list of members who have signed up for a role/game."""
-    if role.name in config['roles']['forbidden']:
+    role_colors = [discord.Color.orange(), discord.Color.blue(), discord.Color.from_rgb(54, 57, 63)]
+    role = get_role(role)
+    if role is None:
+        reply = f"{ctx.author.mention}, that is not a valid role/game."
+        await ctx.send(reply)
+        return
+    if role.name in config['roles']['forbidden'] or role.color not in role_colors:
         reply = f"{ctx.author.mention}, this is a Forbidden Role:tm:. If you can't figure this out a different way, you don't deserve to know."
         await ctx.send(reply)
         return
-    if len(role.members) == 0:
-        reply = f"No members are signed up for '{role.name}'. It's probably a Stupid Role:tm:."
-        await ctx.send(reply)
-        return
-    length = 0
+    if role.color in [discord.Color.orange(), discord.Color.from_rgb(54, 57, 63)]:
+        member_type = "members"
+    else:
+        member_type = "players"
+    title = f"**{member_type.upper()} OF {role.name.upper()}**"
+    description = ""
     for member in role.members:
-        if len(member.display_name) > length:
-            length = len(member.display_name)
-    reply = f"The following members have signed up for '{role.name}':\n\n"
-    for member in role.members:
-        reply = reply + f"`{member.display_name.ljust(length)}{member.status.name.rjust(10)}`\n"
-    for page in paginate(reply):
-        await ctx.send(page)
-        await asyncio.sleep(1)
+        description = description + f"{member.mention}\n"
+    if description == "":
+        description = f"No {member_type.lower()} found."
+    color = role.color
+    pages = paginate(description)
+    for index, page in enumerate(pages):
+        if index == 0:
+            embed = discord.Embed(title=title, description=page, color=color)
+        else:
+            embed.add_field(name="Continued", value=page, inline=False)
+    await ctx.send(embed=embed)
     return
 
 @bot.command(aliases=["games"])
@@ -534,59 +538,78 @@ async def members(ctx, role: discord.Role):
 async def roles(ctx):
     """Show a list of mentionable roles/games you can join."""
     guild = get_guild()
-    length = 0
     roles = []
+    if ctx.invoked_with.lower() == "roles":
+        role_colors = [discord.Color.orange(), discord.Color.from_rgb(54, 57, 63)]
+        role_type = "roles"
+        emoji = ":passport_control:"
+    else:
+        role_colors = [discord.Color.blue()]
+        role_type = "games"
+        emoji = ":video_game:"
     for role in guild.roles:
         if role.name not in config["roles"]["forbidden"]:
-            if ctx.invoked_with == "roles" and role.name == role.name.lower():
+            if role.color in role_colors:
                 roles.append(role)
-                if len(role.name) > length:
-                    length = len(role.name)
-            elif ctx.invoked_with == "games" and role.name == role.name.upper():
-                roles.append(role)
-                if len(role.name) > length:
-                    length = len(role.name)
-    reply = f"The following {ctx.invoked_with} are joinable:\n\n"
+    title = f"**JOINABLE {role_type.upper()} {emoji}**"
+    description = ""
     for role in roles:
-        role_name = role.name.ljust(length)
-        count = str(len(role.members)).rjust(6)
-        reply = reply + f"`{role_name}{count}`\n"
-    for page in paginate(reply):
-        await ctx.send(page)
-        await asyncio.sleep(1)
+        description = description + f"{role.mention}\n"
+    if description == "":
+        description = f"No {role_type} found."
+    color = role_colors[0]
+    pages = paginate(description)
+    for index, page in enumerate(pages):
+        if index == 0:
+            embed = discord.Embed(title=title, description=page, color=color)
+        else:
+            embed.add_field(name="Continued", value=page, inline=False)
+    await ctx.send(embed=embed)
     return
 
 @bot.command()
 @commands.guild_only()
-async def join(ctx, role: discord.Role):
+async def join(ctx, *, role):
     """Join a mentionable role/game."""
-    if role.name in config['roles']['forbidden']:
+    role_colors = [discord.Color.orange(), discord.Color.blue(), discord.Color.from_rgb(54, 57, 63)]
+    role = get_role(role)
+    if role is None:
+        reply = f"{ctx.author.mention}, that is not a valid role/game."
+        await ctx.send(reply)
+        return
+    if role.name in config['roles']['forbidden'] or role.color not in role_colors:
         reply = f"{ctx.author.mention}, you can't join a Forbidden Role:tm:."
         await ctx.send(reply)
         return
     if role in ctx.author.roles:
-        reply = f"{ctx.author.mention}, you already have that role."
+        reply = f"{ctx.author.mention}, you already have the '{role.name}' role."
         await ctx.send(reply)
         return
     await ctx.author.add_roles(role)
-    reply = f"{ctx.author.mention}, you now have the '{role.name}' role"
+    reply = f"{ctx.author.mention}, you now have the '{role.name}' role."
     await ctx.send(reply)
     return
 
 @bot.command()
 @commands.guild_only()
-async def leave(ctx, role: discord.Role):
+async def leave(ctx, *, role):
     """Leave a mentionable role/game."""
-    if role.name in config['roles']['forbidden']:
+    role_colors = [discord.Color.orange(), discord.Color.blue(), discord.Color.from_rgb(54, 57, 63)]
+    role = get_role(role)
+    if role is None:
+        reply = f"{ctx.author.mention}, that is not a valid role/game."
+        await ctx.send(reply)
+        return
+    if role.name in config['roles']['forbidden'] or role.color not in role_colors:
         reply = f"{ctx.author.mention}, you can't leave a Forbidden Role:tm:."
         await ctx.send(reply)
         return
     if role not in ctx.author.roles:
-        reply = f"{ctx.author.mention}, you don't have that role."
+        reply = f"{ctx.author.mention}, you don't have the '{role.name}' role."
         await ctx.send(reply)
         return
     await ctx.author.remove_roles(role)
-    reply = f"{ctx.author.mention}, you no longer have the '{role.name}' role"
+    reply = f"{ctx.author.mention}, you no longer have the '{role.name}' role."
     await ctx.send(reply)
     return
 
@@ -849,33 +872,33 @@ async def shake(ctx, *, target: typing.Optional[typing.Union[discord.Member, dis
 @commands.has_role("super_waifu")
 @commands.check(is_super_channel)
 @commands.guild_only()
-async def createrole(ctx, role: str):
-    """Add a mentionable role. Required format: `WAIFUS_4_LIFU`."""
+async def createrole(ctx, *, role):
+    """Create a mentionable role."""
+    role_colors = [discord.Color.orange(), discord.Color.from_rgb(54, 57, 63)]
     guild = get_guild()
-    super_waifu_chat = get_channel("super_waifu_chat")
-    if ctx.invoked_with == "createrole":
-        if role != role.lower():
-            reply = "Roles must be lowercase."
-            await ctx.send(reply)
-            return
-        convention = "`waifus_4_lifu`"
-    else:
-        if role != role.upper():
-            reply = "Games must be uppercase."
-            await ctx.send(reply)
-            return
-        convention = "`WAIFUS_4_LIFU`"
-    if get_role(role) != None:
-        reply = "That role already exists, dummy."
+    role_name = ascii_only(role).lower().replace(" ", "_")
+    role = get_role(role_name)
+    if role != None:
+        if role.color in role_colors:
+            role_type = "game"
+        else:
+            role_type = "role"
+        reply = f"{ctx.author.mention}, that {role_type} already exists."
         await ctx.send(reply)
         return
-    if "_" not in role:
-        reply = f"I don't see any underscores. Are you sure you're following the '{convention}' convention?"
-        if not await yes_no_timeout(ctx, reply):
-            return
-    role = await guild.create_role(name=role, mentionable=True)
-    reply = f"{ctx.author.mention} has created the {role.mention} role.\nBerate them if they didn't follow the '{convention}' convention"
-    await super_waifu_chat.send(reply)
+    if ctx.invoked_with.lower() == "createrole":
+        role_type = "role"
+        emoji = ":passport_control:"
+        color = discord.Color.orange()
+    else:
+        role_type = "game"
+        emoji = ":video_game:"
+        color = discord.Color.blue()
+    role = await guild.create_role(name=role_name, color=color, mentionable=True)
+    title = f"**{role_type.upper()} CREATED {emoji}**"
+    description = f"{role_type.capitalize()}: {role.mention}\nCreated by: {ctx.author.mention}\n"
+    embed = discord.Embed(title=title, description=description, color=color)
+    await ctx.send(embed=embed)
     return
 
 @bot.command(hidden=True, aliases=['deletegame'])
@@ -884,23 +907,19 @@ async def createrole(ctx, role: str):
 @commands.guild_only()
 async def deleterole(ctx, role: discord.Role):
     """Delete a mentionable role."""
-    if role.name in config['roles']['forbidden']:
+    if role.name in config['roles']['forbidden'] or role.color not in [discord.Color.orange(), discord.Color.blue()]:
         reply = f"{ctx.author.mention}, that is a Forbidden Role:tm:."
         await ctx.send(reply)
         return
-    if ctx.invoked_with == "deleterole" and role.name == role.name.upper():
-        reply = f"{ctx.author.mention} that is a game."
-        await ctx.send(reply)
-        return
-    if ctx.invoked_with == "deletegame" and role.name == role.name.lower():
-        reply = f"{ctx.author.mention} that is not a game."
-        await ctx.send(reply)
-        return
-    guild = get_guild()
-    super_waifu_chat = get_channel("super_waifu_chat")
-    reply = f"{ctx.author.mention} has deleted the '{role.name}' role."
+    if role.color == discord.Color.orange():
+        role_type = "role"
+    else:
+        role_type = "game"
+    title = f"**{role_type.upper()} DELETED :fire:**"
+    description = f"{role_type.capitalize()}: {role.name}\nDeleted by: {ctx.author.mention}\n"
+    embed = discord.Embed(title=title, description=description, color=role.color)
     await role.delete()
-    await super_waifu_chat.send(reply)
+    await ctx.send(embed=embed)
     return
 
 @bot.command(hidden=True)
