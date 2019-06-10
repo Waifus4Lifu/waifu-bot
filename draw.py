@@ -1,23 +1,25 @@
 import io
 import math
+import random
 import requests
 import textwrap
 from functions import *
 from datetime import datetime
-from PIL import Image, ImageFont, ImageDraw
+from PIL import Image, ImageFont, ImageDraw, ImageSequence
 
 def shaky_text(text):
     frames = []
     frame = Image.new('RGBA', (1,1))
     draw = ImageDraw.Draw(frame)
-    font = ImageFont.truetype("arial.ttf", 15)
+    font_path = os.path.join(sys.path[0], "fonts", "whitney_medium.ttf")
+    font = ImageFont.truetype(font_path, 15)
     text_size = draw.textsize(text=text, font=font)
     text_size = (text_size[0] + 5, text_size[1] + 10)
     for index in range(50):
         frame = Image.new('RGBA', text_size, color=(54, 57, 62, 255))
         draw = ImageDraw.Draw(frame)
         offset = (random.randint(0, 5), random.randint(3, 7))
-        draw.text(offset, text, font=font, fill=(255, 255, 255, 255))
+        draw.text(offset, text, font=font, fill=(220, 221, 222, 255))
         frames.append(frame)
     output = io.BytesIO()
     output.name = f"{datetime.now().strftime('%Y%m%d%H%M%S')}.gif"
@@ -192,7 +194,7 @@ def inspiration(id, text, name, query, comical):
 def sunny(text):
     img = Image.new('RGB', (3840, 2160))
     draw = ImageDraw.Draw(img)
-    font_path = os.path.join(sys.path[0], "textile_regular.ttf")
+    font_path = os.path.join(sys.path[0], "fonts", "textile_regular.ttf")
     font = ImageFont.truetype(font_path, 100)
     width = maximize_width(img, font, text, 250)
     width = equalize_width(img, font, text, width)

@@ -170,7 +170,12 @@ async def yes_no_timeout(ctx, message):
 
 async def reply_noob(message):
     global block_noobs
-    if message.channel.topic != str(message.author.id):
+    if message.content.startswith("!"):
+        image_path = os.path.join(sys.path[0], "images", "power.gif")
+        file = discord.File(image_path)
+        reply = f"You don't have access to commands yet, noob."
+        await message.channel.send(reply, file=file)
+        file.close()
         return
     answer = re.sub("[^0-9a-zA-Z]+", "", message.clean_content).lower()
     if answer == "dontbeadick":
@@ -443,11 +448,17 @@ async def on_command_error(ctx, error):
         reply = f"{ctx.author.mention}, you sure are creative when it comes to syntax.\n{error_text}"
         await ctx.send(reply)
     elif isinstance(error, commands.MissingRole):
-        reply = f"Fucking what? {ctx.author.mention}, just who do you think you are?"
-        await ctx.send(reply)
+        image_path = os.path.join(sys.path[0], "images", "dennis.gif")
+        file = discord.File(image_path)
+        reply = f"{ctx.author.mention}, just who do you think you are?"
+        await ctx.send(reply, file=file)
+        file.close()
     elif isinstance(error, commands.NoPrivateMessage):
+        image_path = os.path.join(sys.path[0], "images", "power.gif")
+        file = discord.File(image_path)
         reply = f"Say, uh {ctx.author.mention}, let's find a better channel for this."
-        await ctx.send(reply)
+        await ctx.send(reply, file=file)
+        file.close()
     elif isinstance(error, commands.errors.CommandNotFound):
         reply = f"{ctx.author.mention}, that's not a valid command. Maybe try `!wtf`."
         await ctx.send(reply)
@@ -461,14 +472,14 @@ async def on_command_error(ctx, error):
 async def on_message(message):
     if message.author == bot.user:
         return
+    lower = message.clean_content.lower()
+    if isinstance(message.channel, discord.TextChannel):
+        if message.channel.name == "welcome_noob" and message.channel.topic == str(message.author.id):
+            await reply_noob(message)
+            return
     if message.content.startswith("!"):
         await bot.process_commands(message)
         return
-    lower = message.clean_content.lower()
-    if isinstance(message.channel, discord.TextChannel):
-        if message.channel.name == "welcome_noob":
-            await reply_noob(message)
-            return
     if "thank" in lower and "waifubot" in lower:
         reply = random.choice(strings["no_problem"])
         await message.channel.send(reply)
@@ -642,6 +653,8 @@ async def _random(ctx):
     await ctx.send(f"{ctx.author.mention}: 4")
     def check(answer):
         if answer.channel == ctx.channel:
+            if answer.author == bot.user:
+                return False
             is_not = ["n't", "not", "no", "crypto"]
             for word in is_not:
                 if (word in answer.content.lower() and "random" in answer.content.lower()) or answer.content.lower().startswith("!random"):
@@ -1041,7 +1054,7 @@ async def createevent(ctx, event: typing.Union[discord.CategoryChannel, str], *,
     guild = get_guild()
     noob_role = get_role("noob")
     quarantine_role = get_role("quarantine")
-    event_role = await guild.create_role(name=name.lower(), mentionable=True)
+    event_role = await guild.create_role(name=name.lower(), mentionable=True, color=discord.Color.orange())
     countdown = {
         noob_role: discord.PermissionOverwrite(read_messages=False, send_messages=False, connect=False),
         guild.default_role: discord.PermissionOverwrite(send_messages=False, connect=False)
