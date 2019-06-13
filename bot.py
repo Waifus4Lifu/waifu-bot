@@ -6,6 +6,7 @@ import asyncio
 import aiohttp
 from functions import *
 from discord.ext import commands
+from fuzzywuzzy import process
 from datetime import datetime
 
 bot = commands.Bot(command_prefix="!", case_insensitive=True, help_command=None)
@@ -63,6 +64,14 @@ def get_role(name):
         if role.name.lower() == name.lower():
             return role
     return None
+
+def get_joinable_roles():
+    joinable = []
+    role_colors = [discord.Color.orange(), discord.Color.blue(), discord.Color.from_rgb(54, 57, 63)]
+    for role in get_guild().roles:
+        if role.name not in config['roles']['forbidden'] and role.color in role_colors:
+            joinable.append(role)
+    return joinable
 
 def get_members_by_role(name):
     return get_role(name).members
@@ -569,47 +578,55 @@ async def roles(ctx):
 
 @bot.command()
 @commands.guild_only()
-async def join(ctx, *, role):
+async def join(ctx, *, role: typing.Union[discord.Role, str]):
     """Join a mentionable role/game."""
     role_colors = [discord.Color.orange(), discord.Color.blue(), discord.Color.from_rgb(54, 57, 63)]
-    role = get_role(role)
+    role_name = role
+    if isinstance(role, str):
+        role = get_role(role)
     if role is None:
-        reply = f"{ctx.author.mention}, that is not a valid role/game."
-        await ctx.send(reply)
-        return
-    if role.name in config['roles']['forbidden'] or role.color not in role_colors:
+        joinable = get_joinable_roles()
+        joinable_names = []
+        for role in joinable:
+            joinable_names.append(role.name)
+        suggested = process.extractOne(role_name, joinable_names)[0]
+        reply = f"{ctx.author.mention}, that is not a valid role/game. Maybe try: `!join {suggested}`"
+    elif role.name in config['roles']['forbidden'] or role.color not in role_colors:
         reply = f"{ctx.author.mention}, you can't join a Forbidden Role:tm:."
-        await ctx.send(reply)
-        return
-    if role in ctx.author.roles:
+    elif role in ctx.author.roles:
         reply = f"{ctx.author.mention}, you already have the '{role.name}' role."
-        await ctx.send(reply)
-        return
-    await ctx.author.add_roles(role)
-    reply = f"{ctx.author.mention}, you now have the '{role.name}' role."
+    else:
+        await ctx.author.add_roles(role)
+        reply = f"{ctx.author.mention}, you now have the '{role.name}' role."
+    if len(ctx.message.role_mentions) > 0:
+        reply = reply + "\n\nOh, and don't mention it. Literally. Don't @ me!"
     await ctx.send(reply)
     return
 
 @bot.command()
 @commands.guild_only()
-async def leave(ctx, *, role):
+async def leave(ctx, *, role: typing.Union[discord.Role, str]):
     """Leave a mentionable role/game."""
     role_colors = [discord.Color.orange(), discord.Color.blue(), discord.Color.from_rgb(54, 57, 63)]
-    role = get_role(role)
+    role_name = role
+    if isinstance(role, str):
+        role = get_role(role)
     if role is None:
-        reply = f"{ctx.author.mention}, that is not a valid role/game."
-        await ctx.send(reply)
-        return
-    if role.name in config['roles']['forbidden'] or role.color not in role_colors:
+        joinable = get_joinable_roles()
+        joinable_names = []
+        for role in joinable:
+            joinable_names.append(role.name)
+        suggested = process.extractOne(role_name, joinable_names)[0]
+        reply = f"{ctx.author.mention}, that is not a valid role/game. Maybe try: `!leave {suggested}`"
+    elif role.name in config['roles']['forbidden'] or role.color not in role_colors:
         reply = f"{ctx.author.mention}, you can't leave a Forbidden Role:tm:."
-        await ctx.send(reply)
-        return
-    if role not in ctx.author.roles:
+    elif role not in ctx.author.roles:
         reply = f"{ctx.author.mention}, you don't have the '{role.name}' role."
-        await ctx.send(reply)
-        return
-    await ctx.author.remove_roles(role)
-    reply = f"{ctx.author.mention}, you no longer have the '{role.name}' role."
+    else:
+        await ctx.author.remove_roles(role)
+        reply = f"{ctx.author.mention}, you no longer have the '{role.name}' role."
+    if len(ctx.message.role_mentions) > 0:
+        reply = reply + "\n\nOh, and don't mention it. Literally. Don't @ me!"
     await ctx.send(reply)
     return
 
