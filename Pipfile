@@ -1,0 +1,17 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+aiohttp = "*"
+PyYAML = "*"
+requests = "*"
+Pillow = "*"
+fuzzywuzzy = "*"
+"discord.py" = ">=1.2.3"
+
+[dev-packages]
+
+[requires]
+python_version = "3.7"

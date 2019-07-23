@@ -1,4 +1,3 @@
-#!/usr/bin/python3.6 -u
 import io
 import draw
 import typing
