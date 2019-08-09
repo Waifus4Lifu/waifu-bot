@@ -5,6 +5,7 @@ tmp/*
 sqlite/*
 config.yaml
 .idea/*
+.vscode/*
 
 !images/inspire/.gitkeep
 !tmp/.gitkeep
