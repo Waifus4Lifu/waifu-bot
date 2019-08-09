@@ -894,8 +894,9 @@ async def resetroles(ctx):
     msg = '**GAMES:**'
     await channel.send(msg)
     for role in games:
-        description = 'This is a test description:'
-        msg = role.name + ' - ' + description
+        #description = 'This is a test description:'
+        #msg = role.name + ' - ' + description
+        msg = role.name
         msg = await channel.send(msg)
         await asyncio.sleep(1)
         await msg.add_reaction('👍')
