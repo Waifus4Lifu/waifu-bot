@@ -257,21 +257,22 @@ def get_quote(channel, phrase):
             sql = """
                 SELECT *
                 FROM quotes
+                WHERE channel_name = ?
                 ORDER BY RANDOM()
                 LIMIT 1
                 """
-            cursor.execute(sql)
+            cursor.execute(sql, (channel_name,))
         else:
             pattern = "%" + phrase + "%"
             sql = """
                 SELECT *
                 FROM quotes
-                WHERE quote_text LIKE ?
-                OR author_name LIKE ?
+                WHERE (quote_text LIKE ? OR author_name LIKE ?)
+                AND channel_name = ?
                 ORDER BY RANDOM()
                 LIMIT 1
                 """
-            cursor.execute(sql, (pattern, pattern))
+            cursor.execute(sql, (pattern, pattern, channel_name))
         return cursor.fetchone()
 
 def delete_quote(id):
@@ -292,6 +293,18 @@ def delete_quote(id):
         cursor.execute(sql, (id,))
         database.commit()
         return quote
+        
+def veto_quote(id):
+    with open_database() as database:
+        cursor = database.cursor()
+        sql = """
+            UPDATE quotes
+            SET channel_name = 'vetoed'
+            WHERE id = ?
+            """
+        cursor.execute(sql, (id,))
+        database.commit()
+        return
 
 def create_database():
     if os.path.isfile(database_file_path):
