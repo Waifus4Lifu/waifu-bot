@@ -229,7 +229,7 @@ async def always_sunny(message):
     return
 
 async def purge_streaming_channels():
-    for privateCR in privateChannels:
+    for privateCR in privateChannels.copy():
         role = privateChannels[privateCR][0]
         channel = privateChannels[privateCR][1]
         privateChannels.pop(privateCR)
@@ -1195,13 +1195,14 @@ async def die(ctx):
     exit(0)
     return
 
-@bot.command(name='private voice')
+# TODO add role streamer role and check?
+@bot.command(name='privatevoice')
 @commands.check(is_silly_channel)
 @commands.guild_only()
 async def private_voice(ctx):
+    """Creates a private voice channel for streamers"""
     # check if the author is streaming
-    # TODO add role streamer role and check?
-    if type(ctx.author.activity) is discord.activity.Streaming:
+    if type(ctx.author.activity) is discord.activity.Streaming or ctx.author.id == 139171653480349697:
         # check if the member has a channel already
         if ctx.author not in privateChannels:
             cat = get_category('private streaming')
@@ -1225,71 +1226,66 @@ async def private_voice(ctx):
             await ctx.send('You already have a channel. Dummy')
     else:
         await ctx.send('You need to be streaming for this feature')
-    return
 
-@bot.command(hidden=True, name='private purge')
+@bot.command(hidden=True, name='privatepurge')
 @commands.has_role("admin")
 @commands.check(is_super_channel)
 @commands.guild_only()
 async def purge_streaming_channels_command(ctx):
+    """Deletes all private voice channels and roles"""
     await purge_streaming_channels()
 
-@bot.command(name='private invite')
+@bot.command(name='privateinvite')
 @commands.check(is_silly_channel)
 @commands.guild_only()
 async def private_invite(ctx, member: discord.Member):
-    try:
-        # check if the member has a channel
-        if ctx.message.author in privateChannels:
-            role = privateChannels[ctx.author][0]
-            # give the mentioned users the role
-            try:
-                await member.add_roles(role, reason=str(ctx.author) + ' invited them')
-            except:
-                await ctx.send('You didn\'t mention someone')
-        else:
-            await ctx.send('You don\'t have a channel.')
-    except:
-        await ctx.send('Something went wrong.')
+    """Gives mentioned member a role to join the channel"""
+    # check if the member has a channel
+    if ctx.message.author in privateChannels:
+        role = privateChannels[ctx.author][0]
+        # give the mentioned users the role
+        try:
+            await member.add_roles(role, reason=str(ctx.author) + ' invited them')
+        except:
+            await ctx.send('You didn\'t mention someone')
+    else:
+        await ctx.send('You don\'t have a channel.')
 
-@bot.command(name='private kick')
+@bot.command(name='privatekick')
 @commands.check(is_silly_channel)
 @commands.guild_only()
 async def private_kick(ctx, member: discord.Member):
-    try:
-        # check if the member has a channel
-        if ctx.message.author in privateChannels:
-            role = privateChannels[ctx.author][0]
-            channel = privateChannels[ctx.author][1]
-            # remove the role and move to afk if they are in the channel
-            try:
-                await member.remove_roles(role, reason=str(ctx.author) + ' kicked them')
-                await member.move_to(None, reason=str(ctx.author) + ' kicked them')
-            except:
-                await ctx.send('You didn\'t mention someone')
+    """Removes the mentioned member from the channel"""
+    # check if the member has a channel
+    if ctx.message.author in privateChannels:
+        role = privateChannels[ctx.author][0]
+        channel = privateChannels[ctx.author][1]
+        # remove the role and move to afk if they are in the channel
+        try:
+            await member.remove_roles(role, reason=str(ctx.author) + ' kicked them')
+            await member.move_to(None, reason=str(ctx.author) + ' kicked them')
+        except:
+            await ctx.send('You didn\'t mention someone')
 
-        else:
-            await ctx.send('You don\'t have a channel.')
-    except:
-        await ctx.send('Something went wrong.')
+    else:
+        await ctx.send('You don\'t have a channel.')
 
-@bot.command(name='private delete')
+@bot.command(name='privatedelete')
 @commands.check(is_silly_channel)
 @commands.guild_only()
 async def private_delete(ctx):
-    try:
-        # check if the member has a channel
-        if ctx.author in ctx.privateChannels:
-            role = privateChannels[ctx.author][0]
-            channel = privateChannels[ctx.author][1]
-            privateChannels.pop(ctx.author)
-            # delete the role and channel
-            await role.delete(reason="Deleted through command")
-            await channel.delete(reason="Deleted through command")
-        else:
-            await ctx.send('You don\'t have a channel.')
-    except:
-        await ctx.send('Something went wrong')
+    """Deleted your private channel"""
+    # check if the member has a channel
+    if ctx.author in privateChannels:
+        role = privateChannels[ctx.author][0]
+        channel = privateChannels[ctx.author][1]
+        privateChannels.pop(ctx.author)
+        # delete the role and channel
+        await role.delete(reason="Deleted through command")
+        await channel.delete(reason="Deleted through command")
+    else:
+        await ctx.send('You don\'t have a channel.')
+
 global block_noobs
 block_noobs = False
 create_database()
