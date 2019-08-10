@@ -11,8 +11,12 @@ from datetime import datetime
 bot = commands.Bot(command_prefix="!", case_insensitive=True, help_command=None)
 privateChannels = {}
 
-def get_command_help(command):
-    help = f"`{bot.command_prefix}{command.name} "
+def get_command_help(command, **kwargs):
+    # check if the command was a sub command
+    if kwargs.get('basecommand', None):
+        help = f"`{bot.command_prefix}{kwargs['basecommand'].name} {command.name} "
+    else:
+        help = f"`{bot.command_prefix}{command.name} "
     for alias in sorted(command.aliases):
         help = help + f"or {bot.command_prefix}{alias} "
     if command.signature != "":
@@ -565,7 +569,12 @@ async def wtf(ctx):
     """Display this help message."""
     reply = "I understand the following commands:\n\n"
     for command in sorted(bot.commands, key=lambda x: x.name):
-        if not command.hidden:
+        # dirty way of handling the sub commands
+        if command.name == 'private':
+            for subcommand in sorted(private_base_command.commands, key=lambda x: x.name):
+                if not subcommand.hidden:
+                    reply = reply + get_command_help(subcommand, basecommand=command) + "\n"
+        elif not command.hidden:
             reply = reply + get_command_help(command) + "\n"
     reply = reply + "\nIf I'm not working correctly, go fuck yourself, you aren't my boss."
     await ctx.send(reply)
@@ -976,7 +985,11 @@ async def superwtf(ctx):
     """Display this help message."""
     reply = "Oh shit it's a Super_Waifu, everyone pretend like you aren't fucking shit up!\n\n"
     for command in sorted(bot.commands, key=lambda x: x.name):
-        if command.hidden:
+        if command.name == 'private':
+            for subcommand in sorted(private_base_command.commands, key=lambda x: x.name):
+                if subcommand.hidden:
+                    reply = reply + get_command_help(subcommand, basecommand=command) + "\n"
+        elif command.hidden:
             reply = reply + get_command_help(command) + "\n"
     reply = reply + "\nIf I'm not working correctly, go fuck yourself, you aren't my boss."
     await ctx.send(reply)
@@ -1195,14 +1208,19 @@ async def die(ctx):
     exit(0)
     return
 
-# TODO add role streamer role and check?
-@bot.command(name='privatevoice')
-@commands.check(is_silly_channel)
+@bot.group(name='private')
 @commands.guild_only()
+async def private_base_command(ctx):
+    if ctx.invoked_subcommand is None:
+        await ctx.send('Invalid private command passed.')
+
+# TODO add role streamer role and check?
+@private_base_command.command(name='voice')
+@commands.check(is_silly_channel)
 async def private_voice(ctx):
     """Creates a private voice channel for streamers"""
     # check if the author is streaming
-    if type(ctx.author.activity) is discord.activity.Streaming or ctx.author.id == 139171653480349697:
+    if type(ctx.author.activity) is discord.activity.Streaming or has_role(ctx.author, 'admin'):
         # check if the member has a channel already
         if ctx.author not in privateChannels:
             cat = get_category('private streaming')
@@ -1227,17 +1245,15 @@ async def private_voice(ctx):
     else:
         await ctx.send('You need to be streaming for this feature')
 
-@bot.command(hidden=True, name='privatepurge')
+@private_base_command.command(hidden=True, name='purge')
 @commands.has_role("admin")
 @commands.check(is_super_channel)
-@commands.guild_only()
 async def purge_streaming_channels_command(ctx):
     """Deletes all private voice channels and roles"""
     await purge_streaming_channels()
 
-@bot.command(name='privateinvite')
+@private_base_command.command(name='invite')
 @commands.check(is_silly_channel)
-@commands.guild_only()
 async def private_invite(ctx, member: discord.Member):
     """Gives mentioned member a role to join the channel"""
     # check if the member has a channel
@@ -1251,9 +1267,8 @@ async def private_invite(ctx, member: discord.Member):
     else:
         await ctx.send('You don\'t have a channel.')
 
-@bot.command(name='privatekick')
+@private_base_command.command(name='kick')
 @commands.check(is_silly_channel)
-@commands.guild_only()
 async def private_kick(ctx, member: discord.Member):
     """Removes the mentioned member from the channel"""
     # check if the member has a channel
@@ -1270,11 +1285,10 @@ async def private_kick(ctx, member: discord.Member):
     else:
         await ctx.send('You don\'t have a channel.')
 
-@bot.command(name='privatedelete')
+@private_base_command.command(name='delete')
 @commands.check(is_silly_channel)
-@commands.guild_only()
 async def private_delete(ctx):
-    """Deleted your private channel"""
+    """Delete your private channel"""
     # check if the member has a channel
     if ctx.author in privateChannels:
         role = privateChannels[ctx.author][0]
@@ -1285,6 +1299,22 @@ async def private_delete(ctx):
         await channel.delete(reason="Deleted through command")
     else:
         await ctx.send('You don\'t have a channel.')
+
+@private_base_command.command(hidden=True ,name='superdelete')
+@commands.has_role("admin")
+@commands.check(is_super_channel)
+async def private_super_delete(ctx, member: discord.member):
+    """Delete member's private channel"""
+    # check if the member has a channel
+    if member in privateChannels:
+        role = privateChannels[member][0]
+        channel = privateChannels[member][1]
+        privateChannels.pop(member)
+        # delete the role and channel
+        await role.delete(reason="Deleted through command")
+        await channel.delete(reason="Deleted through command")
+    else:
+        await ctx.send('They don\'t have a channel.')
 
 global block_noobs
 block_noobs = False
