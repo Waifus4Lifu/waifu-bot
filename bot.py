@@ -9,6 +9,7 @@ from fuzzywuzzy import process
 from datetime import datetime
 
 bot = commands.Bot(command_prefix="!", case_insensitive=True, help_command=None)
+privateChannels = {}
 
 def get_command_help(command):
     help = f"`{bot.command_prefix}{command.name} "
@@ -226,6 +227,15 @@ async def always_sunny(message):
     file.close()
     await pending.delete()
     return
+
+async def purge_streaming_channels():
+    for privateCR in privateChannels:
+        role = privateChannels[privateCR][0]
+        channel = privateChannels[privateCR][1]
+        privateChannels.pop(privateCR)
+        # delete the role and channel
+        await role.delete(reason='Deleted by purge command')
+        await channel.delete(reason='Deleted by purge command')
 
 @asyncio.coroutine
 async def change_status():
@@ -1180,9 +1190,106 @@ async def die(ctx):
     """Kill my currently running instance. I won't forget this."""
     reply = random.choice(strings['last_words'])
     await ctx.send(reply)
+    # avoids admin clean up
+    await purge_streaming_channels()
     exit(0)
     return
 
+@bot.command(name='private voice')
+@commands.check(is_silly_channel)
+@commands.guild_only()
+async def private_voice(ctx):
+    # check if the author is streaming
+    # TODO add role streamer role and check?
+    if type(ctx.author.activity) is discord.activity.Streaming:
+        # check if the member has a channel already
+        if ctx.author not in privateChannels:
+            cat = get_category('private streaming')
+            if not cat:
+                cat = await ctx.message.guild.create_category_channel('private streaming', overwrites=None,
+                                                                  reason='Waifu Bot found that it was missing')
+            # creates the role and channel
+            name = ctx.message.author.display_name
+            privateRole = await ctx.message.guild.create_role(name=name, reason="Created via command",
+                                                          mentionable=False)
+            overwrites = {
+                privateRole: discord.PermissionOverwrite(connect=True, speak=True),
+                ctx.message.guild.default_role: discord.PermissionOverwrite(connect=False, speak=False)
+            }
+            privateVoice = await cat.create_voice_channel(name + '\'s channel', overwrites=overwrites)
+            # await privateVoice.set_permissions(privateRole, connect=True, speak=True)
+            # await privateVoice.set_permissions(message.guild.default_role, connect=False, speak=False)
+            await ctx.author.add_roles(privateRole, reason="Created via command")
+            privateChannels[ctx.author] = (privateRole, privateVoice)
+        else:
+            await ctx.send('You already have a channel. Dummy')
+    else:
+        await ctx.send('You need to be streaming for this feature')
+    return
+
+@bot.command(hidden=True, name='private purge')
+@commands.has_role("admin")
+@commands.check(is_super_channel)
+@commands.guild_only()
+async def purge_streaming_channels_command(ctx):
+    await purge_streaming_channels()
+
+@bot.command(name='private invite')
+@commands.check(is_silly_channel)
+@commands.guild_only()
+async def private_invite(ctx, member: discord.Member):
+    try:
+        # check if the member has a channel
+        if ctx.message.author in privateChannels:
+            role = privateChannels[ctx.author][0]
+            # give the mentioned users the role
+            try:
+                await member.add_roles(role, reason=str(ctx.author) + ' invited them')
+            except:
+                await ctx.send('You didn\'t mention someone')
+        else:
+            await ctx.send('You don\'t have a channel.')
+    except:
+        await ctx.send('Something went wrong.')
+
+@bot.command(name='private kick')
+@commands.check(is_silly_channel)
+@commands.guild_only()
+async def private_kick(ctx, member: discord.Member):
+    try:
+        # check if the member has a channel
+        if ctx.message.author in privateChannels:
+            role = privateChannels[ctx.author][0]
+            channel = privateChannels[ctx.author][1]
+            # remove the role and move to afk if they are in the channel
+            try:
+                await member.remove_roles(role, reason=str(ctx.author) + ' kicked them')
+                await member.move_to(None, reason=str(ctx.author) + ' kicked them')
+            except:
+                await ctx.send('You didn\'t mention someone')
+
+        else:
+            await ctx.send('You don\'t have a channel.')
+    except:
+        await ctx.send('Something went wrong.')
+
+@bot.command(name='private delete')
+@commands.check(is_silly_channel)
+@commands.guild_only()
+async def private_delete(ctx):
+    try:
+        # check if the member has a channel
+        if ctx.author in ctx.privateChannels:
+            role = privateChannels[ctx.author][0]
+            channel = privateChannels[ctx.author][1]
+            privateChannels.pop(ctx.author)
+            # delete the role and channel
+            await role.delete(reason="Deleted through command")
+            await channel.delete(reason="Deleted through command")
+        else:
+            await ctx.send('You don\'t have a channel.')
+    except:
+        await ctx.send('Something went wrong')
 global block_noobs
 block_noobs = False
 create_database()
