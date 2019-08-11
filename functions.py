@@ -136,6 +136,59 @@ def seconds_since(then):
 def open_database():
     return sqlite3.connect(database_file_path)
 
+def store_privateroom(member_id, role_id, channel_id):
+    with open_database() as database:
+        cursor = database.cursor()
+        sql = """
+                    INSERT
+                    INTO privaterooms
+                    VALUES (?,?,?)
+                    """
+        cursor.execute(sql, (member_id, role_id, channel_id))
+        database.commit()
+        return
+
+def get_privateroom(member_id):
+    with open_database() as database:
+        cursor = database.cursor()
+        id = member_id
+        sql = """
+            SELECT *
+            FROM privaterooms
+            WHERE id = ?
+            """
+        cursor.execute(sql, (id,))
+        return cursor.fetchone()
+
+def get_privaterooms():
+    with open_database() as database:
+        cursor = database.cursor()
+        sql = """
+            SELECT *
+            FROM privaterooms
+            """
+        cursor.execute(sql, ())
+        return cursor.fetchall()
+
+def delete_privateroom(id):
+    with open_database() as database:
+        cursor = database.cursor()
+        sql = """
+            SELECT *
+            FROM privaterooms
+            WHERE id = ?
+            """
+        cursor.execute(sql, (id,))
+        privateroom = cursor.fetchone()
+        sql = """
+            DELETE
+            FROM privaterooms
+            WHERE id=?
+            """
+        cursor.execute(sql, (id,))
+        database.commit()
+        return privateroom
+
 def store_hash(bytes_hash, message):
     with open_database() as database:
         cursor = database.cursor()
@@ -363,6 +416,15 @@ def create_database():
                 "channel_category"	TEXT
                 )
             """
+        cursor.execute(sql)
+        database.commit()
+        sql = """
+                    CREATE TABLE IF NOT EXISTS "privaterooms" (
+                        "id"	INTEGER,
+                        "role_id"	INTEGER,
+                        "channel_id"	INTEGER
+                        )
+                    """
         cursor.execute(sql)
         database.commit()
         return
