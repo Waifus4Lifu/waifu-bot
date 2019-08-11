@@ -1215,7 +1215,6 @@ async def die(ctx):
     """Kill my currently running instance. I won't forget this."""
     reply = random.choice(strings['last_words'])
     await ctx.send(reply)
-    # avoids admin clean up
     exit(0)
     return
 
