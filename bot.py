@@ -772,7 +772,11 @@ async def inspire(ctx, *, phrase: typing.Optional[str]):
     if quote == None:
         quote = get_quote(ctx.channel, None)
     id = quote[0]
-    name = quote[4]
+    member = ctx.guild.get_member(quote[3])
+    if member:
+        name = member.display_name
+    else:
+        name = quote[4]
     text = quote[7]
     query = None
     if phrase != None:
