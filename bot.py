@@ -597,44 +597,6 @@ async def members(ctx, *, role):
 @bot.command()
 @commands.check(is_silly_channel)
 @commands.guild_only()
-async def kidnap(ctx, victim: typing.Optional[discord.Member]):
-    """Attempt to kidnap a member."""
-    if victim == None:
-        reply = f"*{ctx.author.display_name} violently bear-hugs empty air.*"
-        await ctx.send(reply)
-        return
-    print(victim.status)
-    if victim not in ctx.channel.members:
-        reply = f"*{ctx.author.display_name} screams the name {victim.display_name} and tackles the ground.*"
-        await ctx.send(reply)
-        return
-    if victim.mobile_status == discord.Status.online:
-        reply = f"*{victim.display_name} has often been warned that paying so much attention to the brightly-lit, handheld dopamine pump will be their undoing. \
-        {victim.display_name} barely notices the strong, greasy, hand and damp rag before succumbing to the sandman. \
-        Robbed of the thrill by such an easy prey, {ctx.author.display_name} mentally prepares extra treats for the new guest.*"
-        await ctx.send(reply)
-        return
-    if victim.status in [discord.Status.offline, discord.Status.dnd]:
-        reply = f"*{ctx.author.display_name} stalks the sickly sweet stench of {victim.display_name} around two succesive blind corners in a dark hallway. \
-        Sensing the trapped prey around a third corner, the hunter prepares to pounce. \
-        In a physics-bending bound, {ctx.author.display_name} half-jumps, half-flies around the corner only to slam into a locked door.*"
-        await ctx.send(reply)
-        return
-    if victim.status == discord.Status.idle:
-        reply = f"*Ever the opportunist, {ctx.author.display_name} stealthily approaches the seemingly lifeless form of {victim.display_name}. \
-        As the dissapointed predator grows nearer, shallow movements of the quarry's chest betray its feeble attempt to play dead. \
-        Angered by this attempted treachery, {ctx.author.display_name} strikes, overpowering the victim before dragging it into the inky shadows.*"
-        await ctx.send(reply)
-        return
-    if victim.status == discord.Status.online:
-        reply = f"*{ctx.author.display_name} knows that the only advantages over {victim.display_name} are stealth and surprise. However, recent events have inflated the hunter's ego \
-        In broad daylight and in full view of the prey, {ctx.author.display_name} makes a misguided attempt to attack. The plan is easily foiled and a bullet graze to the shoulder is all that is gained.*"
-        await ctx.send(reply)
-        return
-
-@bot.command()
-@commands.check(is_silly_channel)
-@commands.guild_only()
 async def magic8ball(ctx, question: str):
     """Ask the magic 8 ball a question."""
     answer = random.choice(strings['eight_ball'])
