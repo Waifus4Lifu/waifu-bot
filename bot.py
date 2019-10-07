@@ -1056,6 +1056,50 @@ async def deletequote(ctx, id: typing.Optional[typing.Union[int, str]]):
 
 @bot.command(hidden=True)
 @commands.has_role("admin")
+@commands.guild_only()
+async def whichwitch(ctx):
+    witches = get_members_by_role("spoopy")
+    if len(witches) < 2:
+        reply = "YOU MUST CONSTRUCT ADDITIONAL WITCHES"
+        await ctx.send(reply)
+    else:
+        wizards = []
+        apprentices = []
+        for witch in witches:
+            wizards.append(witch)
+            apprentices.append(witch)
+        wizards1 = []
+        apprentices1 = []
+        while len(wizards) > 0:
+            wizard = random.choice(wizards)
+            apprentice = random.choice(apprentices)
+            if apprentice != wizard or len(wizards) == 1:
+                wizards1.append(wizard)
+                apprentices1.append(apprentice)
+                wizards.remove(wizard)
+                apprentices.remove(apprentice)
+        if wizards1[-1] == apprentices1[-1]:
+            temp = apprentices1[-1]
+            apprentices1[-1] = apprentices1[-2]
+            apprentices1[-2] = temp
+        list = []
+        for index, wizard in enumerate(wizards1):
+            msg = f"Professor {wizard.name}, get your mops ready. Your ambiguous apprentice is {apprentices1[index].name}."
+            log.info(msg)
+            try:
+                await wizard.send(msg)
+            except:
+                log.error("Bot is on naughty_list")
+            try:
+                list.append(wizard)
+                list.append(apprentices1[index])
+            except IndexError:
+                log.error("Santa index error")
+        msg = f"It's time to get {get_role('spoopy').mention}. Check your DMs."
+        await ctx.send(msg)
+
+@bot.command(hidden=True)
+@commands.has_role("admin")
 @commands.check(is_super_channel)
 @commands.guild_only()
 async def createevent(ctx, event: typing.Union[discord.CategoryChannel, str], *, YYYYMMDDHHMMSS: typing.Optional[str]):
