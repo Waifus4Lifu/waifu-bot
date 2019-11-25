@@ -1057,47 +1057,48 @@ async def deletequote(ctx, id: typing.Optional[typing.Union[int, str]]):
 @bot.command(hidden=True)
 @commands.has_role("admin")
 @commands.guild_only()
-async def whichwitch(ctx):
-    witches = get_members_by_role("spoopy")
-    if len(witches) < 2:
-        reply = "YOU MUST CONSTRUCT ADDITIONAL WITCHES"
+async def notice(ctx):
+    members = get_members_by_role("secret_senpai")
+    guild = get_guild()
+    if len(members) < 2:
+        reply = "YOU MUST CONSTRUCT ADDITIONAL WEEBS"
         await ctx.send(reply)
     else:
-        wizards = []
-        apprentices = []
-        for witch in witches:
-            wizards.append(witch)
-            apprentices.append(witch)
-        wizards1 = []
-        apprentices1 = []
-        while len(wizards) > 0:
-            wizard = random.choice(wizards)
-            apprentice = random.choice(apprentices)
-            if apprentice != wizard or len(wizards) == 1:
-                wizards1.append(wizard)
-                apprentices1.append(apprentice)
-                wizards.remove(wizard)
-                apprentices.remove(apprentice)
-        if wizards1[-1] == apprentices1[-1]:
-            temp = apprentices1[-1]
-            apprentices1[-1] = apprentices1[-2]
-            apprentices1[-2] = temp
-        list = []
-        for index, wizard in enumerate(wizards1):
-            msg = f"Professor {wizard.name}, get your mops ready. Your ambiguous apprentice is {apprentices1[index].name}."
-            log.info(msg)
-            try:
-                await wizard.send(msg)
-            except:
-                log.error("Bot is on naughty_list")
-            try:
-                list.append(wizard)
-                list.append(apprentices1[index])
-            except IndexError:
-                log.error("Santa index error")
-        msg = f"It's time to get {get_role('spoopy').mention}. Check your DMs."
-        await ctx.send(msg)
-
+        for i in range(100):
+            mismatch = False
+            senpai = members.copy()
+            kohai = members.copy()
+            
+            random.shuffle(senpai)
+            random.shuffle(kohai)
+            
+            for i in range(len(members)):
+                if senpai[i] == kohai[i]:
+                    mismatch = True
+                if senpai[i].id in config["secret_senpai_exclusions"]:
+                    if config["secret_senpai_exclusions"][senpai[i].id] == kohai[i].id:
+                        mismatch = True
+                        
+            if not mismatch:
+                for i in range(len(members)):
+                    message = f"{senpai[i].display_name}, your covert kohai is {kohai[i].display_name} ({kohai[i].name}). Get to noticing!"
+                    try:
+                        await senpai[i].send(message)
+                    except:
+                        log.error(f"Unable to send message to {senpai[i]}")
+                        bot_testing = get_channel("bot_testing")
+                        warning = f"{senpai[i]} won't accept DM's. SPOILER: ||'{message}'||"
+                        await bot_testing.send(warning)
+                    log.info(message)
+                secret_senpai = get_role("secret_senpai")
+                message = f"{secret_senpai.mention}, check your DMs."
+                await ctx.send(message)
+                return
+                
+        reply = "Unable to match members. Please check exclusions and try again."
+        await ctx.send(reply)
+        return
+          
 @bot.command(hidden=True)
 @commands.has_role("admin")
 @commands.check(is_super_channel)

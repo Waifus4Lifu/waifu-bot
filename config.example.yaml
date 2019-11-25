@@ -127,3 +127,6 @@ statuses:
     - 2the field
     - 2possum
     - 2footsie
+    
+secret_senpai_exclusions:
+    senpai_id: kohai_id
