@@ -3,6 +3,9 @@ import draw
 import typing
 import asyncio
 import aiohttp
+import requests
+import json
+from random import randint
 from functions import *
 from discord.ext import commands
 from fuzzywuzzy import process
@@ -1098,7 +1101,7 @@ async def notice(ctx):
         reply = "Unable to match members. Please check exclusions and try again."
         await ctx.send(reply)
         return
-          
+
 @bot.command(hidden=True)
 @commands.has_role("admin")
 @commands.check(is_super_channel)
@@ -1232,6 +1235,22 @@ async def die(ctx):
     exit(0)
     return
 
+@bot.command(aliases=["image"])
+@commands.guild_only()
+async def i(ctx, *, query):
+    '''Finds an image using Google Images (safesearch off)'''
+    api_key = config["api"]["google"]
+    url = ('https://www.googleapis.com/customsearch/v1?cx=012763604623577894851:r8w2tzy60qx'
+            '&fields=items(title,link,snippet)&safe=off&nfpr=1&searchType=image')
+    random = randint(0,9)
+    r = requests.get(url, params={'key': api_key, 'q': query, 'num': 10})
+    data = r.json()
+    title = data['items'][random]['title']
+    link = data['items'][random]['link']
+    embed=discord.Embed(title=title, url=link, color=0xff3fb4)
+    embed.set_image(url=link)
+    await ctx.send(embed=embed)
+    
 global block_noobs
 block_noobs = False
 create_database()
