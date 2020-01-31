@@ -113,11 +113,14 @@ def format_countdown(delta):
     minutes = int((delta.seconds % 3600) / 60)
     formatted_delta = ""
     if years != 0:
-        formatted_delta = formatted_delta + f"{years}Y_"
+        formatted_delta = formatted_delta + f"{years}Y "
     if days != 0:
-        formatted_delta = formatted_delta + f"{days}D_"
-    formatted_delta = formatted_delta + f"{hours}H_"
-    formatted_delta = formatted_delta + f"{minutes}M"
+        formatted_delta = formatted_delta + f"{days}D "
+    if hours != 0:
+        formatted_delta = formatted_delta + f"{hours}H "
+    else:
+        if minutes != 0:
+            formatted_delta = formatted_delta + f"{minutes}M"
     return formatted_delta
 
 def time_since(date_time):
