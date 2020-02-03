@@ -1,5 +1,7 @@
 import io
+import csv
 import draw
+import shutil
 import typing
 import asyncio
 import aiohttp
@@ -1219,6 +1221,43 @@ async def say(ctx, channel: discord.TextChannel, *, text: typing.Optional[str]):
     super_waifu_chat = get_channel("super_waifu_chat")
     reply = f"{ctx.author.mention} made me say something in {channel.mention}."
     await super_waifu_chat.send(reply)
+    return
+
+@bot.command(hidden=True)
+@commands.has_role("admin")
+@commands.check(is_super_channel)
+@commands.guild_only()
+async def archive(ctx, channel: discord.TextChannel):
+    """Archive a text channel."""
+    message_count = 0
+    file_count = 0
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    messages = await channel.history(limit=None).flatten()
+    tmp_dir = os.path.join(sys.path[0], "tmp", channel.name)
+    log_path = os.path.join(tmp_dir, "log.csv")
+    archive_path = os.path.join(sys.path[0], "archive", f"{channel.name}-{timestamp}")
+    os.mkdir(tmp_dir)
+    with open(log_path, "w", newline='') as csv_file:
+        csv_file = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        for message in messages:
+            csv_line = []
+            csv_line.append(message.created_at.strftime("%Y%m%d%H%M%S"))
+            csv_line.append(str(message.id))
+            csv_line.append(str(message.author.id))
+            csv_line.append(str(ascii_only(message.author.name)))
+            csv_line.append(str(ascii_only(message.author.display_name)))
+            csv_line.append(str(ascii_only(message.clean_content)))
+            csv_line.append(str(len(message.attachments)))
+            message_count += 1
+            for index, attachment in enumerate(message.attachments):
+                filename = f"{message.id}_{index}_{attachment.filename}"
+                await attachment.save(os.path.join(tmp_dir, filename))
+                file_count += 1
+            csv_file.writerow(csv_line)
+    shutil.make_archive(archive_path, 'zip', tmp_dir)
+    shutil.rmtree(tmp_dir)
+    reply = f"{message_count} messages and {file_count} attachments archived to {channel.name}-{timestamp}.zip"
+    await ctx.send(reply)
     return
 
 @bot.command(hidden=True)
