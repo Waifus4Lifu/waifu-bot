@@ -142,6 +142,7 @@ def inspiration(id, text, name, query, comical):
                 img, author = get_local()
                 if img == None:
                     return None
+    img = img.convert("RGB")
     draw = ImageDraw.Draw(img)
     high_on_potnuse = math.sqrt((img.width**2) + (img.height**2))
     font_size = round(high_on_potnuse / 25)
