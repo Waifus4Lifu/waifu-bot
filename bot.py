@@ -1,4 +1,5 @@
 import io
+import re
 import csv
 import draw
 import shutil
@@ -436,6 +437,31 @@ async def update_countdowns():
                             pass
         await asyncio.sleep(1)
 
+@asyncio.coroutine
+async def update_game_channels():
+    """Loop through dynamic voice channels and set name to majority game played in channel"""
+    guild = get_guild()
+    while True:
+        for channel in guild.voice_channels:
+            # Check if channel starts with W1-W9 or G1-G9
+            if re.match(r"^[WG]\d", channel.name):
+                base_channel_name = channel.name[:2]
+                games = {}
+                for member in channel.members:
+                    for activity in member.activities:
+                        if isinstance(activity, discord.Game):
+                            # Increment value for game name key initializing it if it did not already exist
+                            games[activity.name] = games.get(activity.name, 0) + 1
+                if games:
+                    # Select most common game being played by those in channel
+                    game = max(games, key=games.get)
+                    new_channel_name = f"{base_channel_name}: {game}"
+                else:
+                    new_channel_name = base_channel_name
+                if channel.name != new_channel_name:
+                    await channel.edit(name=new_channel_name)
+        await asyncio.sleep(1)
+
 @bot.event
 async def on_ready():
     log.info(f"Logged on as {bot.user}")
@@ -445,6 +471,7 @@ async def on_ready():
     monitor_deletions_task = loop.create_task(monitor_deletions())
     monitor_joins_task = loop.create_task(monitor_joins())
     update_countdowns_task = loop.create_task(update_countdowns())
+    update_game_channels_task = loop.create_task(update_game_channels())
 
 @bot.event
 async def on_command_error(ctx, error):
