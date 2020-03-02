@@ -913,11 +913,12 @@ async def resetroles(ctx):
                 games.append(role)
     msg = '**ROLES:**'
     await channel.send(msg)
+    roles.sort(key=lambda x: x.name.lower())
     for role in roles:
-        #TODO: write up descriptions and create db table
-        #description = 'This is a test description:'
-        #msg = role.name + ' - ' + description
+        description = get_description(role.name)
         msg = role.name
+        if description:
+            msg = f"{msg} - *{description[0]}*"
         msg = await channel.send(msg)
         await asyncio.sleep(1)
         await msg.add_reaction('👍')
@@ -926,10 +927,12 @@ async def resetroles(ctx):
         await asyncio.sleep(1)
     msg = '**GAMES:**'
     await channel.send(msg)
+    games.sort(key=lambda x: x.name.lower())
     for role in games:
-        #description = 'This is a test description:'
-        #msg = role.name + ' - ' + description
+        description = get_description(role.name)
         msg = role.name
+        if description:
+            msg = f"{msg} - *{description[0]}*"
         msg = await channel.send(msg)
         await asyncio.sleep(1)
         await msg.add_reaction('👍')
@@ -941,7 +944,7 @@ async def resetroles(ctx):
 @commands.has_role("super_waifu")
 @commands.check(is_super_channel)
 @commands.guild_only()
-async def createrole(ctx, *, role):
+async def createrole(ctx, role, *, description: typing.Optional[str]):
     """Create a mentionable role."""
     role_colors = [discord.Color.orange(), discord.Color.from_rgb(54, 57, 63)]
     guild = get_guild()
@@ -964,8 +967,36 @@ async def createrole(ctx, *, role):
         emoji = ":video_game:"
         color = discord.Color.blue()
     role = await guild.create_role(name=role_name, color=color, mentionable=True)
+    store_description(role_name=role_name, role_description=description)
     title = f"**{role_type.upper()} CREATED {emoji}**"
     description = f"{role_type.capitalize()}: {role.mention}\nCreated by: {ctx.author.mention}\n"
+    embed = discord.Embed(title=title, description=description, color=color)
+    await ctx.send(embed=embed)
+    return
+
+@bot.command(hidden=True, aliases=['editgame'])
+@commands.has_role("super_waifu")
+@commands.check(is_super_channel)
+@commands.guild_only()
+async def editrole(ctx, role: discord.Role, *, description: typing.Optional[str]):
+    """Edit a mentionable role."""
+    if role.name in config['roles']['forbidden'] or role.color not in [discord.Color.orange(), discord.Color.blue()]:
+        reply = f"{ctx.author.mention}, that is a Forbidden Role:tm:."
+        await ctx.send(reply)
+        return
+    old_description = get_description(role.name)
+    new_description = description
+    store_description(role_name=role.name, role_description=new_description)
+    if role.color == discord.Color.orange():
+        role_type = "role"
+        emoji = ":passport_control:"
+        color = discord.Color.orange()
+    else:
+        role_type = "game"
+        emoji = ":video_game:"
+        color = discord.Color.blue()
+    title = f"**{role_type.upper()} UPDATED {emoji}**"
+    description = f"{role_type.capitalize()}: {role.mention}\nOld description: {old_description}\nNew description: {new_description}\nEdited by: {ctx.author.mention}\n"
     embed = discord.Embed(title=title, description=description, color=color)
     await ctx.send(embed=embed)
     return

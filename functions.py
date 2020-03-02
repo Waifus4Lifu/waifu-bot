@@ -170,6 +170,31 @@ def get_hashes(bytes_hash, channel_category):
         cursor.execute(sql, (bytes_hash, channel_category))
         return cursor.fetchall()
 
+def store_description(role_name, role_description):
+    with open_database() as database:
+        cursor = database.cursor()
+        role_name = role_name.lower()
+        sql = """
+            INSERT OR REPLACE
+            INTO descriptions
+            VALUES (?,?)
+            """
+        cursor.execute(sql, (role_name, role_description))
+        database.commit()
+        return
+
+def get_description(role_name):
+    with open_database() as database:
+        cursor = database.cursor()
+        role_name = role_name.lower()
+        sql = """
+            SELECT role_description
+            FROM descriptions
+            WHERE role_name = ?
+            """
+        cursor.execute(sql, (role_name,))
+        return cursor.fetchone()
+
 def store_invite_details(invite, inviter, reason, event):
     with open_database() as database:
         cursor = database.cursor()
@@ -364,6 +389,14 @@ def create_database():
                 "author_name"	TEXT,
                 "channel_name"	TEXT,
                 "channel_category"	TEXT
+                )
+            """
+        cursor.execute(sql)
+        database.commit()
+        sql = """
+            CREATE TABLE IF NOT EXISTS "descriptions" (
+                "role_name"	TEXT UNIQUE,
+                "role_description"	TEXT
                 )
             """
         cursor.execute(sql)
