@@ -800,6 +800,10 @@ async def inspire(ctx, *, phrase: typing.Optional[str]):
     quote = get_quote(ctx.channel, phrase)
     if quote == None:
         quote = get_quote(ctx.channel, None)
+    if quote == None:
+        reply = "No quotes found for this channel."
+        await ctx.send(reply)
+        return
     id = quote[0]
     member = ctx.guild.get_member(quote[3])
     if member:

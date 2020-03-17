@@ -281,26 +281,46 @@ def get_quote(channel, phrase):
     with open_database() as database:
         channel_name = channel.name
         cursor = database.cursor()
-        if phrase == None:
-            sql = """
-                SELECT *
-                FROM quotes
-                WHERE channel_name = ?
-                ORDER BY RANDOM()
-                LIMIT 1
-                """
-            cursor.execute(sql, (channel_name,))
+        if channel_name == "general_chat":
+            if phrase == None:
+                sql = """
+                    SELECT *
+                    FROM quotes
+                    WHERE channel_name = ?
+                    ORDER BY RANDOM()
+                    LIMIT 1
+                    """
+                cursor.execute(sql, (channel_name,))
+            else:
+                pattern = "%" + phrase + "%"
+                sql = """
+                    SELECT *
+                    FROM quotes
+                    WHERE (quote_text LIKE ? OR author_name LIKE ?)
+                    AND channel_name = ?
+                    ORDER BY RANDOM()
+                    LIMIT 1
+                    """
+                cursor.execute(sql, (pattern, pattern, channel_name))
         else:
-            pattern = "%" + phrase + "%"
-            sql = """
-                SELECT *
-                FROM quotes
-                WHERE (quote_text LIKE ? OR author_name LIKE ?)
-                AND channel_name = ?
-                ORDER BY RANDOM()
-                LIMIT 1
-                """
-            cursor.execute(sql, (pattern, pattern, channel_name))
+            if phrase == None:
+                sql = """
+                    SELECT *
+                    FROM quotes
+                    ORDER BY RANDOM()
+                    LIMIT 1
+                    """
+                cursor.execute(sql)
+            else:
+                pattern = "%" + phrase + "%"
+                sql = """
+                    SELECT *
+                    FROM quotes
+                    WHERE (quote_text LIKE ? OR author_name LIKE ?)
+                    ORDER BY RANDOM()
+                    LIMIT 1
+                    """
+                cursor.execute(sql, (pattern, pattern))
         return cursor.fetchone()
 
 def delete_quote(id):
