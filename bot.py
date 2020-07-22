@@ -13,6 +13,7 @@ from datetime import datetime
 
 bot = commands.Bot(command_prefix="!", case_insensitive=True, help_command=None)
 
+
 def get_command_help(command):
     help = f"`{bot.command_prefix}{command.name} "
     for alias in sorted(command.aliases):
@@ -22,10 +23,12 @@ def get_command_help(command):
     help = help + f"` - {command.help}"
     return help
 
+
 def is_super_channel(ctx):
     if ctx.channel.name not in config["channels"]["super_waifu"]:
         raise commands.NoPrivateMessage
     return True
+
 
 def has_role(member, role_name):
     for role in member.roles:
@@ -33,15 +36,18 @@ def has_role(member, role_name):
             return True
     return False
 
+
 def is_silly_channel(ctx):
     if isinstance(ctx.channel, discord.TextChannel):
         if ctx.channel.name not in config["channels"]["serious"]:
             return True
     raise commands.NoPrivateMessage
 
+
 def get_guild():
     guild_id = config["discord"]["guild_id"]
     return bot.get_guild(guild_id)
+
 
 def get_channel(name):
     for channel in get_guild().channels:
@@ -49,11 +55,13 @@ def get_channel(name):
             return channel
     return None
 
+
 def get_category(name):
     for category in get_guild().categories:
         if category.name.lower() == name.lower():
             return category
     return None
+
 
 def get_channel_by_topic(topic):
     for channel in get_guild().text_channels:
@@ -61,11 +69,13 @@ def get_channel_by_topic(topic):
             return channel
     return None
 
+
 def get_role(name):
     for role in get_guild().roles:
         if role.name.lower() == name.lower():
             return role
     return None
+
 
 def get_joinable_roles():
     joinable = []
@@ -75,8 +85,10 @@ def get_joinable_roles():
             joinable.append(role)
     return joinable
 
+
 def get_members_by_role(name):
     return get_role(name).members
+
 
 async def detect_reposts(message):
     if message.channel.name in config['channels']['ignore_reposts']:
@@ -137,6 +149,7 @@ async def detect_reposts(message):
         await message.channel.send(embed=embed)
     return
 
+
 async def rate_limiter(message):
     if message.channel.name not in config['channels']['rate_limited']:
         return
@@ -161,10 +174,13 @@ async def rate_limiter(message):
         await message.channel.send(embed=embed)
     return
 
+
 async def yes_no_timeout(ctx, message):
     await ctx.send(message)
+
     def check(answer):
         return answer.author == ctx.author and answer.channel == ctx.channel
+
     try:
         answer = await bot.wait_for("message", timeout=15, check=check)
         if answer.content.lower() in config["answers"][True]:
@@ -178,6 +194,7 @@ async def yes_no_timeout(ctx, message):
         reply = random.choice(strings["user_reply_timeout"])
         await ctx.send(reply)
         return None
+
 
 async def reply_noob(message):
     global block_noobs
@@ -203,18 +220,21 @@ async def reply_noob(message):
         if message.author not in general_chat.members:
             for channel in get_guild().text_channels:
                 if "quarantine" in channel.name and message.author in channel.members:
-                    reply = f"Hey everyone, {message.author.mention} just joined. {message.author.mention}, please introduce yourself. Thanks!"
+                    reply = f"Hey everyone, {message.author.mention} just joined. {message.author.mention}, please " \
+                            f"introduce yourself. Thanks! "
                     await channel.send(reply)
                     reply = f"Hey everyone, {message.author.mention} just joined in {channel.mention}!"
                     await general_chat.send(reply)
                     return
-        reply = f"Hey everyone, {message.author.mention} just joined. {message.author.mention}, please introduce yourself. Thanks!"
+        reply = f"Hey everyone, {message.author.mention} just joined. {message.author.mention}, please introduce " \
+                f"yourself. Thanks! "
         await general_chat.send(reply)
         return
     else:
         reply = "Not quite. Try again."
         await message.channel.send(reply)
         return
+
 
 async def always_sunny(message):
     text = message.clean_content.replace("*", "")
@@ -230,7 +250,7 @@ async def always_sunny(message):
     await pending.delete()
     return
 
-@asyncio.coroutine
+
 async def change_status():
     statuses = config["statuses"]
     while True:
@@ -247,7 +267,7 @@ async def change_status():
         await bot.change_presence(status=status_code, activity=game)
         await asyncio.sleep(random.randint(300, 600))
 
-@asyncio.coroutine
+
 async def monitor_noobs():
     global block_noobs
     guild = get_guild()
@@ -255,7 +275,7 @@ async def monitor_noobs():
     super_waifu_chat = get_channel("super_waifu_chat")
     while True:
         for member in get_members_by_role("noob"):
-            if get_channel_by_topic(str(member.id)) == None:
+            if get_channel_by_topic(str(member.id)) is None:
                 if block_noobs:
                     await asyncio.sleep(5)
                 else:
@@ -267,7 +287,7 @@ async def monitor_noobs():
                 id = int(channel.topic)
                 member = guild.get_member(id)
                 noobs = get_members_by_role("noob")
-                if member == None or member not in noobs:
+                if member is None or member not in noobs:
                     if block_noobs:
                         await asyncio.sleep(5)
                     else:
@@ -276,7 +296,7 @@ async def monitor_noobs():
                         await super_waifu_chat.send(reply)
         await asyncio.sleep(1)
 
-@asyncio.coroutine
+
 async def monitor_deletions():
     guild = get_guild()
     waifu_audit_log = {}
@@ -305,12 +325,16 @@ async def monitor_deletions():
             continue
         if "deleted" in message.channel.name:
             super_waifu_chat = get_channel("super_waifu_chat")
-            reply = f"Hey {deleted_by.mention}, it's best if you don't delete messages from {message.channel.mention}. Unless of course they're really bad."
+            reply = f"Hey {deleted_by.mention}, it's best if you don't delete messages from {message.channel.mention}." \
+                    f" Unless of course they're really bad. "
             await super_waifu_chat.send(reply)
             continue
         timestamp = message.created_at.strftime("%m/%d/%Y %H:%M")
         title = f"ID: {message.id}"
-        description = f"Author: {author.mention}\nDeleted by: {deleted_by.mention}*\nChannel: {message.channel.mention}\nUTC: {timestamp}"
+        description = f"Author: {author.mention}\n" \
+                      f"Deleted by: {deleted_by.mention}*\n" \
+                      f"Channel: {message.channel.mention}\n" \
+                      f"UTC: {timestamp}"
         embed = discord.Embed(title=title, description=description, color=discord.Color.red())
         deleted_embeds = message.embeds
         if len(message.content) > 0:
@@ -336,7 +360,7 @@ async def monitor_deletions():
             reply = f"**Embed {index + 1} of {len(deleted_embeds)}**"
             await channel.send(reply, embed=embed)
 
-@asyncio.coroutine
+
 async def monitor_joins():
     global block_noobs
     guild = get_guild()
@@ -392,24 +416,42 @@ async def monitor_joins():
                 event_name = "UNOFFICIAL"
                 invited_by = invite_found.inviter.mention
                 reason = f"Fuck if I know. Ask {invited_by}."
-            value = f"Event: {event_name}\nCreated by: {invited_by}\nChannel: {invite_channel.mention}\nReason: {reason}\nURL: {url}\n"
+            value = f"Event: {event_name}\n" \
+                    f"Created by: {invited_by}\n" \
+                    f"Channel: {invite_channel.mention}\n" \
+                    f"Reason: {reason}\nURL: {url}\n"
         else:
             value = "ERROR: NO MATCHING INVITE FOUND"
         embed.add_field(name="Invite", value=value, inline=False)
         await super_waifu_chat.send(embed=embed)
-        reply = f"Hey {member.mention}, welcome to Waifus_4_Lifu! I'm WaifuBot, I manage various things here. Here is a basic outline of our rules:"
+        reply = f"Hey {member.mention}, welcome to Waifus_4_Lifu! I'm WaifuBot, I manage various things here." \
+                f" Here is a basic outline of our rules: "
         await noob_channel.send(reply)
-        reply = "1. Don't be a dick. We all like to have fun and mess around but let's try and keep it playful! On that note, please try and keep negativity to a minimum. All it does is bring everyone else down and we don't want that! This is intended to be a fun environment.\n\n"
-        reply = reply + "2. Introduce yourself before you start posting! Everybody is welcome, we just want to know who you are and what you are into!\n\n"
-        reply = reply + "3. If you want to post something NSFW (or just shitpost memes) then we have a channel for that! Just remember if its illegal we don't want to see it and you will be immediately banned without question. The shitposting channel has it's own special rules, please read them if you decide to join it. To gain access to the channel, join the shithead role in #role_call.\n\n"
-        reply = reply + "4. Speaking of, we have a bot! If you want a list of commands just type `!wtf` or `!help` and WaifuBot will explain!\n\n"
-        reply = reply + "5. If you have a problem of some sort, tag a Super Waifu. They are here to help!\n\n"
-        reply = reply + "6. We have voice channels for specific games and for general conversation! Please try and use the appropriate channel based on what you are playing or doing.\n\n"
-        reply = reply + "7. We don't have rules for all types of behaviors and actions. That being said, if a Super Waifu or Admin contacts you regarding something you have said or done, please be willing to comply. We try our hardest to make sure everybody here is having a good time. On that same note, if you have some sort of issue or concern with something that has been said or done then please bring it to a Super Waifu or Admin's attention. Your concern will be reviewed and addressed appropriately.\n\n"
-        reply = reply + "8. Have fun! That is why we made this server!\n\n**Before we continue, what's rule #1?**"
+        reply = "1. Don't be a dick. We all like to have fun and mess around but let's try and keep it playful! On " \
+                "that note, please try and keep negativity to a minimum. All it does is bring everyone else down and " \
+                "we don't want that! This is intended to be a fun environment.\n\n " \
+                "2. Introduce yourself before you start posting! Everybody is welcome, we just want to know " \
+                "who you are and what you are into!\n\n " \
+                "3. If you want to post something NSFW (or just shitpost memes) then we have a channel for " \
+                "that! Just remember if its illegal we don't want to see it and you will be immediately " \
+                "banned without question. The shitposting channel has it's own special rules, please read " \
+                "them if you decide to join it. To gain access to the channel, join the shithead role in " \
+                "#role_call.\n\n " \
+                "4. Speaking of, we have a bot! If you want a list of commands just type `!wtf` or `!help` " \
+                "and WaifuBot will explain!\n\n " \
+                "5. If you have a problem of some sort, tag a Super Waifu. They are here to help!\n\n" \
+                "6. We have voice channels for specific games and for general conversation! Please try and " \
+                "use the appropriate channel based on what you are playing or doing.\n\n " \
+                "7. We don't have rules for all types of behaviors and actions. That being said, if a Super " \
+                "Waifu or Admin contacts you regarding something you have said or done, please be willing to " \
+                "comply. We try our hardest to make sure everybody here is having a good time. On that same " \
+                "note, if you have some sort of issue or concern with something that has been said or done " \
+                "then please bring it to a Super Waifu or Admin's attention. Your concern will be reviewed " \
+                "and addressed appropriately.\n\n " \
+                "8. Have fun! That is why we made this server!\n\n**Before we continue, what's rule #1?**"
         await noob_channel.send(reply)
 
-@asyncio.coroutine
+
 async def update_countdowns():
     guild = get_guild()
     while True:
@@ -437,7 +479,7 @@ async def update_countdowns():
                             pass
         await asyncio.sleep(1)
 
-@asyncio.coroutine
+
 async def update_game_channels():
     """Loop through dynamic voice channels and set name to majority game played in channel"""
     guild = get_guild()
@@ -462,6 +504,7 @@ async def update_game_channels():
                     await channel.edit(name=new_channel_name)
         await asyncio.sleep(1)
 
+
 @bot.event
 async def on_ready():
     log.info(f"Logged on as {bot.user}")
@@ -472,6 +515,7 @@ async def on_ready():
     monitor_joins_task = loop.create_task(monitor_joins())
     update_countdowns_task = loop.create_task(update_countdowns())
     update_game_channels_task = loop.create_task(update_game_channels())
+
 
 @bot.event
 async def on_command_error(ctx, error):
@@ -547,6 +591,7 @@ async def on_raw_reaction_add(payload):
                             await member.send(msg)
     return
 
+
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
@@ -578,6 +623,7 @@ async def on_message(message):
         await rate_limiter(message)
     return
 
+
 @bot.command(aliases=["help"])
 @commands.guild_only()
 async def wtf(ctx):
@@ -588,6 +634,7 @@ async def wtf(ctx):
             reply = reply + get_command_help(command) + "\n"
     reply = reply + "\nIf I'm not working correctly, go fuck yourself, you aren't my boss."
     await ctx.send(reply)
+
 
 @bot.command(aliases=["players"])
 @commands.guild_only()
@@ -600,7 +647,8 @@ async def members(ctx, *, role):
         await ctx.send(reply)
         return
     if role.name in config['roles']['forbidden'] or role.color not in role_colors:
-        reply = f"{ctx.author.mention}, this is a Forbidden Role:tm:. If you can't figure this out a different way, you don't deserve to know."
+        reply = f"{ctx.author.mention}, this is a Forbidden Role:tm:. If you can't figure this out a different way, " \
+                f"you don't deserve to know. "
         await ctx.send(reply)
         return
     if role.color in [discord.Color.orange(), discord.Color.from_rgb(54, 57, 63)]:
@@ -623,6 +671,7 @@ async def members(ctx, *, role):
     await ctx.send(embed=embed)
     return
 
+
 @bot.command()
 @commands.check(is_silly_channel)
 @commands.guild_only()
@@ -632,6 +681,7 @@ async def magic8ball(ctx, question: str):
     reply = f"{ctx.author.mention}, the magic 8 ball has spoken: \"{answer}\"."
     await ctx.send(reply)
     return
+
 
 @bot.command(name="color")
 @commands.guild_only()
@@ -645,20 +695,24 @@ async def _color(ctx):
     await ctx.send(reply)
     return
 
+
 @bot.command(name="random")
 @commands.guild_only()
 async def _random(ctx):
     """Request a random number, chosen by fair dice roll."""
     await ctx.send(f"{ctx.author.mention}: 4")
+
     def check(answer):
         if answer.channel == ctx.channel:
             if answer.author == bot.user:
                 return False
             is_not = ["n't", "not", "no", "crypto"]
             for word in is_not:
-                if (word in answer.content.lower() and "random" in answer.content.lower()) or answer.content.lower().startswith("!random"):
+                if (word in answer.content.lower() and "random" in answer.content.lower()) \
+                        or answer.content.lower().startswith("!random"):
                     return True
         return False
+
     try:
         answer = await bot.wait_for("message", timeout=300, check=check)
         if answer.content.lower().startswith("!random"):
@@ -668,6 +722,7 @@ async def _random(ctx):
         return
     except asyncio.TimeoutError:
         return
+
 
 # TODO: Fix plural replacements to use proper regex
 @bot.command()
@@ -694,6 +749,7 @@ async def catfact(ctx):
                 fact = fact.replace("s's", "s'")
             await ctx.send(fact)
     return
+
 
 @bot.command()
 @commands.check(is_silly_channel)
@@ -727,6 +783,7 @@ async def sponge(ctx, target: typing.Optional[typing.Union[discord.Member, disco
     file.close()
     await pending.delete()
     return
+
 
 @bot.command()
 @commands.check(is_silly_channel)
@@ -773,7 +830,7 @@ async def quoth(ctx, target: typing.Optional[typing.Union[discord.Member, discor
     if ctx.channel.name in config["channels"]["sensitive"]:
         reply = f"Hey uh, {ctx.author.mention}, this is a sensitive_channel™.\nAre you sure you want to do this?"
         answer = await yes_no_timeout(ctx, reply)
-        if answer == False or answer == None:
+        if answer is False or answer is None:
             return
     if ctx.channel != target.channel:
         reply = f"Nice try {ctx.author.mention}. Though you are being a dick."
@@ -790,6 +847,7 @@ async def quoth(ctx, target: typing.Optional[typing.Union[discord.Member, discor
     await ctx.send(embed=embed)
     return
 
+
 @bot.command()
 @commands.check(is_silly_channel)
 @commands.guild_only()
@@ -798,9 +856,9 @@ async def inspire(ctx, *, phrase: typing.Optional[str]):
     if ctx.author.id == 247943708371189761:
         phrase = None
     quote = get_quote(ctx.channel, phrase)
-    if quote == None:
+    if quote is None:
         quote = get_quote(ctx.channel, None)
-    if quote == None:
+    if quote is None:
         reply = "No quotes found for this channel."
         await ctx.send(reply)
         return
@@ -812,14 +870,14 @@ async def inspire(ctx, *, phrase: typing.Optional[str]):
         name = quote[4]
     text = quote[7]
     query = None
-    if phrase != None:
+    if phrase is not None:
         phrase = phrase.split(" ")
         query = random.choice(phrase).lower()
     pending = await ctx.send("Drawing some dumb shit...")
     comical = has_role(ctx.author, "comical")
     image = draw.inspiration(id, text, name, query, comical)
     await pending.edit(content="Drawing is done. Sending now...")
-    if image == None:
+    if image is None:
         reply = "I seem to be unable to draw today."
         await ctx.send(reply)
         await pending.delete()
@@ -830,6 +888,7 @@ async def inspire(ctx, *, phrase: typing.Optional[str]):
     file.close()
     await pending.delete()
     return
+
 
 @bot.command()
 @commands.check(is_silly_channel)
@@ -842,12 +901,12 @@ async def shake(ctx, *, target: typing.Optional[typing.Union[discord.Member, dis
     async for message in ctx.channel.history(limit=20):
         messages.append(message)
     messages.pop(0)
-    if target == None and len(ctx.message.attachments) == 0:
+    if target is None and len(ctx.message.attachments) == 0:
         text = messages[0].clean_content
         attachments = messages[0].attachments
     elif isinstance(target, discord.Member):
         for message in messages:
-            if (message.author == target):
+            if message.author == target:
                 text = message.clean_content
                 attachments = message.attachments
                 break
@@ -858,7 +917,7 @@ async def shake(ctx, *, target: typing.Optional[typing.Union[discord.Member, dis
         text = target
         attachments = ctx.message.attachments
     pending = await ctx.send("Drawing some dumb shit...")
-    if text != 0 and text != None:
+    if text != 0 and text is not None:
         image = draw.shaky_text(text)
         file = discord.File(image)
         await ctx.send(file=file)
@@ -869,7 +928,8 @@ async def shake(ctx, *, target: typing.Optional[typing.Union[discord.Member, dis
         await attachment.save(file)
         image = draw.shaky_image(file)
         if image == "format":
-            reply = f"{ctx.author.mention}, attachment '{attachment.filename}' isn't in a valid format. How would you like it if I force-fed you garbage?"
+            reply = f"{ctx.author.mention}, attachment '{attachment.filename}' isn't in a valid format."\
+                    f" How would you like it if I force-fed you garbage? "
             await ctx.send(reply)
             continue
         if image == "memory":
@@ -894,7 +954,8 @@ async def shake(ctx, *, target: typing.Optional[typing.Union[discord.Member, dis
                 file.close()
     await pending.delete()
     return
-    
+
+
 @bot.command(hidden=True)
 @commands.has_role("super_waifu")
 @commands.guild_only()
@@ -944,6 +1005,7 @@ async def resetroles(ctx):
         await msg.add_reaction('👎')
         await asyncio.sleep(1)
 
+
 @bot.command(hidden=True, aliases=['creategame'])
 @commands.has_role("super_waifu")
 @commands.check(is_super_channel)
@@ -954,7 +1016,7 @@ async def createrole(ctx, role, *, description: typing.Optional[str]):
     guild = get_guild()
     role_name = ascii_only(role).lower().replace(" ", "_")
     role = get_role(role_name)
-    if role != None:
+    if role is not None:
         if role.color in role_colors:
             role_type = "game"
         else:
@@ -978,6 +1040,7 @@ async def createrole(ctx, role, *, description: typing.Optional[str]):
     await ctx.send(embed=embed)
     return
 
+
 @bot.command(hidden=True, aliases=['editgame'])
 @commands.has_role("super_waifu")
 @commands.check(is_super_channel)
@@ -1000,10 +1063,14 @@ async def editrole(ctx, role: discord.Role, *, description: typing.Optional[str]
         emoji = ":video_game:"
         color = discord.Color.blue()
     title = f"**{role_type.upper()} UPDATED {emoji}**"
-    description = f"{role_type.capitalize()}: {role.mention}\nOld description: {old_description}\nNew description: {new_description}\nEdited by: {ctx.author.mention}\n"
+    description = f"{role_type.capitalize()}: {role.mention}\n"\
+                  f"Old description: {old_description}\n"\
+                  f"New description: {new_description}\n"\
+                  f"Edited by: {ctx.author.mention}\n"
     embed = discord.Embed(title=title, description=description, color=color)
     await ctx.send(embed=embed)
     return
+
 
 @bot.command(hidden=True, aliases=['deletegame'])
 @commands.has_role("super_waifu")
@@ -1026,6 +1093,7 @@ async def deleterole(ctx, role: discord.Role):
     await ctx.send(embed=embed)
     return
 
+
 @bot.command(hidden=True)
 @commands.has_role("super_waifu")
 @commands.check(is_super_channel)
@@ -1039,6 +1107,7 @@ async def superwtf(ctx):
     reply = reply + "\nIf I'm not working correctly, go fuck yourself, you aren't my boss."
     await ctx.send(reply)
     return
+
 
 @bot.command(hidden=True)
 @commands.has_role("super_waifu")
@@ -1075,6 +1144,7 @@ async def invite(ctx, *, reason: typing.Union[discord.CategoryChannel, str]):
     await ctx.send(embed=embed)
     return
 
+
 @bot.command(hidden=True)
 @commands.has_role("super_waifu")
 @commands.check(is_super_channel)
@@ -1082,7 +1152,7 @@ async def invite(ctx, *, reason: typing.Union[discord.CategoryChannel, str]):
 async def deletequote(ctx, id: typing.Optional[typing.Union[int, str]]):
     """Delete a quote by ID or URL"""
     guild = get_guild()
-    if id == None:
+    if id is None:
         history = await ctx.channel.history(limit=25).flatten()
         for message in history:
             if len(message.attachments) == 1:
@@ -1118,6 +1188,7 @@ async def deletequote(ctx, id: typing.Optional[typing.Union[int, str]]):
         await ctx.send(embed=embed)
     return
 
+
 @bot.command(hidden=True)
 @commands.has_role("admin")
 @commands.guild_only()
@@ -1132,20 +1203,21 @@ async def notice(ctx):
             mismatch = False
             senpai = members.copy()
             kohai = members.copy()
-            
+
             random.shuffle(senpai)
             random.shuffle(kohai)
-            
+
             for i in range(len(members)):
                 if senpai[i] == kohai[i]:
                     mismatch = True
                 if senpai[i].id in config["secret_senpai_exclusions"]:
                     if config["secret_senpai_exclusions"][senpai[i].id] == kohai[i].id:
                         mismatch = True
-                        
+
             if not mismatch:
                 for i in range(len(members)):
-                    message = f"{senpai[i].display_name}, your covert kohai is {kohai[i].display_name} ({kohai[i].name}). Get to noticing!"
+                    message = f"{senpai[i].display_name}, your covert kohai is {kohai[i].display_name}"\
+                              f" ({kohai[i].name}). Get to noticing!"
                     try:
                         await senpai[i].send(message)
                     except:
@@ -1158,11 +1230,12 @@ async def notice(ctx):
                 message = f"{secret_senpai.mention}, check your DMs."
                 await ctx.send(message)
                 return
-                
+
         reply = "Unable to match members. Please check exclusions and try again."
         await ctx.send(reply)
         return
-          
+
+
 @bot.command(hidden=True)
 @commands.has_role("admin")
 @commands.check(is_super_channel)
@@ -1217,12 +1290,17 @@ async def createevent(ctx, event: typing.Union[discord.CategoryChannel, str], *,
     await category.create_text_channel(name="quarantine_chat", overwrites=quarantine, slowmode_delay=10)
     await category.create_voice_channel(name="quarantine_voice", overwrites=quarantine)
     title = "**EVENT CREATED :confetti_ball:**"
-    description = f"Event: {category.name}\nCreated by: {ctx.author.mention}\nPrimary channel: {primary_channel.mention}\nCountdown to: {YYYYMMDDHHMMSS}\n"
+    description = f"Event: {category.name}\n"\
+                  f"Created by: {ctx.author.mention}\n"\
+                  f"Primary channel: {primary_channel.mention}\n"\
+                  f"Countdown to: {YYYYMMDDHHMMSS}\n"
     embed = discord.Embed(title=title, description=description, color=waifu_pink)
-    value = f"!invite {category.name} - Create 100 use event invite.\n!deleteevent {category.name} - Pretty self-explanatory.\n"
+    value = f"!invite {category.name} - Create 100 use event invite.\n"\
+            f"!deleteevent {category.name} - Pretty self-explanatory.\n"
     embed.add_field(name="Commands", value=value, inline=False)
     await ctx.send(embed=embed)
     return
+
 
 @bot.command(hidden=True)
 @commands.has_role("admin")
@@ -1257,13 +1335,14 @@ async def deleteevent(ctx, *, event: typing.Union[discord.CategoryChannel, str])
     await event_role.delete()
     return
 
+
 @bot.command(hidden=True)
 @commands.has_role("admin")
 @commands.check(is_super_channel)
 @commands.guild_only()
 async def say(ctx, channel: discord.TextChannel, *, text: typing.Optional[str]):
     """Make me say something and/or post attachments."""
-    if text == None and len(ctx.message.attachments) == 0:
+    if text is None and len(ctx.message.attachments) == 0:
         raise commands.UserInputError
     files = []
     file_paths = []
@@ -1285,6 +1364,7 @@ async def say(ctx, channel: discord.TextChannel, *, text: typing.Optional[str]):
     await super_waifu_chat.send(reply)
     return
 
+
 @bot.command(hidden=True)
 @commands.has_role("admin")
 @commands.check(is_super_channel)
@@ -1302,14 +1382,15 @@ async def archive(ctx, channel: discord.TextChannel):
     with open(log_path, "w", newline='') as csv_file:
         csv_file = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for message in messages:
-            csv_line = []
-            csv_line.append(message.created_at.strftime("%Y%m%d%H%M%S"))
-            csv_line.append(str(message.id))
-            csv_line.append(str(message.author.id))
-            csv_line.append(str(ascii_only(message.author.name)))
-            csv_line.append(str(ascii_only(message.author.display_name)))
-            csv_line.append(str(ascii_only(message.clean_content)))
-            csv_line.append(str(len(message.attachments)))
+            csv_line = [
+                message.created_at.strftime("%Y%m%d%H%M%S"),
+                str(message.id),
+                str(message.author.id),
+                str(ascii_only(message.author.name)),
+                str(ascii_only(message.author.display_name)),
+                str(ascii_only(message.clean_content)),
+                str(len(message.attachments))
+            ]
             message_count += 1
             for index, attachment in enumerate(message.attachments):
                 filename = f"{message.id}_{index}_{attachment.filename}"
@@ -1322,6 +1403,7 @@ async def archive(ctx, channel: discord.TextChannel):
     await ctx.send(reply)
     return
 
+
 @bot.command(hidden=True)
 @commands.has_role("admin")
 @commands.check(is_super_channel)
@@ -1332,6 +1414,7 @@ async def die(ctx):
     await ctx.send(reply)
     exit(0)
     return
+
 
 global block_noobs
 block_noobs = False

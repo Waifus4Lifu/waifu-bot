@@ -9,9 +9,11 @@ import logging as log
 import hashlib as hash
 from datetime import datetime
 
+
 def load_yaml(yaml_file_name):
     with open(os.path.join(sys.path[0], yaml_file_name), "r", encoding="utf8") as yaml_file:
         return yaml.safe_load(yaml_file)
+
 
 def paginate(text):
     pages = []
@@ -26,6 +28,7 @@ def paginate(text):
     pages.append(page)
     return pages
 
+
 def sha_256(file):
     BLOCKSIZE = 65536
     sha = hash.sha256()
@@ -36,6 +39,7 @@ def sha_256(file):
     file.close()
     return sha.hexdigest()
 
+
 def spongify(text):
     sponged_text = ""
     for character in text:
@@ -45,19 +49,24 @@ def spongify(text):
             sponged_text = sponged_text + character.lower()
     return sponged_text
 
+
 def sentence_case(text):
     return ". ".join(i.capitalize() for i in text.split(". "))
 
+
 def chance(percent):
     return random.randint(0, 99) < percent
+
 
 def replace_ignore_case(text, find, replace):
     pattern = re.compile(find, re.IGNORECASE)
     return pattern.sub(replace, text)
 
+
 def ascii_only(text):
     stripped = (c for c in text if 0 < ord(c) < 127)
     return ''.join(stripped)
+
 
 def format_delta_long(delta):
     years = int(delta.days / 365)
@@ -88,6 +97,7 @@ def format_delta_long(delta):
         formatted_delta = formatted_delta + f"{seconds} Seconds"
     return formatted_delta
 
+
 def format_delta(delta):
     years = int(delta.days / 365)
     days = int(delta.days % 365)
@@ -106,6 +116,7 @@ def format_delta(delta):
     formatted_delta = formatted_delta + f"{seconds}s"
     return formatted_delta
 
+
 def format_countdown(delta):
     years = int(delta.days / 365)
     days = int(delta.days % 365)
@@ -123,21 +134,27 @@ def format_countdown(delta):
             formatted_delta = formatted_delta + f"{minutes}M"
     return formatted_delta
 
+
 def time_since(date_time):
-    return (datetime.utcnow() - date_time)
+    return datetime.utcnow() - date_time
+
 
 def time_until(date_time):
-    return (date_time - datetime.utcnow())
+    return date_time - datetime.utcnow()
+
 
 def date_time_from_str(timestamp):
-    timestamp = re.sub('[^0-9]','', timestamp)[:14]
+    timestamp = re.sub('[^0-9]', '', timestamp)[:14]
     return datetime.strptime(timestamp[:19], "%Y%m%d%H%M%S")
+
 
 def seconds_since(then):
     return abs((datetime.utcnow() - then).total_seconds())
 
+
 def open_database():
     return sqlite3.connect(database_file_path)
+
 
 def store_hash(bytes_hash, message):
     with open_database() as database:
@@ -157,6 +174,7 @@ def store_hash(bytes_hash, message):
         database.commit()
         return
 
+
 def get_hashes(bytes_hash, channel_category):
     with open_database() as database:
         cursor = database.cursor()
@@ -169,6 +187,7 @@ def get_hashes(bytes_hash, channel_category):
             """
         cursor.execute(sql, (bytes_hash, channel_category))
         return cursor.fetchall()
+
 
 def store_description(role_name, role_description):
     with open_database() as database:
@@ -183,6 +202,7 @@ def store_description(role_name, role_description):
         database.commit()
         return
 
+
 def get_description(role_name):
     with open_database() as database:
         cursor = database.cursor()
@@ -194,6 +214,7 @@ def get_description(role_name):
             """
         cursor.execute(sql, (role_name,))
         return cursor.fetchone()
+
 
 def store_invite_details(invite, inviter, reason, event):
     with open_database() as database:
@@ -210,9 +231,11 @@ def store_invite_details(invite, inviter, reason, event):
             INTO invites
             VALUES (?,?,?,?,?,?,?,?,?)
             """
-        cursor.execute(sql, (id, date_time_created, date_time_used, inviter_id, inviter_name, invitee_id, invitee_name, reason, event))
+        cursor.execute(sql, (
+        id, date_time_created, date_time_used, inviter_id, inviter_name, invitee_id, invitee_name, reason, event))
         database.commit()
         return
+
 
 def get_invite_details(invite):
     with open_database() as database:
@@ -225,6 +248,7 @@ def get_invite_details(invite):
             """
         cursor.execute(sql, (id,))
         return cursor.fetchone()
+
 
 def update_invite_details(invite, invitee):
     with open_database() as database:
@@ -242,6 +266,7 @@ def update_invite_details(invite, invitee):
         database.commit()
         return
 
+
 def quote_exists(id):
     with open_database() as database:
         cursor = database.cursor()
@@ -251,9 +276,10 @@ def quote_exists(id):
             WHERE id = ?
             """
         cursor.execute(sql, (id,))
-        if cursor.fetchone() == None:
+        if cursor.fetchone() is None:
             return False
         return True
+
 
 def store_quote(message, ctx):
     with open_database() as database:
@@ -273,9 +299,11 @@ def store_quote(message, ctx):
             INTO quotes
             VALUES (?,?,?,?,?,?,?,?)
             """
-        cursor.execute(sql, (id, channel_name, date_time, author_id, author_name, stored_by_id, stored_by_name, quote_text))
+        cursor.execute(sql,
+                       (id, channel_name, date_time, author_id, author_name, stored_by_id, stored_by_name, quote_text))
         database.commit()
         return quote_text
+
 
 def get_quote(channel, phrase):
     with open_database() as database:
@@ -323,6 +351,7 @@ def get_quote(channel, phrase):
                 cursor.execute(sql, (pattern, pattern))
         return cursor.fetchone()
 
+
 def delete_quote(id):
     with open_database() as database:
         cursor = database.cursor()
@@ -341,7 +370,8 @@ def delete_quote(id):
         cursor.execute(sql, (id,))
         database.commit()
         return quote
-        
+
+
 def veto_quote(id):
     with open_database() as database:
         cursor = database.cursor()
@@ -353,6 +383,7 @@ def veto_quote(id):
         cursor.execute(sql, (id,))
         database.commit()
         return
+
 
 def create_database():
     if os.path.isfile(database_file_path):
@@ -422,6 +453,7 @@ def create_database():
         cursor.execute(sql)
         database.commit()
         return
+
 
 log.basicConfig(format="[%(asctime)s] [%(levelname)s] %(message)s", level=log.INFO, stream=sys.stdout)
 config = load_yaml("config.yaml")

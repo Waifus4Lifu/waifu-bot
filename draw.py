@@ -7,9 +7,10 @@ from functions import *
 from datetime import datetime
 from PIL import Image, ImageFont, ImageDraw, ImageSequence
 
+
 def shaky_text(text):
     frames = []
-    frame = Image.new('RGBA', (1,1))
+    frame = Image.new('RGBA', (1, 1))
     draw = ImageDraw.Draw(frame)
     font_path = os.path.join(sys.path[0], "fonts", "whitney_medium.ttf")
     font = ImageFont.truetype(font_path, 15)
@@ -29,6 +30,7 @@ def shaky_text(text):
     output.seek(0)
     return output
 
+
 def shaky_image(file):
     frames = []
     try:
@@ -37,11 +39,11 @@ def shaky_image(file):
         img.close()
         return "format"
     img = img.convert('RGBA')
-    high_on_potnuse = math.sqrt((img.width**2) + (img.height**2))
-    border = round(high_on_potnuse/20)
+    high_on_potnuse = math.sqrt((img.width ** 2) + (img.height ** 2))
+    border = round(high_on_potnuse / 20)
     size = (img.width + border, img.height + border)
-    shake_min = round((border/2) - (border/4))
-    shake_max = round((border/2) + (border/4))
+    shake_min = round((border / 2) - (border / 4))
+    shake_max = round((border / 2) + (border / 4))
     try:
         for index in range(10):
             frame = Image.new('RGBA', size, color=(54, 57, 62, 255))
@@ -60,19 +62,20 @@ def shaky_image(file):
             frame.close()
         return output
 
+
 def get_unsplash(query):
     try:
         config = load_yaml("config.yaml")
         client_id = config["api"]["unsplash"]
         url = "https://api.unsplash.com/photos/random"
         params = {
-            "client_id" : client_id,
-            "query" : query
+            "client_id": client_id,
+            "query": query
         }
         r = requests.get(url, params=params)
         if r.status_code != 200:
             params = {
-                "client_id" : client_id,
+                "client_id": client_id,
             }
             r = requests.get(url, params=params)
         url = r.json()["links"]["download"]
@@ -83,6 +86,7 @@ def get_unsplash(query):
         return img, author
     except:
         return None, None
+
 
 def get_chromecast(query):
     try:
@@ -96,7 +100,7 @@ def get_chromecast(query):
             if "author" in image:
                 image_author = image["author"]
             potential_match = [image_url, image_author]
-            if query != None:
+            if query is not None:
                 if query in image_url.lower():
                     matches.append(potential_match)
             all_images.append(potential_match)
@@ -112,6 +116,7 @@ def get_chromecast(query):
     except:
         return None, None
 
+
 def get_local():
     try:
         path = os.path.join(sys.path[0], 'images', 'inspire')
@@ -123,28 +128,29 @@ def get_local():
     except:
         return None, None
 
+
 def inspiration(id, text, name, query, comical):
     text = ascii_only(f"\"{text}\"")
     name = ascii_only(f"- {name}")
     if chance(50):
         img, author = get_unsplash(query)
-        if img == None:
+        if img is None:
             img, author = get_chromecast(query)
-            if img == None:
+            if img is None:
                 img, author = get_local()
-                if img == None:
+                if img is None:
                     return None
     else:
         img, author = get_chromecast(query)
-        if img == None:
+        if img is None:
             img, author = get_unsplash(query)
-            if img == None:
+            if img is None:
                 img, author = get_local()
-                if img == None:
+                if img is None:
                     return None
     img = img.convert("RGB")
     draw = ImageDraw.Draw(img)
-    high_on_potnuse = math.sqrt((img.width**2) + (img.height**2))
+    high_on_potnuse = math.sqrt((img.width ** 2) + (img.height ** 2))
     font_size = round(high_on_potnuse / 25)
     if comical and chance(config["chance"]["comical"]):
         font = ImageFont.truetype("comic.ttf", font_size)
@@ -152,7 +158,7 @@ def inspiration(id, text, name, query, comical):
     else:
         font = ImageFont.truetype("impact.ttf", font_size)
         name_font = ImageFont.truetype("impact.ttf", round(font_size * .75))
-    margin = round(high_on_potnuse/10)
+    margin = round(high_on_potnuse / 10)
     width = maximize_width(img, font, text, margin)
     width = equalize_width(img, font, text, width)
     text = textwrap.fill(text, width=width)
@@ -161,15 +167,15 @@ def inspiration(id, text, name, query, comical):
     attribution_border_width = round(border_width * .25)
     text_size = draw.textsize(text=text, font=font)
     name_size = draw.textsize(text=name, font=name_font)
-    x = (img.width/2) - (text_size[0]/2)
-    y = (img.height/2) - (text_size[1]/2) - name_size[1]
+    x = (img.width / 2) - (text_size[0] / 2)
+    y = (img.height / 2) - (text_size[1] / 2) - name_size[1]
     xy = (x, y)
     draw_text(img, text, xy, font, "center", "white", "black", border_width)
     x += text_size[0] - name_size[0]
     y += text_size[1] + name_size[1]
     xy = (x, y)
     draw_text(img, name, xy, name_font, "right", "white", "black", name_border_width)
-    if author != None:
+    if author is not None:
         attribution = ascii_only(f"Photo by {author}")
         attribution_font = ImageFont.truetype("arial.ttf", round(font_size * .25))
         attribution_size = draw.textsize(text=attribution, font=attribution_font)
@@ -185,12 +191,13 @@ def inspiration(id, text, name, query, comical):
         ratio = 0.9
         output = io.BytesIO()
         output.name = f"{timestamp}_{id}.png"
-        new_size = (int(img.width*ratio), int(img.height*ratio))
+        new_size = (int(img.width * ratio), int(img.height * ratio))
         img.thumbnail(new_size, resample=Image.ANTIALIAS)
         img.save(output)
     img.close()
     output.seek(0)
     return output
+
 
 def sunny(text):
     img = Image.new('RGB', (3840, 2160))
@@ -201,8 +208,8 @@ def sunny(text):
     width = equalize_width(img, font, text, width)
     text = textwrap.fill(text, width=width)
     text_size = draw.textsize(text=text, font=font)
-    x = (img.size[0]/2) - (text_size[0]/2)
-    y = (img.size[1]/2) - (text_size[1]/2)
+    x = (img.size[0] / 2) - (text_size[0] / 2)
+    y = (img.size[1] / 2) - (text_size[1] / 2)
     xy = (x, y)
     draw.text(xy=xy, text=text, font=font, align="center", fill="white")
     output = io.BytesIO()
@@ -210,6 +217,7 @@ def sunny(text):
     img.save(output)
     output.seek(0)
     return output
+
 
 def draw_text(img, text, xy, font, align, text_color, border_color, border_width):
     draw = ImageDraw.Draw(img)
@@ -221,6 +229,7 @@ def draw_text(img, text, xy, font, align, text_color, border_color, border_width
         draw.text(xy=xy_border, text=text, font=font, align=align, fill=border_color)
     draw.text(xy=xy, text=text, font=font, align=align, fill=text_color)
     return
+
 
 def spongebob(ctx, message):
     border = 20
@@ -251,6 +260,7 @@ def spongebob(ctx, message):
     output.seek(0)
     return output
 
+
 def maximize_width(img, font, text, margin):
     draw = ImageDraw.Draw(img)
     for i in range(1, len(text) + 1):
@@ -258,6 +268,7 @@ def maximize_width(img, font, text, margin):
         if draw.textsize(text=new_text, font=font)[0] > img.width - (margin * 2):
             return i - 1
     return i
+
 
 def equalize_width(img, font, text, start_width):
     draw = ImageDraw.Draw(img)
@@ -278,4 +289,3 @@ def equalize_width(img, font, text, start_width):
         distances.append([i, distance])
     distances = sorted(distances, key=lambda x: x[1])
     return distances[0][0]
-
