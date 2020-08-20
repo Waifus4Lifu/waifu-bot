@@ -723,6 +723,12 @@ async def _random(ctx):
     except asyncio.TimeoutError:
         return
 
+@bot.command()
+@commands.guild_only()
+async def rand(ctx, start, end):
+    """Request a random number between two numbers, inclusive"""
+    number = random.randint(start, end)
+    await ctx.send(f"{ctx.author.mention}: {number}")
 
 # TODO: Fix plural replacements to use proper regex
 @bot.command()
