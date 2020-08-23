@@ -6,6 +6,8 @@ import shutil
 import typing
 import asyncio
 import aiohttp
+import requests
+from random import randint
 from functions import *
 from discord.ext import commands
 from fuzzywuzzy import process
@@ -1408,6 +1410,24 @@ async def archive(ctx, channel: discord.TextChannel):
     reply = f"{message_count} messages and {file_count} attachments archived to {channel.name}-{timestamp}.zip"
     await ctx.send(reply)
     return
+
+
+@bot.command(aliases=["image"])
+@commands.guild_only()
+async def gis(ctx, *, query):
+    """Finds an image using Google Image Search (safesearch on)"""
+    config = load_yaml("config.yaml")
+    api_key = config["api"]["google"]
+    url = ('https://www.googleapis.com/customsearch/v1?cx=012763604623577894851:r8w2tzy60qx'
+            '&fields=items(title,link,snippet)&safe=off&nfpr=1&searchType=image')
+    random_number = randint(0, 9)
+    r = requests.get(url, params={'key': api_key, 'q': query, 'num': 10})
+    data = r.json()
+    title = data['items'][random_number]['title']
+    link = data['items'][random_number]['link']
+    embed = discord.Embed(title=title, url=link, color=0xff3fb4)
+    embed.set_image(url=link)
+    await ctx.send(embed=embed)
 
 
 @bot.command(hidden=True)
