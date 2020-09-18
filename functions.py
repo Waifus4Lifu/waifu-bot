@@ -1,6 +1,7 @@
 import re
 import os
 import sys
+import uuid
 import yaml
 import random
 import sqlite3
@@ -384,6 +385,45 @@ def veto_quote(id):
         database.commit()
         return
 
+def create_key(member_id, member_name, key_type):
+    with open_database() as database:
+        cursor = database.cursor()
+        key = str(uuid.uuid1())
+        active = True
+        sql = """
+                INSERT
+                INTO keys
+                VALUES (?,?,?,?,?,?)
+                """
+        cursor.execute(sql, (None, member_id, member_name, key, key_type, active))
+        database.commit()
+        return key
+
+def get_key(member_id, key_type, active):
+    with open_database() as database:
+        cursor = database.cursor()
+        sql = """SELECT id, member_id, member_name, key, key_type, active
+            FROM keys
+            WHERE member_id = ?
+            AND key_type = ?
+            AND active = ?
+            """
+        cursor.execute(sql, (member_id, key_type, active))
+        return cursor.fetchall()
+
+
+def delete_key(member_id, key_type):
+    with open_database() as database:
+        cursor = database.cursor()
+        sql = """
+            UPDATE keys
+            SET active = 0
+            WHERE member_id = ?
+            AND key_type = ?
+            """
+        cursor.execute(sql, (member_id, key_type))
+        database.commit()
+        return
 
 def create_database():
     if os.path.isfile(database_file_path):
@@ -448,6 +488,18 @@ def create_database():
             CREATE TABLE IF NOT EXISTS "descriptions" (
                 "role_name"	TEXT UNIQUE,
                 "role_description"	TEXT
+                )
+            """
+        cursor.execute(sql)
+        database.commit()
+        sql = """
+            CREATE TABLE IF NOT EXISTS "keys" (
+                "id"	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
+                "member_id"	INTEGER,
+                "member_name"	TEXT,
+                "key"	TEXT,
+                "key_type"	TEXT,
+                "active"	INTEGER
                 )
             """
         cursor.execute(sql)

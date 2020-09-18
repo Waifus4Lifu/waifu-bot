@@ -594,6 +594,46 @@ async def on_raw_reaction_add(payload):
 
 @bot.event
 async def on_message(message):
+    if message.author.name == "among_us":
+        message_parts = message.content.split("|")
+        if len(message_parts) != 4:
+            log.error(f"Invalid webhook command: {message.content}")
+            return
+        user_key, user_id, user_name, command = message_parts
+        try:
+            user_id = int(user_id)
+        except ValueError:
+            log.error(f"Invalid user ID: {user_id}")
+            return
+        key = get_key(user_id, "among_us", True)
+        if len(key) < 1:
+            log.error(f"Invalid key: {user_key} for user: {user_id} - {user_name}")
+            return
+        if not (user_id == key[0][1] and user_key == key[0][3]):
+            log.error(f"Invalid key: {user_key} for user: {user_id} - {user_name}")
+            return
+        guild = get_guild()
+        host = guild.get_member(user_id)
+        if host is None:
+            log.error(f"Game host not found in guild: {user_id} - {user_name}")
+            return
+        voice_state = host.voice
+        if voice_state is None:
+            log.error(f"Game host not in any voice channels: {user_id} - {user_name}")
+            return
+        channel = voice_state.channel
+        if "among us" not in channel.name.lower():
+            log.error(f"Game host: {user_id} - {user_name} is in the wrong channel: {channel.name}")
+            return
+        for player in channel.members:
+            if command == "mute":
+                await player.edit(mute=True, reason="among_us")
+                log.info(f"Muted {player.display_name}")
+            elif command == "unmute":
+                await player.edit(mute=False, reason="among_us")
+                log.info(f"Un-muted {player.display_name}")
+        return
+
     if message.author == bot.user:
         return
     lower = message.clean_content.lower()
@@ -961,6 +1001,48 @@ async def shake(ctx, *, target: typing.Optional[typing.Union[discord.Member, dis
     await pending.delete()
     return
 
+@bot.command(hidden=True)
+@commands.has_role("super_waifu")
+@commands.guild_only()
+async def createkey(ctx, member: discord.Member, key_type: str):
+    """Create a webhook key for a member."""
+    member_id = member.id
+    member_name = member.display_name
+    active = True
+    key = get_key(member_id, key_type, active)
+    if len(key) > 0:
+        msg = f"{member_name} already has an active {key_type} key."
+        await ctx.send(msg)
+        return
+    key = create_key(member_id, member_name, key_type)
+    title = f"**KEY CREATED :key:**"
+    description = f"Key: {key}\nType: {key_type}\nMember: {member.mention}\nCreated by: {ctx.author.mention}\n\n*\"With great power, yada yada.\"*\n- Abraham Lincoln"
+    embed = discord.Embed(title=title, description=description, color=waifu_pink)
+    await member.send(embed=embed)
+    embed.description = f"Key: [REDACTED]\nType: {key_type}\nMember: {member.mention}\nCreated by: {ctx.author.mention}\n\n*\"With great power, yada yada.\"*\n- Abraham Lincoln"
+    await ctx.send(embed=embed)
+    return
+
+@bot.command(hidden=True)
+@commands.has_role("super_waifu")
+@commands.guild_only()
+async def deletekey(ctx, member: discord.Member, key_type: str):
+    """Delete a member's webhook key."""
+    member_id = member.id
+    member_name = member.display_name
+    active = True
+    key = get_key(member_id, key_type, active)
+    if len(key) < 1:
+        msg = f"{member_name} does not have an active {key_type} key."
+        await ctx.send(msg)
+        return
+    key = key[0][3]
+    delete_key(member_id, key_type)
+    title = f"**KEY DELETED :lock:**"
+    description = f"Key: {key}\nType: {key_type}\nMember: {member.mention}\nDeleted by: {ctx.author.mention}\n"
+    embed = discord.Embed(title=title, description=description, color=waifu_pink)
+    await ctx.send(embed=embed)
+    return
 
 @bot.command(hidden=True)
 @commands.has_role("super_waifu")
