@@ -11,7 +11,8 @@ from discord.ext import commands
 from fuzzywuzzy import process
 from datetime import datetime
 
-bot = commands.Bot(command_prefix="!", case_insensitive=True, help_command=None)
+bot = commands.Bot(command_prefix="!",
+                   case_insensitive=True, help_command=None)
 
 
 def get_command_help(command):
@@ -79,7 +80,8 @@ def get_role(name):
 
 def get_joinable_roles():
     joinable = []
-    role_colors = [discord.Color.orange(), discord.Color.blue(), discord.Color.from_rgb(54, 57, 63)]
+    role_colors = [discord.Color.orange(), discord.Color.blue(),
+                   discord.Color.from_rgb(54, 57, 63)]
     for role in get_guild().roles:
         if role.name not in config['roles']['forbidden'] and role.color in role_colors:
             joinable.append(role)
@@ -97,7 +99,8 @@ async def detect_reposts(message):
     title = "**REPOST DETECTED :recycle:**"
     author = message.author
     description = f"Reposter: {author.mention}"
-    embed = discord.Embed(title=title, description=description, color=waifu_pink)
+    embed = discord.Embed(
+        title=title, description=description, color=waifu_pink)
     if len(message.content.split(" ")) > 3:
         value = ""
         file = io.BytesIO(message.content.encode("utf-8"))
@@ -169,8 +172,10 @@ async def rate_limiter(message):
         title = "**DUMP DETECTED :poo:**"
         author = message.author
         description = f"Dumper: {author.mention}\n\n"
-        description = description + "You're not breaking the rules, but you are being a scumbag."
-        embed = discord.Embed(title=title, description=description, color=waifu_pink)
+        description = description + \
+            "You're not breaking the rules, but you are being a scumbag."
+        embed = discord.Embed(
+            title=title, description=description, color=waifu_pink)
         await message.channel.send(embed=embed)
     return
 
@@ -335,7 +340,8 @@ async def monitor_deletions():
                       f"Deleted by: {deleted_by.mention}*\n" \
                       f"Channel: {message.channel.mention}\n" \
                       f"UTC: {timestamp}"
-        embed = discord.Embed(title=title, description=description, color=discord.Color.red())
+        embed = discord.Embed(
+            title=title, description=description, color=discord.Color.red())
         deleted_embeds = message.embeds
         if len(message.content) > 0:
             value = f"\"{message.content}\""
@@ -386,7 +392,8 @@ async def monitor_joins():
         await member.add_roles(get_role("noob"))
         block_noobs = False
         description = f"Noob: {member.mention}\n"
-        embed = discord.Embed(title=title, description=description, color=waifu_pink)
+        embed = discord.Embed(
+            title=title, description=description, color=waifu_pink)
         invite_found = None
         invites = await guild.invites()
         for invite in invites:
@@ -493,7 +500,8 @@ async def update_game_channels():
                     for activity in member.activities:
                         if isinstance(activity, discord.Game):
                             # Increment value for game name key initializing it if it did not already exist
-                            games[activity.name] = games.get(activity.name, 0) + 1
+                            games[activity.name] = games.get(
+                                activity.name, 0) + 1
                 if games:
                     # Select most common game being played by those in channel
                     game = max(games, key=games.get)
@@ -515,6 +523,89 @@ async def on_ready():
     monitor_joins_task = loop.create_task(monitor_joins())
     update_countdowns_task = loop.create_task(update_countdowns())
     update_game_channels_task = loop.create_task(update_game_channels())
+
+
+among_us_colors = [
+    "black",
+    "brown",
+    "orange",
+    "green",
+    "yellow",
+    "red",
+    "teal",
+    "lime",
+    "blue",
+    "pink",
+    "purple",
+    "white"]
+
+among_us_games = {}
+
+
+class AmongUsGame:
+    def __init__(self, channel):
+        self.channel = channel
+        self.players = {}
+
+    def __str__(self):
+        return self.channel.name
+
+    def get_available_colors(self):
+        available_colors = among_us_colors.copy()
+        for player, color in self.players.items():
+            available_colors.remove(color)
+        return available_colors
+
+
+@bot.event
+async def on_voice_state_update(member, before, after):
+    if member == bot.user:
+        return
+
+    if before.channel == after.channel:
+        return
+
+    if before.channel is not None and after.channel is not None:
+        if "among us" in before.channel.name.lower():
+            if "among the dead" in after.channel.name.lower():
+                return
+        if "among the dead" in before.channel.name.lower():
+            if "among us" in after.channel.name.lower():
+                return
+
+    if before.channel is not None:
+        if "among us" in before.channel.name.lower():
+            game = among_us_games.get(before.channel, None)
+            if game is not None:
+                game.players.pop(member, None)
+                nickname = member.display_name.split(":")[0]
+                try:
+                    await member.edit(nick=nickname, reason="among_us")
+                except discord.errors.Forbidden:
+                    pass
+                log.info(f"{member.display_name} left {game}")
+                if len(game.players) == 0:
+                    game_name = str(game)
+                    among_us_games.pop(game, None)
+                    log.info(f"{game_name} has been deleted.")
+
+    if after.channel is not None:
+        if "among us" in after.channel.name.lower():
+            game = among_us_games.get(after.channel, None)
+            if game is None:
+                game = AmongUsGame(after.channel)
+                among_us_games[after.channel] = game
+                log.info(f"{str(game)} has been created.")
+            if member not in game.players:
+                color = random.choice(game.get_available_colors())
+                game.players[member] = color
+                nickname = f"{member.display_name[0:24]}: {color}"
+                msg = f"{member.display_name} joined {game} as {color}"
+                try:
+                    await member.edit(nick=nickname, reason="among_us")
+                except discord.errors.Forbidden:
+                    await member.send(msg)
+                log.info(msg)
 
 
 @bot.event
@@ -607,10 +698,12 @@ async def on_message(message):
             return
         key = get_key(user_id, "among_us", True)
         if len(key) < 1:
-            log.error(f"Invalid key: {user_key} for user: {user_id} - {user_name}")
+            log.error(
+                f"Invalid key: {user_key} for user: {user_id} - {user_name}")
             return
         if not (user_id == key[0][1] and user_key == key[0][3]):
-            log.error(f"Invalid key: {user_key} for user: {user_id} - {user_name}")
+            log.error(
+                f"Invalid key: {user_key} for user: {user_id} - {user_name}")
             return
         guild = get_guild()
         host = guild.get_member(user_id)
@@ -619,19 +712,53 @@ async def on_message(message):
             return
         voice_state = host.voice
         if voice_state is None:
-            log.error(f"Game host not in any voice channels: {user_id} - {user_name}")
+            log.error(
+                f"Game host not in any voice channels: {user_id} - {user_name}")
             return
         channel = voice_state.channel
-        if "among us" not in channel.name.lower():
-            log.error(f"Game host: {user_id} - {user_name} is in the wrong channel: {channel.name}")
+        if channel.name.lower() == "among the dead":
+            channel = None
+            for game_channel, game in among_us_games.items():
+                for player, color in game.players.items():
+                    if host == player:
+                        channel = game_channel
+                        break
+            if channel is None:
+                log.error(
+                    f"Game host not in any games: {user_id} - {user_name}")
+                return
+        elif "among us" not in channel.name.lower():
+            msg = f"Game host: {user_id} - {user_name} is in the wrong channel: {channel.name}"
+            log.error(msg)
             return
-        for player in channel.members:
-            if command == "mute":
+        if command == "mute":
+            for player in channel.members:
                 await player.edit(mute=True, reason="among_us")
                 log.info(f"Muted {player.display_name}")
-            elif command == "unmute":
+        elif command == "unmute":
+            for player in channel.members:
                 await player.edit(mute=False, reason="among_us")
                 log.info(f"Un-muted {player.display_name}")
+        elif command.startswith("kill"):
+            dead = command.split(":")[1]
+            dead = dead.replace("'", "").replace("[", "").replace("]", "")
+            dead = dead.split(", ")
+            game = among_us_games.get(channel, None)
+            if game is None:
+                log.error(f"Game {game} not found.")
+                return
+            for player, color in game.players.items():
+                if color in dead:
+                    await player.edit(voice_channel=get_channel("Among The Dead"), mute=False)
+        elif command.startswith("revive"):
+            game = among_us_games.get(channel, None)
+            if game is None:
+                log.error(f"Game {game} not found.")
+                return
+            for player, color in game.players.items():
+                if player.voice is not None:
+                    if player.voice.channel != channel:
+                        await player.edit(voice_channel=channel, mute=False)
         return
 
     if message.author == bot.user:
@@ -653,7 +780,8 @@ async def on_message(message):
     if "hungry" in message.content.lower().replace(" ", ""):
         if chance(config['chance']['hungry']):
             reply = "No, <@221162619497611274> is hungry."
-            file = discord.File(os.path.join(sys.path[0], 'images', 'dennis.gif'))
+            file = discord.File(os.path.join(
+                sys.path[0], 'images', 'dennis.gif'))
             await message.channel.send(reply, file=file)
             file.close()
     if lower.startswith("*the gang") or lower.startswith("_the gang"):
@@ -680,7 +808,8 @@ async def wtf(ctx):
 @commands.guild_only()
 async def members(ctx, *, role):
     """Show a list of members who have signed up for a role/game."""
-    role_colors = [discord.Color.orange(), discord.Color.blue(), discord.Color.from_rgb(54, 57, 63)]
+    role_colors = [discord.Color.orange(), discord.Color.blue(),
+                   discord.Color.from_rgb(54, 57, 63)]
     role = get_role(role)
     if role is None:
         reply = f"{ctx.author.mention}, that is not a valid role/game."
@@ -763,6 +892,7 @@ async def _random(ctx):
     except asyncio.TimeoutError:
         return
 
+
 @bot.command()
 @commands.guild_only()
 async def rand(ctx, start, end):
@@ -771,6 +901,8 @@ async def rand(ctx, start, end):
     await ctx.send(f"{ctx.author.mention}: {number}")
 
 # TODO: Fix plural replacements to use proper regex
+
+
 @bot.command()
 @commands.check(is_silly_channel)
 @commands.guild_only()
@@ -887,7 +1019,8 @@ async def quoth(ctx, target: typing.Optional[typing.Union[discord.Member, discor
     clean_content = store_quote(target, ctx)
     title = "**QUOTE STORED :floppy_disk:**"
     description = f"Author: {target.author.mention}\nStored by: {ctx.author.mention}\n"
-    embed = discord.Embed(title=title, description=description, color=waifu_pink)
+    embed = discord.Embed(
+        title=title, description=description, color=waifu_pink)
     value = f"\"{clean_content}\""
     embed.add_field(name="Quote", value=value, inline=False)
     await ctx.send(embed=embed)
@@ -1001,6 +1134,7 @@ async def shake(ctx, *, target: typing.Optional[typing.Union[discord.Member, dis
     await pending.delete()
     return
 
+
 @bot.command(hidden=True)
 @commands.has_role("super_waifu")
 @commands.guild_only()
@@ -1017,11 +1151,13 @@ async def createkey(ctx, member: discord.Member, key_type: str):
     key = create_key(member_id, member_name, key_type)
     title = f"**KEY CREATED :key:**"
     description = f"Key: {key}\nType: {key_type}\nMember: {member.mention}\nCreated by: {ctx.author.mention}\n\n*\"With great power, yada yada.\"*\n- Abraham Lincoln"
-    embed = discord.Embed(title=title, description=description, color=waifu_pink)
+    embed = discord.Embed(
+        title=title, description=description, color=waifu_pink)
     await member.send(embed=embed)
     embed.description = f"Key: [REDACTED]\nType: {key_type}\nMember: {member.mention}\nCreated by: {ctx.author.mention}\n\n*\"With great power, yada yada.\"*\n- Abraham Lincoln"
     await ctx.send(embed=embed)
     return
+
 
 @bot.command(hidden=True)
 @commands.has_role("super_waifu")
@@ -1040,9 +1176,11 @@ async def deletekey(ctx, member: discord.Member, key_type: str):
     delete_key(member_id, key_type)
     title = f"**KEY DELETED :lock:**"
     description = f"Key: {key}\nType: {key_type}\nMember: {member.mention}\nDeleted by: {ctx.author.mention}\n"
-    embed = discord.Embed(title=title, description=description, color=waifu_pink)
+    embed = discord.Embed(
+        title=title, description=description, color=waifu_pink)
     await ctx.send(embed=embed)
     return
+
 
 @bot.command(hidden=True)
 @commands.has_role("super_waifu")
@@ -1176,7 +1314,8 @@ async def deleterole(ctx, role: discord.Role):
         role_type = "game"
     title = f"**{role_type.upper()} DELETED :fire:**"
     description = f"{role_type.capitalize()}: {role.name}\nDeleted by: {ctx.author.mention}\n"
-    embed = discord.Embed(title=title, description=description, color=role.color)
+    embed = discord.Embed(
+        title=title, description=description, color=role.color)
     await role.delete()
     await ctx.send(embed=embed)
     return
@@ -1226,7 +1365,8 @@ async def invite(ctx, *, reason: typing.Union[discord.CategoryChannel, str]):
     store_invite_details(invite, ctx.author, reason, event_name)
     title = f"**{type} INVITE CREATED :love_letter:**"
     description = f"Created by: {ctx.author.mention}\nChannel: {channel.mention}\nReason: {reason}\n"
-    embed = discord.Embed(title=title, description=description, color=waifu_pink)
+    embed = discord.Embed(
+        title=title, description=description, color=waifu_pink)
     value = f"URL: {invite.url}"
     embed.add_field(name="Invite", value=value, inline=False)
     await ctx.send(embed=embed)
@@ -1270,7 +1410,8 @@ async def deletequote(ctx, id: typing.Optional[typing.Union[int, str]]):
     if not quote_exists(id):
         title = "**QUOTE DELETED :fire:**"
         description = f"Author: {author_mention}\nStored by: {stored_by_mention}\nDeleted by: {ctx.author.mention}\n"
-        embed = discord.Embed(title=title, description=description, color=waifu_pink)
+        embed = discord.Embed(
+            title=title, description=description, color=waifu_pink)
         value = f"\"{text}\""
         embed.add_field(name="Quote", value=value, inline=False)
         await ctx.send(embed=embed)
@@ -1354,18 +1495,21 @@ async def createevent(ctx, event: typing.Union[discord.CategoryChannel, str], *,
     event_role = await guild.create_role(name=name.lower(), mentionable=True, color=discord.Color.orange())
     countdown = {
         noob_role: discord.PermissionOverwrite(read_messages=False, send_messages=False, connect=False),
-        guild.default_role: discord.PermissionOverwrite(send_messages=False, connect=False)
+        guild.default_role: discord.PermissionOverwrite(
+            send_messages=False, connect=False)
     }
     general = {
         noob_role: discord.PermissionOverwrite(read_messages=False, send_messages=False, connect=False),
         quarantine_role: discord.PermissionOverwrite(read_messages=False, send_messages=False, connect=False),
         event_role: discord.PermissionOverwrite(send_messages=True, connect=True),
-        guild.default_role: discord.PermissionOverwrite(send_messages=False, connect=False)
+        guild.default_role: discord.PermissionOverwrite(
+            send_messages=False, connect=False)
     }
     quarantine = {
         noob_role: discord.PermissionOverwrite(read_messages=False, send_messages=False, connect=False),
         event_role: discord.PermissionOverwrite(send_messages=True, connect=True),
-        guild.default_role: discord.PermissionOverwrite(send_messages=False, connect=False)
+        guild.default_role: discord.PermissionOverwrite(
+            send_messages=False, connect=False)
     }
     category = await guild.create_category_channel(name=name, overwrites=general)
     if YYYYMMDDHHMMSS is not None:
@@ -1382,7 +1526,8 @@ async def createevent(ctx, event: typing.Union[discord.CategoryChannel, str], *,
                   f"Created by: {ctx.author.mention}\n"\
                   f"Primary channel: {primary_channel.mention}\n"\
                   f"Countdown to: {YYYYMMDDHHMMSS}\n"
-    embed = discord.Embed(title=title, description=description, color=waifu_pink)
+    embed = discord.Embed(
+        title=title, description=description, color=waifu_pink)
     value = f"!invite {category.name} - Create 100 use event invite.\n"\
             f"!deleteevent {category.name} - Pretty self-explanatory.\n"
     embed.add_field(name="Commands", value=value, inline=False)
@@ -1411,7 +1556,8 @@ async def deleteevent(ctx, *, event: typing.Union[discord.CategoryChannel, str])
     await event.delete()
     title = "**EVENT DELETED :cry:**"
     description = f"Event: {event.name}\nDeleted by: {ctx.author.mention}\n"
-    embed = discord.Embed(title=title, description=description, color=waifu_pink)
+    embed = discord.Embed(
+        title=title, description=description, color=waifu_pink)
     quarantined = get_members_by_role("quarantine")
     value = ""
     for member in quarantined:
@@ -1439,7 +1585,8 @@ async def say(ctx, channel: discord.TextChannel, *, text: typing.Optional[str]):
         file_name = "{}_{}".format(timestamp, attachment.filename)
         file_path = os.path.join(sys.path[0], "tmp", file_name)
         await attachment.save(file_path)
-        file = discord.File(file_path, filename=attachment.filename, spoiler=attachment.is_spoiler())
+        file = discord.File(
+            file_path, filename=attachment.filename, spoiler=attachment.is_spoiler())
         files.append(file)
         file_paths.append(file_path)
     await channel.send(content=text, files=files)
@@ -1465,10 +1612,12 @@ async def archive(ctx, channel: discord.TextChannel):
     messages = await channel.history(limit=None).flatten()
     tmp_dir = os.path.join(sys.path[0], "tmp", channel.name)
     log_path = os.path.join(tmp_dir, "log.csv")
-    archive_path = os.path.join(sys.path[0], "archive", f"{channel.name}-{timestamp}")
+    archive_path = os.path.join(
+        sys.path[0], "archive", f"{channel.name}-{timestamp}")
     os.mkdir(tmp_dir)
     with open(log_path, "w", newline='') as csv_file:
-        csv_file = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        csv_file = csv.writer(csv_file, delimiter=',',
+                              quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for message in messages:
             csv_line = [
                 message.created_at.strftime("%Y%m%d%H%M%S"),
