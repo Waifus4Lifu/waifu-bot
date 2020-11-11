@@ -11,8 +11,11 @@ from discord.ext import commands
 from fuzzywuzzy import process
 from datetime import datetime
 
-bot = commands.Bot(command_prefix="!",
-                   case_insensitive=True, help_command=None)
+intents = discord.Intents.default()
+intents.presences = True
+intents.members = True
+bot = commands.Bot(command_prefix="!", case_insensitive=True,
+                   help_command=None, intents=intents)
 
 
 def get_command_help(command):
