@@ -1660,10 +1660,10 @@ async def die(ctx):
 @commands.check(is_silly_channel)
 @commands.guild_only()
 async def image(ctx, *, query):
-    """Finds an image using Google Images (safesearch off)"""
+    """Finds an image using Google Images (safesearch on)"""
     api_key = config["api"]["google"]
     url = ("https://www.googleapis.com/customsearch/v1?cx=012763604623577894851:r8w2tzy60qx"
-            "&fields=items(title,link,snippet)&safe=off&nfpr=1&searchType=image")
+            "&fields=items(title,link,snippet)&safe=on&nfpr=1&searchType=image")
     r = requests.get(url, params={"key": api_key, "q": query, "num": 10})
     data = r.json()
     items = data["items"]
