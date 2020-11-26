@@ -6,6 +6,7 @@ import shutil
 import typing
 import asyncio
 import aiohttp
+import requests
 from functions import *
 from discord.ext import commands
 from fuzzywuzzy import process
@@ -1655,6 +1656,24 @@ async def die(ctx):
     exit(0)
     return
 
+@bot.command()
+@commands.check(is_silly_channel)
+@commands.guild_only()
+async def image(ctx, *, query):
+    """Finds an image using Google Images (safesearch off)"""
+    api_key = config["api"]["google"]
+    url = ("https://www.googleapis.com/customsearch/v1?cx=012763604623577894851:r8w2tzy60qx"
+            "&fields=items(title,link,snippet)&safe=off&nfpr=1&searchType=image")
+    r = requests.get(url, params={"key": api_key, "q": query, "num": 10})
+    data = r.json()
+    items = data["items"]
+    choice = random.choice(items)
+    title = choice["title"]
+    link = choice["link"]
+    embed=discord.Embed(title=title, url=link, color=0xff3fb4)
+    embed.set_image(url=link)
+    await ctx.send(embed=embed)
+    return
 
 global block_noobs
 block_noobs = False
