@@ -4,6 +4,7 @@ discord:
     database: waifubot.db
 api:
     unsplash:
+    google:
 chance:
     catfact: 25
     hungry: 25
