@@ -1663,14 +1663,20 @@ async def image(ctx, *, query):
     """Finds an image using Google Images (safesearch on)"""
     api_key = config["api"]["google"]
     url = ("https://www.googleapis.com/customsearch/v1?cx=012763604623577894851:r8w2tzy60qx"
-            "&fields=items(title,link,snippet)&safe=on&nfpr=1&searchType=image")
-    r = requests.get(url, params={"key": api_key, "q": query, "num": 10})
+            "&fields=items(title,link,snippet)&safe=ACTIVE&nfpr=1&searchType=image")
+    try:
+        r = requests.get(url, params={"key": api_key, "q": query, "num": 10})
+        r.raise_for_status()
+    except requests.exceptions.HTTPError:
+        reply = "Unable to fulfill request."
+        await ctx.send(reply)
+        return
     data = r.json()
     items = data["items"]
     choice = random.choice(items)
     title = choice["title"]
     link = choice["link"]
-    embed=discord.Embed(title=title, url=link, color=0xff3fb4)
+    embed=discord.Embed(title=title, url=link, color=waifu_pink)
     embed.set_image(url=link)
     await ctx.send(embed=embed)
     return
