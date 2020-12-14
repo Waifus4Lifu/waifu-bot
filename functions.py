@@ -233,7 +233,7 @@ def store_invite_details(invite, inviter, reason, event):
             VALUES (?,?,?,?,?,?,?,?,?)
             """
         cursor.execute(sql, (
-        id, date_time_created, date_time_used, inviter_id, inviter_name, invitee_id, invitee_name, reason, event))
+            id, date_time_created, date_time_used, inviter_id, inviter_name, invitee_id, invitee_name, reason, event))
         database.commit()
         return
 
@@ -385,6 +385,7 @@ def veto_quote(id):
         database.commit()
         return
 
+
 def create_key(member_id, member_name, key_type):
     with open_database() as database:
         cursor = database.cursor()
@@ -398,6 +399,7 @@ def create_key(member_id, member_name, key_type):
         cursor.execute(sql, (None, member_id, member_name, key, key_type, active))
         database.commit()
         return key
+
 
 def get_key(member_id, key_type, active):
     with open_database() as database:
@@ -425,6 +427,7 @@ def delete_key(member_id, key_type):
         database.commit()
         return
 
+
 def create_database():
     if os.path.isfile(database_file_path):
         log.info(f"Database {database_file_name} found.")
@@ -448,14 +451,6 @@ def create_database():
             """
         cursor.execute(sql)
         database.commit()
-        sql = """
-            ALTER TABLE invites ADD COLUMN event TEXT;
-            """
-        try:
-            cursor.execute(sql)
-            database.commit()
-        except:
-            database.rollback()
         sql = """
             CREATE TABLE IF NOT EXISTS "quotes" (
                 "id"	INTEGER,
@@ -500,6 +495,18 @@ def create_database():
                 "key"	TEXT,
                 "key_type"	TEXT,
                 "active"	INTEGER
+                )
+            """
+        cursor.execute(sql)
+        database.commit()
+        sql = """
+            CREATE TABLE IF NOT EXISTS "voice_activity" (
+                "id"	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
+                "member_id"	INTEGER,
+                "member_name"	TEXT,
+                "date_time"	TEXT,
+                "channel_name"	TEXT,
+                "status"	INTEGER
                 )
             """
         cursor.execute(sql)

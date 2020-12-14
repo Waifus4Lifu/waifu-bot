@@ -8,9 +8,10 @@ import asyncio
 import aiohttp
 import requests
 from functions import *
+from objects.voice_activity import VoiceActivity
 from discord.ext import commands
 from fuzzywuzzy import process
-from datetime import datetime
+from datetime import datetime, timedelta
 
 intents = discord.Intents.default()
 intents.presences = True
@@ -569,6 +570,12 @@ async def on_voice_state_update(member, before, after):
     if before.channel == after.channel:
         return
 
+    if before.channel is None and after.channel is not None:
+        VoiceActivity.check_in(member.id, member.display_name, after.channel.name)
+    if before.channel is not None and after.channel is None:
+        VoiceActivity.check_out(member.id, member.display_name, before.channel.name)
+
+        # Among Us integration
     if before.channel is not None and after.channel is not None:
         if "among us" in before.channel.name.lower():
             if "among the dead" in after.channel.name.lower():
@@ -841,32 +848,6 @@ async def members(ctx, *, role):
             embed = discord.Embed(title=title, description=page, color=color)
         else:
             embed.add_field(name="Continued", value=page, inline=False)
-    await ctx.send(embed=embed)
-    return
-
-
-@bot.command()
-@commands.check(is_silly_channel)
-@commands.guild_only()
-async def image(ctx, *, query):
-    """Finds an image using Google Images (safesearch on)"""
-    api_key = config["api"]["google"]
-    url = ("https://www.googleapis.com/customsearch/v1?cx=012763604623577894851:r8w2tzy60qx"
-            "&fields=items(title,link,snippet)&safe=ACTIVE&nfpr=1&searchType=image")
-    try:
-        r = requests.get(url, params={"key": api_key, "q": query, "num": 10})
-        r.raise_for_status()
-    except requests.exceptions.HTTPError:
-        reply = "Unable to fulfill request."
-        await ctx.send(reply)
-        return
-    data = r.json()
-    items = data["items"]
-    choice = random.choice(items)
-    title = choice["title"]
-    link = choice["link"]
-    embed=discord.Embed(title=title, url=link, color=waifu_pink)
-    embed.set_image(url=link)
     await ctx.send(embed=embed)
     return
 
@@ -1449,6 +1430,59 @@ async def deletequote(ctx, id: typing.Optional[typing.Union[int, str]]):
 
 
 @bot.command(hidden=True)
+@commands.has_role("super_waifu")
+@commands.check(is_super_channel)
+@commands.guild_only()
+async def activity(ctx, member: typing.Optional[discord.Member], days: typing.Optional[int]):
+    """Get member activity for the last N days (default: 90)"""
+    timer_start = datetime.now()
+    guild = get_guild()
+    if days is None:
+        days = 90
+    if member is None:
+        members = guild.members
+    else:
+        members = [member]
+    await ctx.send(f"Preparing activity report for {len(members)} member(s). I will post when the results are ready.")
+    search_end = datetime.now()
+    search_start = search_end - timedelta(days=days)
+    message_count = {}
+    for channel in guild.text_channels:
+        async for message in channel.history(limit=None, after=search_start, before=search_end):
+            if message.author.id not in message_count:
+                message_count[message.author.id] = 1
+            else:
+                message_count[message.author.id] += 1
+    value = ""
+    for member in members:
+        if member == bot.user:
+            continue
+        total_seconds = VoiceActivity.total_seconds(member.id, search_start, search_end)
+        voice_delta = timedelta(seconds=total_seconds)
+        text_count = message_count.get(member.id, 0)
+        value += f"{member.mention} Text: {text_count} Voice: {format_delta(voice_delta)}\n"
+    first_activity = VoiceActivity.get_first()
+    timer_delta = format_delta((datetime.now() - timer_start))
+    title = f"**TEXT/VOICE* ACTIVITY IN THE LAST {days} DAYS**"
+    formatted_start = datetime.strftime(search_start, "%Y-%m-%d %H:%M")
+    formatted_end = datetime.strftime(search_end, "%Y-%m-%d %H:%M")
+    description = f"Search start: {formatted_start}\n"\
+                  f"Search end: {formatted_end}\n"\
+                  f"Requested by: {ctx.author.mention}\n"\
+                  f"Prepared in: {timer_delta}\n"
+    embed = discord.Embed(title=title, description=description, color=waifu_pink)
+    embed.add_field(name="Activity", value=value, inline=False)
+    if first_activity is None:
+        timestamp = datetime.strftime(bot_started, "%Y-%m-%d %H:%M")
+    else:
+        earliest = min(first_activity.date_time, bot_started)
+        timestamp = datetime.strftime(earliest, "%Y-%m-%d %H:%M")
+    embed.set_footer(text=f"*Voice activity based on data since the bot started watching: {timestamp}")
+    await ctx.send(embed=embed)
+    return
+
+
+@bot.command(hidden=True)
 @commands.has_role("admin")
 @commands.guild_only()
 async def notice(ctx):
@@ -1683,8 +1717,29 @@ async def die(ctx):
     return
 
 
+@bot.command()
+@commands.check(is_silly_channel)
+@commands.guild_only()
+async def image(ctx, *, query):
+    """Finds an image using Google Images (safesearch on)"""
+    api_key = config["api"]["google"]
+    url = ("https://www.googleapis.com/customsearch/v1?cx=012763604623577894851:r8w2tzy60qx"
+           "&fields=items(title,link,snippet)&safe=ACTIVE&nfpr=1&searchType=image")
+    r = requests.get(url, params={"key": api_key, "q": query, "num": 10})
+    print(r.text)
+    data = r.json()
+    items = data["items"]
+    choice = random.choice(items)
+    title = choice["title"]
+    link = choice["link"]
+    embed = discord.Embed(title=title, url=link, color=0xff3fb4)
+    embed.set_image(url=link)
+    await ctx.send(embed=embed)
+    return
+
 global block_noobs
 block_noobs = False
 create_database()
 token = config["discord"]["token"]
+bot_started = datetime.now()
 bot.run(token)
