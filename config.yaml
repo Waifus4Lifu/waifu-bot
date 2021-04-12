@@ -1,0 +1,127 @@
+# These are pre-set values, you can override this file if needed (such as using a ConfigMap in kubernetes)
+chance:
+    catfact: 25
+    hungry: 25
+    comical: 50
+roles:
+    forbidden:
+        - bot
+        - admin
+        - "@admin"
+        - "@everyone"
+        - mod
+        - thot_police
+        - thot
+        - super_waifu
+        - timeout
+        - waifu_4_lifu
+        - honorary_waifu
+        - [a2m]
+        - bot_tester
+        - noob
+        - raid_sherpa
+        - colorblind_fuck
+channels:
+    female_only:
+        - deleted_thots
+        - thots_of_dallas
+    ignore_commands:
+        - welcome_noob
+    sensitive:
+        - serious_business
+        - super_waifu_chat
+    serious:
+        - serious_business
+    super_waifu:
+        - admin_chat
+        - mod_chat
+        - super_waifu_chat
+        - bot_testing
+        - deleted_text
+        - deleted_thots
+    ignore_reposts:
+        - admin_chat
+        - mod_chat
+        - super_waifu_chat
+        - deleted_text
+        - deleted_thots
+        - serious_business
+        - looking_for_group
+        - announcements
+        - its_okay
+        - promote_a_stream
+        - looking_for_game
+        - w4l_merch
+answers:
+    True:
+        - "absolutely"
+        - "affirmative"
+        - "all right"
+        - "amen"
+        - "aye"
+        - "beyond a doubt"
+        - "by all means"
+        - "certainly"
+        - "definitely"
+        - "exactly"
+        - "fine"
+        - "gladly"
+        - "good"
+        - "granted"
+        - "indubitably"
+        - "just so"
+        - "most assuredly"
+        - "naturally"
+        - "of course"
+        - "okay"
+        - "positively"
+        - "precisely"
+        - "sure thing"
+        - "surely"
+        - "true"
+        - "undoubtedly"
+        - "unquestionably"
+        - "without fail"
+        - "y"
+        - "yarp"
+        - "yea"
+        - "yeah"
+        - "yep"
+        - "yes"
+        - "yuh"
+        - "yup"
+statuses:
+    - 0hooky
+    - 0it safe
+    - 0too much
+    - 0it by ear
+    - 0to win
+    - 0as bastion
+    - 0as hanzo
+    - 0as genji
+    - 0for keeps
+    - 0favorites
+    - 0fast and loose
+    - 0AI simulator
+    - 1it cool
+    - 1around
+    - 1mind games
+    - 1quidditch
+    - 1outside
+    - 1the lottery
+    - 1house
+    - 1dumb
+    - 1coy
+    - 2with your toys
+    - 2doctor
+    - 2hard to get
+    - 2with portals
+    - 2with fire
+    - 2the victim
+    - 2russian roulette
+    - 2the field
+    - 2possum
+    - 2footsie
+    
+secret_senpai_exclusions:
+    senpai_id: kohai_id

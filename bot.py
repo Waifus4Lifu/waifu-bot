@@ -1,3 +1,4 @@
+import os
 import io
 import re
 import csv
@@ -51,8 +52,7 @@ def is_silly_channel(ctx):
 
 
 def get_guild():
-    guild_id = config["discord"]["guild_id"]
-    return bot.get_guild(guild_id)
+    return bot.get_guild(os.environ['DISCORD_TOKEN'])
 
 
 def get_channel(name):
@@ -1676,8 +1676,12 @@ async def archive(ctx, channel: discord.TextChannel):
     messages = await channel.history(limit=None).flatten()
     tmp_dir = os.path.join(sys.path[0], "tmp", channel.name)
     log_path = os.path.join(tmp_dir, "log.csv")
-    archive_path = os.path.join(
-        sys.path[0], "archive", f"{channel.name}-{timestamp}")
+    archive_dir = os.path.join(sys.path[0], "data", "archive")
+    if not os.path.isdir(archive_dir):
+        os.mkdir(archive_dir)
+    archive_path = os.path.join(archive_dir, f"{channel.name}-{timestamp}")
+    if not os.path.isdir(archive_path):
+        os.mkdir(archive_path)
     os.mkdir(tmp_dir)
     with open(log_path, "w", newline='') as csv_file:
         csv_file = csv.writer(csv_file, delimiter=',',
@@ -1722,7 +1726,7 @@ async def die(ctx):
 @commands.guild_only()
 async def image(ctx, *, query):
     """Finds an image using Google Images (safesearch on)"""
-    api_key = config["api"]["google"]
+    api_key = os.environ['API_GOOGLE']
     url = ("https://www.googleapis.com/customsearch/v1?cx=012763604623577894851:r8w2tzy60qx"
            "&fields=items(title,link,snippet)&safe=ACTIVE&nfpr=1&searchType=image")
     r = requests.get(url, params={"key": api_key, "q": query, "num": 10})
@@ -1740,6 +1744,6 @@ async def image(ctx, *, query):
 global block_noobs
 block_noobs = False
 create_database()
-token = config["discord"]["token"]
+token = os.environ['DISCORD_TOKEN']
 bot_started = datetime.now()
 bot.run(token)

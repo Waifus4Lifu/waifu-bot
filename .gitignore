@@ -1,13 +1,11 @@
 __pycache__/*
 env/*
+.venv/*
+venv/*
 tmp/*
-archive/*
-sqlite/*
-config.yaml
+data/*
 .idea/*
 .vscode/*
 
-!images/inspire/.gitkeep
 !tmp/.gitkeep
-!archive/.gitkeep
-!sqlite/.gitkeep
+!data/.gitkeep
