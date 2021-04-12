@@ -1,14 +1,14 @@
 # waifu-bot
 
-.. image:: https://cdn.discordapp.com/avatars/309569979450130432/67a809d8741d4973b00eef4ec46d155f.png?size=64
-   :target: https://waifus4lifu.com/
-   :alt: Official Website
+[![Official Website](https://cdn.discordapp.com/avatars/309569979450130432/67a809d8741d4973b00eef4ec46d155f.png?size=64)](https://waifus4lifu.com)
 
 ## Environment Variables
+
 ### Discord Config
 These are **required** in order for waifu-bot to work.
 * `DISCORD_TOKEN`
 * `DISCORD_GUILD_ID`
+
 ### API Keys
 These are currently required until we add some code to disable commands that need them if the env variables aren't set.
 * `API_UNSPLASH`
