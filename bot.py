@@ -52,7 +52,7 @@ def is_silly_channel(ctx):
 
 
 def get_guild():
-    return bot.get_guild(os.environ['DISCORD_TOKEN'])
+    return bot.get_guild(int(os.environ['DISCORD_GUILD_ID']))
 
 
 def get_channel(name):

@@ -52,6 +52,8 @@ channels:
         - promote_a_stream
         - looking_for_game
         - w4l_merch
+    rate_limited:
+        - nsfw_shitposting
 answers:
     True:
         - "absolutely"
@@ -122,6 +124,6 @@ statuses:
     - 2the field
     - 2possum
     - 2footsie
-    
+
 secret_senpai_exclusions:
     senpai_id: kohai_id
