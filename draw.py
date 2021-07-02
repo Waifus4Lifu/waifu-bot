@@ -66,7 +66,7 @@ def shaky_image(file):
 def get_unsplash(query):
     try:
         config = load_yaml("config.yaml")
-        client_id = config["api"]["unsplash"]
+        client_id = os.environ['API_UNSPLASH']
         url = "https://api.unsplash.com/photos/random"
         params = {
             "client_id": client_id,
@@ -119,7 +119,7 @@ def get_chromecast(query):
 
 def get_local():
     try:
-        path = os.path.join(sys.path[0], 'images', 'inspire')
+        path = os.path.join(sys.path[0], 'data', 'inspire')
         files = os.listdir(path)
         files.remove(".gitkeep")
         file = random.choice(files)

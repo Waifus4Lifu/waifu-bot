@@ -1,0 +1,8 @@
+discord.py
+fuzzywuzzy
+Pillow
+requests
+PyYAML
+aiohttp
+PyNaCl
+python-Levenshtein

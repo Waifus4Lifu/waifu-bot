@@ -430,9 +430,9 @@ def delete_key(member_id, key_type):
 
 def create_database():
     if os.path.isfile(database_file_path):
-        log.info(f"Database {database_file_name} found.")
+        log.info(f"Database {database_file_path} found.")
     else:
-        log.error(f"Database {database_file_name} not found.")
+        log.warning(f"Database {database_file_path} not found, an empty database is being created.")
     with open_database() as database:
         cursor = database.cursor()
         sql = """
@@ -518,5 +518,4 @@ log.basicConfig(format="[%(asctime)s] [%(levelname)s] %(message)s", level=log.IN
 config = load_yaml("config.yaml")
 strings = load_yaml("strings.yaml")
 waifu_pink = discord.Color.from_rgb(255, 63, 180)
-database_file_name = config['discord']['database']
-database_file_path = os.path.join(sys.path[0], "sqlite", database_file_name)
+database_file_path = os.path.join(sys.path[0], "data", "waifubot.db")
