@@ -8,11 +8,13 @@ import sqlite3
 import discord
 import logging as log
 import hashlib as hash
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def load_yaml(yaml_file_name):
-    with open(os.path.join(sys.path[0], yaml_file_name), "r", encoding="utf8") as yaml_file:
+    with open(
+        os.path.join(sys.path[0], yaml_file_name), "r", encoding="utf8"
+    ) as yaml_file:
         return yaml.safe_load(yaml_file)
 
 
@@ -66,7 +68,7 @@ def replace_ignore_case(text, find, replace):
 
 def ascii_only(text):
     stripped = (c for c in text if 0 < ord(c) < 127)
-    return ''.join(stripped)
+    return "".join(stripped)
 
 
 def format_delta_long(delta):
@@ -145,12 +147,12 @@ def time_until(date_time):
 
 
 def date_time_from_str(timestamp):
-    timestamp = re.sub('[^0-9]', '', timestamp)[:14]
+    timestamp = re.sub("[^0-9]", "", timestamp)[:14]
     return datetime.strptime(timestamp[:19], "%Y%m%d%H%M%S")
 
 
 def seconds_since(then):
-    return abs((datetime.utcnow() - then).total_seconds())
+    return abs((datetime.now(timezone.utc) - then).total_seconds())
 
 
 def open_database():
@@ -171,7 +173,18 @@ def store_hash(bytes_hash, message):
             INTO hashes
             VALUES (?,?,?,?,?,?,?)
             """
-        cursor.execute(sql, (None, bytes_hash, date_time, author_id, author_name, channel_name, channel_category))
+        cursor.execute(
+            sql,
+            (
+                None,
+                bytes_hash,
+                date_time,
+                author_id,
+                author_name,
+                channel_name,
+                channel_category,
+            ),
+        )
         database.commit()
         return
 
@@ -232,8 +245,20 @@ def store_invite_details(invite, inviter, reason, event):
             INTO invites
             VALUES (?,?,?,?,?,?,?,?,?)
             """
-        cursor.execute(sql, (
-            id, date_time_created, date_time_used, inviter_id, inviter_name, invitee_id, invitee_name, reason, event))
+        cursor.execute(
+            sql,
+            (
+                id,
+                date_time_created,
+                date_time_used,
+                inviter_id,
+                inviter_name,
+                invitee_id,
+                invitee_name,
+                reason,
+                event,
+            ),
+        )
         database.commit()
         return
 
@@ -292,7 +317,7 @@ def store_quote(message, ctx):
         author_name = str(message.author.display_name)
         stored_by_id = ctx.author.id
         stored_by_name = str(ctx.author.display_name)
-        quote_text = message.clean_content.replace("\"", "'")
+        quote_text = message.clean_content.replace('"', "'")
         if quote_text[:1] == "'" and quote_text[-1:] == "'":
             quote_text = quote_text[1:-1]
         sql = """
@@ -300,8 +325,19 @@ def store_quote(message, ctx):
             INTO quotes
             VALUES (?,?,?,?,?,?,?,?)
             """
-        cursor.execute(sql,
-                       (id, channel_name, date_time, author_id, author_name, stored_by_id, stored_by_name, quote_text))
+        cursor.execute(
+            sql,
+            (
+                id,
+                channel_name,
+                date_time,
+                author_id,
+                author_name,
+                stored_by_id,
+                stored_by_name,
+                quote_text,
+            ),
+        )
         database.commit()
         return quote_text
 
@@ -432,7 +468,9 @@ def create_database():
     if os.path.isfile(database_file_path):
         log.info(f"Database {database_file_path} found.")
     else:
-        log.warning(f"Database {database_file_path} not found, an empty database is being created.")
+        log.warning(
+            f"Database {database_file_path} not found, an empty database is being created."
+        )
     with open_database() as database:
         cursor = database.cursor()
         sql = """
@@ -514,7 +552,11 @@ def create_database():
         return
 
 
-log.basicConfig(format="[%(asctime)s] [%(levelname)s] %(message)s", level=log.INFO, stream=sys.stdout)
+log.basicConfig(
+    format="[%(asctime)s] [%(levelname)s] %(message)s",
+    level=log.INFO,
+    stream=sys.stdout,
+)
 config = load_yaml("config.yaml")
 strings = load_yaml("strings.yaml")
 waifu_pink = discord.Color.from_rgb(255, 63, 180)
