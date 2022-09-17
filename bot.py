@@ -14,7 +14,7 @@ from discord.ext import commands
 from fuzzywuzzy import process
 from datetime import datetime, timedelta
 
-intents = discord.Intents.default()
+intents = discord.Intents.all()
 intents.presences = True
 intents.members = True
 bot = commands.Bot(
