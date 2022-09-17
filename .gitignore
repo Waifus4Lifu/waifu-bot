@@ -5,7 +5,14 @@ venv/*
 tmp/*
 data/*
 .idea/*
-.vscode/*
 
 !tmp/.gitkeep
 !data/.gitkeep
+
+# vscode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
